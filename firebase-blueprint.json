@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Subscription service details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "icon": { "type": "string", "description": "Lucide icon name or image URL" },
+        "category": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "active": { "type": "boolean" }
+      },
+      "required": ["name", "price"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "User subscription orders",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "active", "expired"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "serviceId", "status"]
+    },
+    "BlogPost": {
+      "title": "BlogPost",
+      "description": "Articles for the blog system",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "content": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "metaTitle": { "type": "string" },
+        "metaDescription": { "type": "string" }
+      },
+      "required": ["title", "slug", "content", "authorId"]
+    },
+    "Giveaway": {
+      "title": "Giveaway",
+      "description": "Giveaway events",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "prize": { "type": "string" },
+        "totalWinners": { "type": "integer" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "ended"] },
+        "winners": { "type": "array", "items": { "type": "string" }, "description": "User IDs of winners" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "prize", "deadline", "status"]
+    },
+    "GiveawayEntry": {
+      "title": "GiveawayEntry",
+      "description": "User entries for giveaways",
+      "type": "object",
+      "properties": {
+        "giveawayId": { "type": "string" },
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "bonusEntries": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["giveawayId", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/services/{serviceId}": { "schema": "Service", "description": "Available subscriptions" },
+    "/orders/{orderId}": { "schema": "Order", "description": "Purchase history" },
+    "/blogPosts/{postId}": { "schema": "BlogPost", "description": "Blog articles" },
+    "/giveaways/{giveawayId}": { "schema": "Giveaway", "description": "Giveaway events" },
+    "/giveaways/{giveawayId}/entries/{entryId}": { "schema": "GiveawayEntry", "description": "Participants in a giveaway" }
+  }
+}

@@ -1,0 +1,331 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { useAuth } from '@/context/AuthContext';
+import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { uploadFile } from '@/lib/storage-utils';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { db } from '@/firebase';
+import Image from 'next/image';
+
+const BlogCMS = () => {
+  const { isAdmin, profile } = useAuth();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [editingPost, setEditingPost] = useState<any>(null);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    thumbnail: '',
+    category: 'General',
+    published: false,
+    tags: ''
+  });
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const q = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching posts:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isAdmin]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const postData = {
+      ...formData,
+      tags: formData.tags.split(',').map(t => t.trim()),
+      author: profile?.displayName || 'Admin',
+      authorId: profile?.uid,
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+      if (editingPost) {
+        await updateDoc(doc(db, 'blogPosts', editingPost.id), postData);
+      } else {
+        await addDoc(collection(db, 'blogPosts'), {
+          ...postData,
+          createdAt: serverTimestamp(),
+        });
+      }
+      setIsAdding(false);
+      setEditingPost(null);
+      setFormData({ title: '', slug: '', excerpt: '', content: '', thumbnail: '', category: 'General', published: false, tags: '' });
+    } catch (error) {
+      console.error('Error saving post:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deleteDoc(doc(db, 'blogPosts', id));
+      } catch (error) {
+        console.error('Error deleting post:', error);
+      }
+    }
+  };
+
+  if (!isAdmin) return <div className="pt-32 text-center">Access Denied.</div>;
+
+  return (
+    <div className="pt-32 pb-24 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-12">
+          <h1 className="text-4xl font-bold">Blog <span className="text-primary">CMS</span></h1>
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-primary text-white px-6 py-3 rounded-2xl font-bold flex items-center space-x-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add New Post</span>
+          </button>
+        </div>
+
+        {(isAdding || editingPost) && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-[2.5rem] p-10 border-white/10 mb-12"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold">{editingPost ? 'Edit Post' : 'Create New Post'}</h2>
+              <button onClick={() => { setIsAdding(false); setEditingPost(null); }} className="p-2 hover:bg-white/10 rounded-full">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Title</label>
+                  <input 
+                    type="text" 
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Slug</label>
+                  <input 
+                    type="text" 
+                    value={formData.slug}
+                    onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Excerpt</label>
+                  <textarea 
+                    value={formData.excerpt}
+                    onChange={(e) => setFormData({...formData, excerpt: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary h-24"
+                    required
+                  />
+                </div>
+                <div className="pt-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-3">Feature Image</label>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-20 h-20 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
+                      {formData.thumbnail ? (
+                        <Image src={formData.thumbnail} alt="Preview" fill className="object-cover" />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-text/10" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <label className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4 text-primary" />}
+                        <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setUploading(true);
+                            try {
+                              const url = await uploadFile(file, `blog/${Date.now()}_${file.name}`, setUploadProgress);
+                              setFormData({ ...formData, thumbnail: url });
+                            } catch (error) {
+                              alert('Upload failed');
+                            } finally {
+                              setUploading(false);
+                              setUploadProgress(0);
+                            }
+                          }}
+                        />
+                      </label>
+                      {uploading && (
+                        <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden w-32">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} className="h-full bg-primary" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Content (Markdown)</label>
+                  <textarea 
+                    value={formData.content}
+                    onChange={(e) => setFormData({...formData, content: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary h-64 font-mono text-sm"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Category</label>
+                    <input 
+                      type="text" 
+                      value={formData.category}
+                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">Tags (comma separated)</label>
+                    <input 
+                      type="text" 
+                      value={formData.tags}
+                      onChange={(e) => setFormData({...formData, tags: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.published}
+                    onChange={(e) => setFormData({...formData, published: e.target.checked})}
+                    className="w-5 h-5 rounded border-white/10 bg-white/5 text-primary"
+                  />
+                  <span className="font-bold">Publish Article</span>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 pt-6">
+                <button type="submit" className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center space-x-2">
+                  <Save className="w-5 h-5" />
+                  <span>{editingPost ? 'Update Post' : 'Create Post'}</span>
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+
+        <div className="glass rounded-[2.5rem] border-white/10 overflow-hidden">
+          <div className="p-10">
+            {loading ? (
+              <div className="text-center py-10">Loading posts...</div>
+            ) : posts.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      <th className="pb-6 text-xs font-bold uppercase tracking-widest text-brand-text/40">Article</th>
+                      <th className="pb-6 text-xs font-bold uppercase tracking-widest text-brand-text/40">Category</th>
+                      <th className="pb-6 text-xs font-bold uppercase tracking-widest text-brand-text/40">Status</th>
+                      <th className="pb-6 text-xs font-bold uppercase tracking-widest text-brand-text/40 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {posts.map((post) => (
+                      <tr key={post.id} className="border-b border-white/5 group">
+                        <td className="py-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 relative">
+                              <Image 
+                                src={post.thumbnail || 'https://picsum.photos/seed/blog/100/100'} 
+                                className="object-cover" 
+                                alt="" 
+                                fill
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                            <div>
+                              <h4 className="font-bold group-hover:text-primary transition-colors">{post.title}</h4>
+                              <p className="text-xs text-brand-text/40">/{post.slug}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-6">
+                          <span className="text-sm">{post.category}</span>
+                        </td>
+                        <td className="py-6">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            post.published ? 'bg-emerald-500/10 text-emerald-500' : 'bg-brand-text/10 text-brand-text/40'
+                          }`}>
+                            {post.published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="py-6 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button 
+                              onClick={() => {
+                                setEditingPost(post);
+                                setFormData({
+                                  title: post.title,
+                                  slug: post.slug,
+                                  excerpt: post.excerpt,
+                                  content: post.content,
+                                  thumbnail: post.thumbnail || '',
+                                  category: post.category,
+                                  published: post.published,
+                                  tags: post.tags?.join(', ') || ''
+                                });
+                              }}
+                              className="p-2 hover:bg-white/10 rounded-full text-brand-text/40 hover:text-primary transition-colors"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(post.id)}
+                              className="p-2 hover:bg-white/10 rounded-full text-brand-text/40 hover:text-accent transition-colors"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <FileText className="w-16 h-16 text-brand-text/10 mx-auto mb-4" />
+                <p className="text-brand-text/40">No blog posts found. Create your first one!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BlogCMS;

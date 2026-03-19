@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, photoURL, role, createdAt
+    //
+    // Collection: services
+    // Fields: name, description, price, icon, category, features, active
+    //
+    // Collection: orders
+    // Fields: userId, serviceId, serviceName, price, status, createdAt, expiresAt
+    //
+    // Collection: blogPosts
+    // Fields: title, slug, content, excerpt, thumbnail, author, authorId, category, tags, published, createdAt
+    //
+    // Collection: giveaways
+    // Fields: title, description, image, prize, totalWinners, deadline, status, winners, createdAt
+    //
+    // Collection: giveaways/{giveawayId}/entries
+    // Fields: giveawayId, userId, email, bonusEntries, createdAt
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "technicalhammad39@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && 
+        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
+        (request.resource.data.role == 'user' || isAdmin());
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    match /blogPosts/{postId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /giveaways/{giveawayId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      
+      match /entries/{entryId} {
+        allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+    }
+  }
+}

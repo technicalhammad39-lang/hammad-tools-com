@@ -1,0 +1,9 @@
+{
+  "name": "SubHammad Premium",
+  "description": "A high-end animated subscription marketplace for digital services, tools, and courses.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
