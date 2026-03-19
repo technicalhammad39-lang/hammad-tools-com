@@ -20,6 +20,10 @@ interface Service {
   category: string;
   active: boolean;
   features: string[];
+  orderIndex?: number;
+  warranty?: string;
+  accessType?: string;
+  plans?: any[];
 }
 
 const AdminServices = () => {

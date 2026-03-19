@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { ExternalLink, Globe, ShieldCheck, Zap, Globe2 } from 'lucide-react';
+import { ExternalLink, Globe, Zap, Globe2 } from 'lucide-react';
 
 const partners = [
   {

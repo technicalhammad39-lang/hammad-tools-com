@@ -41,6 +41,7 @@ interface Service {
   deliveryStatus?: string;
   accessType?: string;
   plans?: Plan[];
+  orderIndex?: number;
 }
 
 export default function ServiceDetailClient({ service, loading }: { service: Service | null, loading: boolean }) {
