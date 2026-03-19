@@ -38,14 +38,19 @@ const Navbar = () => {
     <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          <Link href="/" className="relative h-10 w-48 transition-transform hover:scale-105 active:scale-95">
-            <Image 
-              src="/logo-header.png" 
-              alt="Hammad Tools Logo" 
-              fill
-              className="object-contain object-left"
-              priority
-            />
+          <Link href="/" className="flex items-center space-x-3 transition-transform hover:scale-105 active:scale-95 group">
+            <div className="relative h-10 w-10 sm:h-12 sm:w-12">
+              <Image 
+                src="/logo-header.png" 
+                alt="Hammad Tools Logo" 
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-brand-text uppercase leading-none">
+              Hammad<span className="internal-gradient">Tools</span>
+            </span>
           </Link>
 
           {/* Desktop Nav */}

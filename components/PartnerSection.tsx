@@ -3,28 +3,30 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { ExternalLink, Globe, Zap, Globe2 } from 'lucide-react';
+import { ExternalLink, Globe, Zap, Globe2, Crown } from 'lucide-react';
 
 const partners = [
   {
     name: 'DailyHayat',
     desc: 'Premier network for digital trends and global news updates.',
     url: 'https://dailyhayat.net',
-    logo: 'https://dailyhayat.net/wp-content/uploads/2023/10/daily-hayat-logo.png',
+    logo: '/dailyhayat.png',
     tag: 'Strategic Partner'
   },
   {
     name: 'Khaksar Agency',
     desc: 'Leading digital solutions and premium service scaling for local markets.',
     url: '#',
-    logo: 'https://ui-avatars.com/api/?name=Khaksar+Agency',
+    logo: '/khaksar-crown', // Placeholder to trigger icon logic
     tag: 'Digital Partner'
   }
 ];
 
 const PartnerSection = () => {
   return (
-    <section className="py-32 relative overflow-hidden bg-brand-bg">
+    <section className="py-16 md:py-24 relative overflow-hidden bg-brand-bg">
+    {/* Reduce top spacing fix */}
+    <div className="-mt-12" />
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full -z-10" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10" />
@@ -42,7 +44,7 @@ const PartnerSection = () => {
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6"
+            className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 whitespace-nowrap"
           >
             Trusted <span className="internal-gradient">Partners</span>
           </motion.h2>
@@ -69,13 +71,17 @@ const PartnerSection = () => {
                 
                 <div className="flex justify-between items-start mb-12">
                    <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center p-4 border border-white/10 group-hover:scale-110 transition-transform">
-                      <Image
-                        src={partner.logo}
-                        alt={partner.name}
-                        width={80}
-                        height={80}
-                        className="object-contain"
-                      />
+                      {partner.name === 'Khaksar Agency' ? (
+                        <Crown className="w-10 h-10 text-primary" />
+                      ) : (
+                        <Image
+                          src={partner.logo}
+                          alt={partner.name}
+                          width={80}
+                          height={80}
+                          className="object-contain"
+                        />
+                      )}
                    </div>
                    <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[8px] font-black uppercase text-primary tracking-widest">
                       {partner.tag}

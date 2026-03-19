@@ -48,7 +48,7 @@ const Hero = () => {
 
             <h1 className="text-5xl sm:text-6xl md:text-8xl font-black leading-[1.1] md:leading-[0.9] mb-8 tracking-tighter text-brand-text flex flex-col items-start md:flex-row md:items-baseline gap-2 md:gap-4 text-left">
               <span className="text-5xl sm:text-6xl md:text-8xl font-serif italic text-white leading-tight">Unlock The</span>
-              <span className="text-5xl sm:text-6xl md:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 min-w-full md:min-w-[450px]">
+              <span className="text-4xl sm:text-6xl md:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
                 <Typewriter
                   options={{
                     strings: ['PRO COURSES', 'PREMIUM TOOLS', 'DIGITAL ASSETS'],
@@ -92,7 +92,7 @@ const Hero = () => {
               </motion.button>
             </div>
 
-            <div className="mt-10 md:mt-20 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 text-center sm:text-left">
+            <div className="mt-10 md:mt-20 flex flex-row items-center justify-start gap-3 sm:gap-6 text-left">
               <div className="flex -space-x-5 md:-space-x-6">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-brand-bg overflow-hidden shadow-xl relative first:ml-0">
@@ -106,11 +106,11 @@ const Hero = () => {
                   </div>
                 ))}
               </div>
-              <div className="flex flex-col justify-center gap-1">
+              <div className="flex flex-col justify-center gap-0.5">
                 <div className="flex items-center text-secondary gap-0.5">
-                  {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-6 h-6 md:w-7 md:h-7 fill-current" />)}
+                  {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-5 h-5 md:w-7 md:h-7 fill-current" />)}
                 </div>
-                <p className="text-lg md:text-xl font-medium text-gray-300 whitespace-nowrap">Trusted by 10k+ users</p>
+                <p className="text-sm md:text-xl font-medium text-gray-300 whitespace-nowrap">Trusted by 10k+ users</p>
               </div>
             </div>
           </motion.div>

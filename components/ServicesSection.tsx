@@ -155,7 +155,7 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none"
+              className="text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none whitespace-nowrap"
             >
               Premium <span className="internal-gradient">Tools</span>
             </motion.h2>
@@ -198,7 +198,7 @@ const ServicesSection = () => {
             </div>
 
             {/* Category Filter */}
-            <div className="lg:col-span-5 flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <div className="lg:col-span-8 flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 no-scrollbar">
               {categories.map(cat => (
                 <button
                   key={cat}
@@ -211,27 +211,6 @@ const ServicesSection = () => {
                   {cat}
                 </button>
               ))}
-            </div>
-
-            {/* Sort By */}
-            <div className="lg:col-span-3 flex items-center gap-4">
-              <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 w-full">
-                {[
-                  { id: 'order', label: 'RANK', icon: <SortAsc className="w-3 h-3" /> },
-                  { id: 'price-low', label: 'MIN $', icon: null },
-                  { id: 'price-high', label: 'MAX $', icon: null }
-                ].map(sort => (
-                  <button
-                    key={sort.id}
-                    onClick={() => setSortBy(sort.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === sort.id ? 'bg-white/10 text-primary' : 'text-brand-text/30 hover:text-brand-text/60'
-                      }`}
-                  >
-                    {sort.icon}
-                    {sort.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </motion.div>
         )}
@@ -259,11 +238,14 @@ const ServicesSection = () => {
                 {/* Thumbnail */}
                 <div className="relative h-48 md:h-72 overflow-hidden bg-white/5">
                   <Image
-                    src={service.image}
+                    src={service.image || 'https://images.unsplash.com/photo-1614332287897-cdc485fa562d?q=80&w=800'}
                     alt={service.name}
                     fill
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110 px-4 pt-4 rounded-[3rem]"
                     referrerPolicy="no-referrer"
+                    onError={(e: any) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1614332287897-cdc485fa562d?q=80&w=800';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
 
@@ -304,14 +286,7 @@ const ServicesSection = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="flex -space-x-2">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-brand-bg bg-white/10 flex items-center justify-center text-[8px] md:text-[10px] font-black uppercase">
-                              {i}
-                            </div>
-                          ))}
-                        </div>
-                        <span className="text-[8px] text-brand-text/20 font-black uppercase tracking-widest mt-1 block">Stats</span>
+                        <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest block bg-emerald-400/10 px-3 py-1 rounded-lg">Instant</span>
                       </div>
                     </div>
 
@@ -343,10 +318,6 @@ const ServicesSection = () => {
                 {/* Aesthetic Inner Glow */}
                 <div className="absolute inset-[1px] rounded-[2rem] md:rounded-[3rem] border border-white/5 pointer-events-none -z-10" />
 
-                {/* Index Number */}
-                <div className="absolute -top-4 -right-4 w-12 h-12 glass rounded-full flex items-center justify-center text-[10px] font-black text-brand-text/20 border border-white/5 rotate-12 group-hover:rotate-0 transition-all z-20">
-                  {index < 9 ? `0${index + 1}` : index + 1}
-                </div>
               </motion.div>
             ))}
           </AnimatePresence>
