@@ -155,17 +155,19 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-4xl sm:text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none flex flex-col md:block"
+              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none ${pathname === '/services' ? 'whitespace-nowrap flex-row overflow-hidden' : 'flex flex-col md:block'}`}
             >
               <span className="md:inline">Premium </span>
-              <span className="internal-gradient md:inline">Tools</span>
+              <span className="internal-gradient md:inline">Subscriptions</span>
             </motion.h2>
-            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-xl mx-auto md:mx-0">Deploy high-performance digital subscriptions and premium services with instant execution.</p>
+            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-xl mx-auto md:mx-0">
+              Deploy high-performance digital subscriptions, exclusive premium software, and elite tools with instant automated execution.
+            </p>
           </div>
 
           <div className="w-full md:w-auto flex justify-center md:justify-end">
             {pathname !== '/services' && (
-              <Link href="/services">
+              <Link href="/services" className="w-full md:w-auto">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -182,10 +184,10 @@ const ServicesSection = () => {
         {/* Filters & Search - Only on /services page */}
         {pathname === '/services' && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16 items-center"
-          >
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 md:mb-16 items-center"
+            >
             {/* Search */}
             <div className="lg:col-span-4 relative group">
               <input
@@ -239,7 +241,7 @@ const ServicesSection = () => {
                 {/* Thumbnail */}
                 <div className="relative h-48 md:h-72 overflow-hidden bg-white/5">
                   <Image
-                    src={service.image || 'https://images.unsplash.com/photo-1614332287897-cdc485fa562d?q=80&w=800'}
+                    src={'/services-card.png'}
                     alt={service.name}
                     fill
                     className="object-cover transition-transform duration-1000 group-hover:scale-110 px-4 pt-4 rounded-[3rem]"

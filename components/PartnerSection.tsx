@@ -44,7 +44,7 @@ const PartnerSection = () => {
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 flex flex-col md:block"
+            className="text-[40px] sm:text-6xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 flex flex-col md:block"
           >
             <span className="md:inline">Trusted </span>
             <span className="internal-gradient md:inline">Partners</span>
