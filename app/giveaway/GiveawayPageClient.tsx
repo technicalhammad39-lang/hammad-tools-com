@@ -315,7 +315,7 @@ export default function GiveawayPageClient() {
 
   if (loading) {
     return (
-      <main className="min-h-screen pt-16 md:pt-24 pb-20 px-4 bg-brand-bg flex items-center justify-center">
+      <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg flex items-center justify-center">
          <div className="flex flex-col items-center gap-6">
             <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             <p className="text-brand-text/40 font-black uppercase tracking-widest text-xs">Syncing Rewards...</p>
@@ -325,7 +325,7 @@ export default function GiveawayPageClient() {
   }
 
   return (
-    <main className="min-h-screen pt-16 md:pt-24 pb-20 px-4 bg-brand-bg relative overflow-hidden">
+    <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg relative overflow-hidden">
       <div className="max-w-3xl mx-auto">
         {/* Feed Header */}
         <div className="flex items-center justify-between mb-12">
@@ -346,16 +346,16 @@ export default function GiveawayPageClient() {
         </div>
 
         {/* Create Post Style Banner */}
-        <div className="glass p-6 rounded-2xl border border-white/5 bg-[#1C1C1E]/50 mb-12 flex items-center gap-4">
-           <div className="w-12 h-12 rounded-full border border-primary/20 p-0.5 relative">
+        <div className="glass p-4 md:p-6 rounded-2xl border border-white/5 bg-[#1C1C1E]/50 mb-12 flex items-center gap-4">
+           <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-primary/20 p-0.5 relative">
               <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center">
-                 <Trophy className="w-6 h-6 text-primary" />
+                 <Trophy className="w-5 h-5 md:w-6 md:h-6 text-primary" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-brand-bg flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 rounded-full border-2 border-brand-bg flex items-center justify-center">
                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
               </div>
            </div>
-           <div className="flex-1 bg-white/5 rounded-full py-3 px-6 text-brand-text/30 text-sm font-medium border border-white/5">
+           <div className="flex-1 bg-white/5 rounded-full py-2 md:py-3 px-6 text-brand-text/30 text-xs md:text-sm font-medium border border-white/5">
               What's on your mind? Deploy a new tool today...
            </div>
         </div>

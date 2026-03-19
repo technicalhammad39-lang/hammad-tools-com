@@ -142,8 +142,8 @@ const ServicesSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header Area */}
-        <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-10">
-          <div className="max-w-2xl">
+        <div className="flex flex-col items-center md:items-start text-center md:text-left mb-16 gap-10">
+          <div className="max-w-2xl flex flex-col items-center md:items-start">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -155,15 +155,16 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none whitespace-nowrap"
+              className="text-4xl sm:text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none flex flex-col md:block"
             >
-              Premium <span className="internal-gradient">Tools</span>
+              <span className="md:inline">Premium </span>
+              <span className="internal-gradient md:inline">Tools</span>
             </motion.h2>
-            <p className="text-brand-text/50 text-base md:text-lg font-medium max-w-xl">Deploy high-performance digital subscriptions and premium services with instant execution.</p>
+            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-xl mx-auto md:mx-0">Deploy high-performance digital subscriptions and premium services with instant execution.</p>
           </div>
 
-          {pathname !== '/services' && (
-            <div className="w-full md:w-auto">
+          <div className="w-full md:w-auto flex justify-center md:justify-end">
+            {pathname !== '/services' && (
               <Link href="/services">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -174,8 +175,8 @@ const ServicesSection = () => {
                   <ChevronRight className="w-4 h-4" />
                 </motion.button>
               </Link>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Filters & Search - Only on /services page */}

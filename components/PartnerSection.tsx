@@ -44,9 +44,10 @@ const PartnerSection = () => {
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 whitespace-nowrap"
+            className="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 flex flex-col md:block"
           >
-            Trusted <span className="internal-gradient">Partners</span>
+            <span className="md:inline">Trusted </span>
+            <span className="internal-gradient md:inline">Partners</span>
           </motion.h2>
           <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>
         </div>
