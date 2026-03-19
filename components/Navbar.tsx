@@ -38,13 +38,14 @@ const Navbar = () => {
     <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? 'glass py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center border-b-2 border-[#FF8C2A]">
-              <span className="text-brand-bg font-black text-xl">H</span>
-            </div>
-            <span className="text-2xl font-black tracking-tighter text-brand-text">
-              Hammad<span className="internal-gradient">Tools</span>
-            </span>
+          <Link href="/" className="relative h-10 w-48 transition-transform hover:scale-105 active:scale-95">
+            <Image 
+              src="/logo-header.png" 
+              alt="Hammad Tools Logo" 
+              fill
+              className="object-contain object-left"
+              priority
+            />
           </Link>
 
           {/* Desktop Nav */}
@@ -97,7 +98,7 @@ const Navbar = () => {
                   onClick={() => setIsAuthModalOpen(true)}
                   className="bg-primary hover:bg-primary/90 text-brand-bg px-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10"
                 >
-                  Login Status
+                  Login
                 </button>
               )}
             </div>
@@ -160,7 +161,7 @@ const Navbar = () => {
                     onClick={() => { setIsAuthModalOpen(true); setIsOpen(false); }}
                     className="w-full bg-primary text-brand-bg py-5 rounded-xl font-black uppercase tracking-widest text-sm border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10"
                   >
-                    Login Access
+                    Login
                   </button>
                 )}
               </div>

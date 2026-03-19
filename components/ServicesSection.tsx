@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
-import { 
-  ShoppingCart, 
-  Zap, 
-  ChevronRight, 
-  Star, 
-  Search, 
-  Filter, 
-  SortAsc, 
-  CheckCircle2 
+import {
+  ShoppingCart,
+  Zap,
+  ChevronRight,
+  Star,
+  Search,
+  Filter,
+  SortAsc,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -114,8 +114,8 @@ const ServicesSection = () => {
 
   const filteredServices = services
     .filter(s => {
-      const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           s.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || s.category === selectedCategory;
       return matchesSearch && matchesCategory;
     })
@@ -128,114 +128,112 @@ const ServicesSection = () => {
   const displayServices = pathname === '/' ? filteredServices.slice(0, 6) : filteredServices;
 
   if (loading) {
-     return (
-        <section className="py-16 md:py-32 relative overflow-hidden bg-brand-bg">
-           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>
-           </div>
-        </section>
-     );
+    return (
+      <section className="py-16 md:py-32 relative overflow-hidden bg-brand-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>
+        </div>
+      </section>
+    );
   }
 
   return (
     <section className="py-16 md:py-32 relative overflow-hidden bg-brand-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header Area */}
         <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-10">
           <div className="max-w-2xl">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, x: 0 }}
               className="inline-flex items-center space-x-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-6 shadow-lg shadow-primary/5"
             >
               <Zap className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Intelligence Hub</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Our Services</span>
             </motion.div>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               className="text-5xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none"
             >
-              Tactical <span className="internal-gradient">Tools</span>
+              Premium <span className="internal-gradient">Tools</span>
             </motion.h2>
             <p className="text-brand-text/50 text-base md:text-lg font-medium max-w-xl">Deploy high-performance digital subscriptions and premium services with instant execution.</p>
           </div>
-          
+
           {pathname !== '/services' && (
-            <Link href="/services">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white/5 hover:bg-white/10 px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border border-white/10 transition-all flex items-center gap-3"
-              >
-                <span>Full Catalog</span>
-                <ChevronRight className="w-4 h-4" />
-              </motion.button>
-            </Link>
+            <div className="w-full md:w-auto">
+              <Link href="/services">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-full md:w-auto bg-white/5 hover:bg-white/10 px-10 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border border-white/10 transition-all flex items-center justify-center gap-3"
+                >
+                  <span>Full Catalog</span>
+                  <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              </Link>
+            </div>
           )}
         </div>
 
         {/* Filters & Search - Only on /services page */}
         {pathname === '/services' && (
-           <motion.div 
-             initial={{ opacity: 0, y: 20 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16 items-center"
-           >
-              {/* Search */}
-              <div className="lg:col-span-4 relative group">
-                 <input 
-                   type="text" 
-                   placeholder="SEARCH INTELLIGENCE..."
-                   value={searchQuery}
-                   onChange={(e) => setSearchQuery(e.target.value)}
-                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 text-[10px] font-black tracking-widest focus:outline-none focus:border-primary/50 transition-all uppercase placeholder:opacity-30"
-                 />
-                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-primary transition-colors" />
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-16 items-center"
+          >
+            {/* Search */}
+            <div className="lg:col-span-4 relative group">
+              <input
+                type="text"
+                placeholder="SEARCH SERVICES..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 text-[10px] font-black tracking-widest focus:outline-none focus:border-primary/50 transition-all uppercase placeholder:opacity-30"
+              />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-primary transition-colors" />
+            </div>
 
-              {/* Category Filter */}
-              <div className="lg:col-span-5 flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
-                 {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`whitespace-nowrap px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
-                        selectedCategory === cat 
-                        ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20' 
-                        : 'bg-white/5 border-white/5 text-brand-text/40 hover:border-white/20'
+            {/* Category Filter */}
+            <div className="lg:col-span-5 flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`whitespace-nowrap px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${selectedCategory === cat
+                    ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20'
+                    : 'bg-white/5 border-white/5 text-brand-text/40 hover:border-white/20'
+                    }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort By */}
+            <div className="lg:col-span-3 flex items-center gap-4">
+              <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 w-full">
+                {[
+                  { id: 'order', label: 'RANK', icon: <SortAsc className="w-3 h-3" /> },
+                  { id: 'price-low', label: 'MIN $', icon: null },
+                  { id: 'price-high', label: 'MAX $', icon: null }
+                ].map(sort => (
+                  <button
+                    key={sort.id}
+                    onClick={() => setSortBy(sort.id as any)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === sort.id ? 'bg-white/10 text-primary' : 'text-brand-text/30 hover:text-brand-text/60'
                       }`}
-                    >
-                      {cat}
-                    </button>
-                 ))}
+                  >
+                    {sort.icon}
+                    {sort.label}
+                  </button>
+                ))}
               </div>
-
-              {/* Sort By */}
-              <div className="lg:col-span-3 flex items-center gap-4">
-                 <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 w-full">
-                    {[
-                      { id: 'order', label: 'RANK', icon: <SortAsc className="w-3 h-3" /> },
-                      { id: 'price-low', label: 'MIN $', icon: null },
-                      { id: 'price-high', label: 'MAX $', icon: null }
-                    ].map(sort => (
-                      <button
-                        key={sort.id}
-                        onClick={() => setSortBy(sort.id as any)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${
-                          sortBy === sort.id ? 'bg-white/10 text-primary' : 'text-brand-text/30 hover:text-brand-text/60'
-                        }`}
-                      >
-                        {sort.icon}
-                        {sort.label}
-                      </button>
-                    ))}
-                 </div>
-              </div>
-           </motion.div>
+            </div>
+          </motion.div>
         )}
 
         {/* Services Grid */}
@@ -249,104 +247,105 @@ const ServicesSection = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
-                className="group relative flex flex-col h-full"
+                className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/5 transition-all duration-700 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
               >
-                {/* Premium Card Container */}
-                <div className="glass rounded-[3rem] overflow-hidden border border-white/5 transition-all duration-700 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl">
-                  
-                  {/* Thumbnail */}
-                  <Link href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`} className="block relative h-72 overflow-hidden bg-white/5">
-                    <Image 
-                      src={service.image} 
-                      alt={service.name} 
-                      fill
-                      className="object-cover transition-transform duration-1000 group-hover:scale-110"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
-                    
-                    {/* Floating Meta */}
-                    <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
-                      <span className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-[0.2em] px-5 py-2.5 rounded-xl border border-white/10">
-                        {service.category}
-                      </span>
-                      <div className="w-10 h-10 rounded-xl bg-primary/20 backdrop-blur-md border border-primary/30 flex items-center justify-center text-primary">
-                        <Zap className="w-5 h-5 fill-current" />
-                      </div>
-                    </div>
+                {/* Link Overlay - Makes whole card clickable except for specific buttons */}
+                <Link 
+                  href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`}
+                  className="absolute inset-0 z-10"
+                  aria-label={`View ${service.name}`}
+                />
 
-                    <div className="absolute bottom-6 left-10 right-10 flex items-center justify-between">
-                       <div className="flex items-center space-x-1 text-secondary">
-                          {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-2.5 h-2.5 fill-current" />)}
-                          <span className="text-[10px] font-black ml-2 text-white/60">5.0</span>
-                       </div>
-                       <div className="text-[9px] font-black uppercase tracking-widest text-primary/80 flex items-center gap-2">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Verified
-                       </div>
-                    </div>
-                  </Link>
-    
-                  {/* Content Body */}
-                  <div className="p-10 flex flex-col flex-1">
-                    <Link href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`}>
-                      <h3 className="text-3xl font-black mb-4 text-brand-text group-hover:text-primary transition-colors uppercase tracking-tighter leading-none">{service.name}</h3>
-                    </Link>
-                    <p className="text-brand-text/40 mb-10 line-clamp-2 text-sm font-medium leading-relaxed italic">{service.description}</p>
-                    
-                    <div className="mt-auto">
-                       <div className="flex items-end justify-between mb-8">
-                          <div>
-                            <span className="text-[8px] text-brand-text/20 block uppercase tracking-[0.4em] font-black mb-1">Global Access</span>
-                            <div className="flex items-baseline gap-1">
-                               <span className="text-[10px] text-brand-text/40 font-bold">$</span>
-                               <span className="text-4xl font-black text-brand-text tracking-tighter">{service.price}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                             <div className="flex -space-x-2">
-                                {[1,2,3].map(i => (
-                                  <div key={i} className="w-7 h-7 rounded-full border-2 border-brand-bg bg-white/10 flex items-center justify-center text-[10px] font-black uppercase">
-                                     {i}
-                                  </div>
-                                ))}
-                             </div>
-                             <span className="text-[8px] text-brand-text/20 font-black uppercase tracking-widest mt-1 block">Deploying Stats</span>
-                          </div>
-                       </div>
+                {/* Thumbnail */}
+                <div className="relative h-48 md:h-72 overflow-hidden bg-white/5">
+                  <Image
+                    src={service.image}
+                    alt={service.name}
+                    fill
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
 
-                       <div className="flex gap-3">
-                          <motion.button 
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => addToCart({ ...service, quantity: 1, id: service.id || service.name })}
-                            className="flex-1 bg-white/5 hover:bg-white/10 py-4 rounded-2xl border border-white/5 flex items-center justify-center gap-3 transition-all group/btn"
-                          >
-                            <ShoppingCart className="w-4 h-4 text-brand-text/20 group-hover/btn:text-primary transition-colors" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 group-hover/btn:text-brand-text">Stash</span>
-                          </motion.button>
-                          
-                          <Link href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`} className="flex-[2]">
-                            <motion.button 
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              className="w-full bg-primary text-black py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 border-b-4 border-secondary shadow-xl shadow-primary/10 group/order"
-                            >
-                              <Zap className="w-4 h-4 fill-current transition-transform group-hover/order:scale-125" />
-                              <span>Deploy Now</span>
-                            </motion.button>
-                          </Link>
-                       </div>
+                  {/* Floating Meta */}
+                  <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">
+                    <span className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-[0.2em] px-5 py-2.5 rounded-xl border border-white/10">
+                      {service.category}
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 backdrop-blur-md border border-primary/30 flex items-center justify-center text-primary">
+                      <Zap className="w-5 h-5 fill-current" />
                     </div>
                   </div>
 
-                  {/* Aesthetic Inner Glow */}
-                  <div className="absolute inset-[1px] rounded-[3rem] border border-white/5 pointer-events-none -z-10" />
+                  <div className="absolute bottom-6 left-6 md:left-10 right-6 md:right-10 flex items-center justify-between z-20">
+                    <div className="flex items-center space-x-1 text-secondary">
+                      {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-2.5 h-2.5 fill-current" />)}
+                      <span className="text-[10px] font-black ml-2 text-white/60">5.0</span>
+                    </div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-primary/80 flex items-center gap-2">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Verified
+                    </div>
+                  </div>
                 </div>
 
+                {/* Content Body */}
+                <div className="p-6 md:p-10 flex flex-col flex-1 relative z-20">
+                  <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors uppercase tracking-tighter leading-none">{service.name}</h3>
+                  <p className="text-brand-text/40 mb-6 md:mb-10 line-clamp-2 text-xs md:sm font-medium leading-relaxed italic">{service.description}</p>
+
+                  <div className="mt-auto">
+                    <div className="flex items-end justify-between mb-6 md:mb-8">
+                      <div>
+                        <span className="text-[8px] text-brand-text/20 block uppercase tracking-[0.4em] font-black mb-1">Global Access</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[10px] text-brand-text/40 font-bold">$</span>
+                          <span className="text-3xl md:text-4xl font-black text-brand-text tracking-tighter">{service.price}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex -space-x-2">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-brand-bg bg-white/10 flex items-center justify-center text-[8px] md:text-[10px] font-black uppercase">
+                              {i}
+                            </div>
+                          ))}
+                        </div>
+                        <span className="text-[8px] text-brand-text/20 font-black uppercase tracking-widest mt-1 block">Stats</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 relative z-30">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart({ ...service, quantity: 1, id: service.id || service.name }); }}
+                        className="flex-1 bg-white/5 hover:bg-white/10 py-3 md:py-4 rounded-2xl border border-white/5 flex items-center justify-center gap-2 md:gap-3 transition-all group/btn"
+                      >
+                        <ShoppingCart className="w-4 h-4 text-brand-text/20 group-hover/btn:text-primary transition-colors" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 group-hover/btn:text-brand-text">Cart</span>
+                      </motion.button>
+
+                      <Link href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`} className="flex-[2]">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="w-full bg-primary text-black py-3 md:py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 md:gap-3 border-b-4 border-secondary shadow-xl shadow-primary/10 group/order"
+                        >
+                          <Zap className="w-4 h-4 fill-current transition-transform group-hover/order:scale-125" />
+                          <span>Buy Now</span>
+                        </motion.button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aesthetic Inner Glow */}
+                <div className="absolute inset-[1px] rounded-[2rem] md:rounded-[3rem] border border-white/5 pointer-events-none -z-10" />
+
                 {/* Index Number */}
-                <div className="absolute -top-4 -right-4 w-12 h-12 glass rounded-full flex items-center justify-center text-[10px] font-black text-brand-text/20 border border-white/5 rotate-12 group-hover:rotate-0 transition-all">
-                   {index < 9 ? `0${index + 1}` : index + 1}
+                <div className="absolute -top-4 -right-4 w-12 h-12 glass rounded-full flex items-center justify-center text-[10px] font-black text-brand-text/20 border border-white/5 rotate-12 group-hover:rotate-0 transition-all z-20">
+                  {index < 9 ? `0${index + 1}` : index + 1}
                 </div>
               </motion.div>
             ))}
@@ -355,17 +354,17 @@ const ServicesSection = () => {
 
         {/* Empty State */}
         {filteredServices.length === 0 && (
-           <motion.div 
-             initial={{ opacity: 0 }}
-             animate={{ opacity: 1 }}
-             className="text-center py-40 flex flex-col items-center"
-           >
-              <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/5">
-                <Search className="w-8 h-8 text-brand-text/10" />
-              </div>
-              <h3 className="text-2xl font-black uppercase tracking-tighter text-brand-text mb-4">No Intel Found</h3>
-              <p className="text-brand-text/40 font-medium">Try adjusting your tactical parameters or search query.</p>
-           </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-40 flex flex-col items-center"
+          >
+            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/5">
+              <Search className="w-8 h-8 text-brand-text/10" />
+            </div>
+            <h3 className="text-2xl font-black uppercase tracking-tighter text-brand-text mb-4">No Products Found</h3>
+            <p className="text-brand-text/40 font-medium">Try adjusting your search query.</p>
+          </motion.div>
         )}
       </div>
     </section>

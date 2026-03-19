@@ -51,7 +51,7 @@ const Hero = () => {
               <span className="text-5xl sm:text-6xl md:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 min-w-full md:min-w-[450px]">
                 <Typewriter
                   options={{
-                    strings: ['PRO COURSES', 'PREMIUM INTEL', 'DIGITAL TOOLS'],
+                    strings: ['PRO COURSES', 'PREMIUM TOOLS', 'DIGITAL ASSETS'],
                     autoStart: true,
                     loop: true,
                     delay: 50,
@@ -92,7 +92,7 @@ const Hero = () => {
               </motion.button>
             </div>
 
-            <div className="mt-20 flex flex-row items-center justify-start gap-4 sm:gap-6 text-left">
+            <div className="mt-10 md:mt-20 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6 text-center sm:text-left">
               <div className="flex -space-x-5 md:-space-x-6">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-brand-bg overflow-hidden shadow-xl relative first:ml-0">

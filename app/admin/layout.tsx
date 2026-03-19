@@ -24,8 +24,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { profile, isAdmin, loading, logout } = useAuth();
   const pathname = usePathname();
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-primary font-black uppercase tracking-widest">Loading...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-black flex items-center justify-center text-accent font-black uppercase tracking-widest">Access Denied</div>;
+  if (loading) return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-primary font-black uppercase tracking-widest">Loading...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-accent font-black uppercase tracking-widest">Access Denied</div>;
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -39,7 +39,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg flex">
+    <div className="min-h-screen bg-brand-soft flex">
       {/* Admin Sidebar */}
       <aside className="w-80 bg-black/40 border-r border-white/5 hidden lg:flex flex-col sticky top-0 h-screen">
         <div className="p-10 border-b border-white/5">

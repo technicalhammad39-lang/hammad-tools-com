@@ -128,7 +128,7 @@ const BlogPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 text-brand-text"
           >
-            Cyber <span className="internal-gradient">Insights</span>
+            Latest <span className="internal-gradient">Blogs</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -173,10 +173,15 @@ const BlogPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="group glass rounded-[2rem] overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-500 flex flex-col relative"
+              className="group glass rounded-[2.5rem] overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-500 flex flex-col relative"
             >
+              <Link 
+                href={`/blog/${post.slug || post.id}`}
+                className="absolute inset-0 z-10"
+                aria-label={`Read ${post.title}`}
+              />
               {/* Image */}
-              <div className="relative h-64 overflow-hidden">
+              <div className="relative h-48 md:h-64 overflow-hidden">
                 <Image 
                   src={post.thumbnail || 'https://picsum.photos/seed/blog/800/600'} 
                   alt={post.title}
@@ -184,7 +189,7 @@ const BlogPage = () => {
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent opacity-80" />
                 <div className="absolute top-6 left-6">
                   <span className="px-4 py-1.5 bg-primary/20 backdrop-blur-md text-primary text-[10px] font-black uppercase tracking-widest rounded-xl border border-primary/20">
                     {post.category}
@@ -206,7 +211,7 @@ const BlogPage = () => {
                   </span>
                 </div>
                 
-                <h2 className="text-2xl font-black mb-4 group-hover:text-primary transition-colors leading-tight text-brand-text uppercase tracking-tighter">
+                <h2 className="text-xl md:text-2xl font-black mb-3 group-hover:text-primary transition-colors leading-tight text-brand-text uppercase tracking-tighter">
                   {post.title}
                 </h2>
                 
@@ -215,13 +220,10 @@ const BlogPage = () => {
                 </p>
 
                 <div className="mt-auto">
-                  <Link 
-                    href={`/blog/${post.slug || post.id}`}
-                    className="w-full glass py-4 rounded-xl flex items-center justify-center gap-3 text-brand-text font-black uppercase tracking-widest text-xs group/link hover:bg-primary hover:text-black transition-all border border-white/5"
-                  >
-                    Read Intelligence 
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
-                  </Link>
+                  <div className="w-full glass py-4 rounded-xl flex items-center justify-center gap-3 text-brand-text font-black uppercase tracking-widest text-[10px] border border-white/5 relative z-20 group-hover:bg-primary group-hover:text-black transition-all">
+                    Read More 
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </div>
                 </div>
               </div>
             </motion.article>

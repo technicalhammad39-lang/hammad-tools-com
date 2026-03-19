@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   },
   description: 'Access premium digital subscriptions, tools, and pro courses at unbeatable prices. Fast, secure, and reliable service from Hammad Tools.',
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
   }
 };
 

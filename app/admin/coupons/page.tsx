@@ -63,6 +63,15 @@ const AdminCoupons = () => {
     return () => unsubscribe();
   }, [isAdmin]);
 
+  const generateCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewCoupon({ ...newCoupon, code: result });
+  };
+
   const handleAdd = async () => {
     if (!newCoupon.code.trim()) return;
     try {
@@ -109,8 +118,8 @@ const AdminCoupons = () => {
     <div className="min-h-screen">
       <div className="flex justify-between items-center mb-12">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text">Tactical <span className="internal-gradient">Coupons</span></h1>
-          <p className="text-brand-text/40 font-medium mt-2">Manage discount codes and promotional overrides.</p>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text">Manage <span className="internal-gradient">Coupons</span></h1>
+          <p className="text-brand-text/40 font-medium mt-2">Create and track discount codes for premium services.</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
@@ -131,13 +140,21 @@ const AdminCoupons = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="space-y-2">
                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-2">Coupon Code</label>
-               <input 
-                  type="text" 
-                  placeholder="EX: SAVE50"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary text-sm font-black tracking-widest"
-                  value={newCoupon.code}
-                  onChange={e => setNewCoupon({...newCoupon, code: e.target.value})}
-                />
+               <div className="flex gap-2">
+                 <input 
+                    type="text" 
+                    placeholder="EX: SAVE50"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary text-sm font-black tracking-widest uppercase"
+                    value={newCoupon.code}
+                    onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
+                  />
+                  <button 
+                    onClick={generateCode}
+                    className="px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Auto
+                  </button>
+               </div>
             </div>
             <div className="space-y-2">
                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-2">Discount %</label>

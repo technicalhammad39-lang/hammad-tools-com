@@ -8,24 +8,17 @@ import { ExternalLink, Globe, Zap, Globe2 } from 'lucide-react';
 const partners = [
   {
     name: 'DailyHayat',
-    desc: 'Premier intelligence network for digital trends and global news updates.',
+    desc: 'Premier network for digital trends and global news updates.',
     url: 'https://dailyhayat.net',
     logo: 'https://dailyhayat.net/wp-content/uploads/2023/10/daily-hayat-logo.png',
     tag: 'Strategic Partner'
   },
   {
-    name: 'SubHammad',
-    desc: 'Advanced subscription logistics and enterprise-grade tool access.',
+    name: 'Khaksar Agency',
+    desc: 'Leading digital solutions and premium service scaling for local markets.',
     url: '#',
-    logo: '/logo.png',
-    tag: 'Core Division'
-  },
-  {
-    name: 'Hammad Tech',
-    desc: 'Infrastructure management and cyber-security protocol development.',
-    url: '#',
-    logo: '/logo.png',
-    tag: 'In-House'
+    logo: 'https://ui-avatars.com/api/?name=Khaksar+Agency',
+    tag: 'Digital Partner'
   }
 ];
 
@@ -40,31 +33,28 @@ const PartnerSection = () => {
         <div className="text-center mb-24">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/40 mb-8"
           >
             <Globe2 className="w-3 h-3 text-primary" />
-            Strategic Ecosystem
+            Our Network
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6"
           >
-            Our Tactical <span className="internal-gradient">Allies</span>
+            Trusted <span className="internal-gradient">Partners</span>
           </motion.h2>
-          <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools protocol.</p>
+          <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {partners.map((partner, index) => (
             <motion.div
               key={partner.name}
               initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -10 }}
               className="group relative"

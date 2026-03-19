@@ -110,7 +110,7 @@ const Testimonials = () => {
 
         {/* Unified Layout: Dual-Row Auto Marquee for all screens */}
         <div className="space-y-4 md:space-y-8">
-          <Marquee speed={35} gradient={false} pauseOnHover={true}>
+          <Marquee speed={20} gradient={false} pauseOnHover={true}>
             {testimonials.slice(0, 3).map((t, i) => (
               <div key={i} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
                 <TestimonialCard t={t} i={i} />
@@ -123,7 +123,7 @@ const Testimonials = () => {
               </div>
             ))}
           </Marquee>
-          <Marquee speed={30} direction="right" gradient={false} pauseOnHover={true}>
+          <Marquee speed={15} direction="right" gradient={false} pauseOnHover={true}>
             {testimonials.slice(3, 6).map((t, i) => (
               <div key={i} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
                 <TestimonialCard t={t} i={i} />
