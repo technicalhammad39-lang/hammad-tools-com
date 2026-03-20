@@ -54,7 +54,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-12">
+          <div className="hidden lg:flex items-center space-x-12">
             <div className="flex items-center space-x-10">
               {navLinks.map((link) => (
                 <Link
@@ -110,7 +110,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-4">
+          <div className="lg:hidden flex items-center space-x-4">
             <button 
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 text-brand-text/40"
@@ -139,7 +139,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-gradient-to-b from-[#0A0A0A] to-[#121212] border-t border-white/5 overflow-hidden shadow-2xl"
+            className="lg:hidden bg-gradient-to-b from-[#0A0A0A] to-[#121212] border-t border-white/5 overflow-hidden shadow-2xl"
           >
             <div className="px-4 pt-2 pb-10 space-y-1">
               {navLinks.map((link) => (

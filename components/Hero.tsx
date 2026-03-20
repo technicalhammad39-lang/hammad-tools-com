@@ -9,7 +9,7 @@ import Typewriter from 'typewriter-effect';
 
 const Hero = () => {
   return (
-    <section className="relative min-h-[100dvh] flex items-center pt-24 md:pt-32 overflow-hidden">
+    <section className="relative min-h-[100dvh] flex flex-col items-center justify-center pt-24 lg:pt-32 overflow-hidden w-full">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <video
