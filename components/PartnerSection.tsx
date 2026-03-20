@@ -46,7 +46,7 @@ const PartnerSection = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-[40px] sm:text-6xl md:text-7xl font-black uppercase tracking-tighter text-brand-text mb-6 flex flex-col md:block"
           >
-            <span className="md:inline">Trusted </span>
+            <span className="font-serif italic text-white normal-case md:inline">Trusted </span>
             <span className="internal-gradient md:inline">Partners</span>
           </motion.h2>
           <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>

@@ -103,7 +103,7 @@ const Testimonials = () => {
             viewport={{ once: true }}
             className="text-4xl md:text-7xl font-black mb-4 md:mb-6 tracking-tighter text-brand-text uppercase"
           >
-            What Our <span className="internal-gradient">Legends</span> Say
+            <span className="font-serif italic text-white normal-case">What Our</span> <span className="internal-gradient">Legends</span> Say
           </motion.h2>
           <p className="text-brand-text/60 text-[10px] md:text-sm font-black uppercase tracking-widest">Join 10,000+ satisfied users worldwide.</p>
         </div>

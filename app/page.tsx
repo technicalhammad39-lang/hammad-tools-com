@@ -63,7 +63,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="text-5xl md:text-7xl font-black mb-6 tracking-tighter text-brand-text uppercase"
             >
-              Why Choose <span className="internal-gradient">Us</span>?
+              <span className="font-serif italic text-white normal-case">Why</span> Choose <span className="internal-gradient">Us</span>?
             </motion.h2>
             <p className="text-brand-text/60 text-xs max-w-2xl mx-auto font-black uppercase tracking-widest">Experience the best subscription platform with premium features and elite security.</p>
           </div>
