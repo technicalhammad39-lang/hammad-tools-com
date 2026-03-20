@@ -142,8 +142,8 @@ const ServicesSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header Area */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left mb-16 gap-10">
-          <div className="max-w-2xl flex flex-col items-center md:items-start">
+        <div className="flex flex-col items-center text-center mb-16 gap-10">
+          <div className="max-w-3xl flex flex-col items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -155,12 +155,12 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none ${pathname === '/services' ? 'flex flex-col md:block overflow-hidden' : 'flex flex-col md:block'}`}
+              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none text-center`}
             >
               <span className="md:inline">Premium </span>
               <span className="internal-gradient md:inline">Subscriptions</span>
             </motion.h2>
-            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-xl mx-auto md:mx-0">
+            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-2xl mx-auto text-center">
               Deploy high-performance digital subscriptions, exclusive premium software, and elite tools with instant automated execution.
             </p>
           </div>
