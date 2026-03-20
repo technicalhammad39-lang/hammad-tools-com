@@ -9,7 +9,7 @@ import Typewriter from 'typewriter-effect';
 
 const Hero = () => {
   return (
-    <section className="relative min-h-[100dvh] flex flex-col items-center justify-center pt-24 lg:pt-32 overflow-hidden w-full">
+    <section className="relative min-h-[100dvh] md:min-h-[70dvh] md:max-h-[800px] lg:min-h-[100dvh] lg:max-h-none flex flex-col items-center justify-center pt-24 lg:pt-32 overflow-hidden w-full">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <video
@@ -35,6 +35,7 @@ const Hero = () => {
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
+            className="md:w-full md:max-w-3xl md:mx-auto md:flex md:flex-col md:items-center md:text-center lg:items-start lg:text-left lg:mx-0"
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -46,9 +47,9 @@ const Hero = () => {
               <span className="text-xs font-semibold uppercase tracking-wider text-brand-text/80">Premium Subscription Platform</span>
             </motion.div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-8xl font-black leading-[1.1] md:leading-[0.9] mb-8 tracking-tighter text-brand-text flex flex-col items-start gap-2 md:gap-4 text-left">
-              <span className="text-5xl sm:text-6xl md:text-8xl font-serif italic text-white leading-tight whitespace-nowrap">Unlock The</span>
-              <span className="text-4xl sm:text-6xl md:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.1] md:leading-[0.9] mb-8 tracking-tighter text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
+              <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif italic text-white leading-tight whitespace-nowrap">Unlock The</span>
+              <span className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
                 <Typewriter
                   options={{
                     strings: ['PRO COURSES', 'PREMIUM TOOLS', 'DIGITAL ASSETS'],
@@ -66,12 +67,12 @@ const Hero = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="text-base md:text-xl text-gray-400 md:text-brand-text/60 mt-6 md:mt-10 mb-10 max-w-lg leading-relaxed font-medium relative z-20 text-left mx-0"
+              className="text-base md:text-xl text-gray-400 md:text-brand-text/60 mt-6 md:mt-10 mb-10 max-w-lg md:max-w-2xl leading-relaxed font-medium relative z-20 text-left md:text-center lg:text-left mx-0 md:mx-auto lg:mx-0"
             >
               Access Netflix, ChatGPT Plus, Canva Pro, and 50+ other premium content access at unbeatable prices. Fast, secure, and reliable.
             </motion.p>
 
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-start">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
               <Link href="/services" className="w-full md:w-auto">
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
@@ -92,7 +93,7 @@ const Hero = () => {
               </motion.button>
             </div>
 
-            <div className="mt-10 md:mt-20 flex flex-row items-center justify-start gap-3 sm:gap-6 text-left">
+            <div className="mt-10 md:mt-20 flex flex-row items-center justify-start md:justify-center lg:justify-start gap-3 sm:gap-6 text-left md:text-center lg:text-left">
               <div className="flex -space-x-5 md:-space-x-6">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-brand-bg overflow-hidden shadow-xl relative first:ml-0">
@@ -107,7 +108,7 @@ const Hero = () => {
                 ))}
               </div>
               <div className="flex flex-col justify-center gap-0.5">
-                <div className="flex items-center text-secondary gap-0.5">
+                <div className="flex items-center text-secondary gap-0.5 md:justify-center lg:justify-start">
                   {[1, 2, 3, 4, 5].map((i) => <Star key={i} className="w-5 h-5 md:w-7 md:h-7 fill-current" />)}
                 </div>
                 <p className="text-sm md:text-xl font-medium text-gray-300 whitespace-nowrap">Trusted by 10k+ users</p>
