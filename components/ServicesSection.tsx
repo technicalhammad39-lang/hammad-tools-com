@@ -155,7 +155,7 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none ${pathname === '/services' ? 'whitespace-nowrap flex-row overflow-hidden' : 'flex flex-col md:block'}`}
+              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none ${pathname === '/services' ? 'flex flex-col md:block overflow-hidden' : 'flex flex-col md:block'}`}
             >
               <span className="md:inline">Premium </span>
               <span className="internal-gradient md:inline">Subscriptions</span>
@@ -244,7 +244,7 @@ const ServicesSection = () => {
                     src={'/services-card.png'}
                     alt={service.name}
                     fill
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110 px-4 pt-4 rounded-[3rem]"
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110 p-4 rounded-[2.5rem]"
                     referrerPolicy="no-referrer"
                     onError={(e: any) => {
                       e.target.src = 'https://images.unsplash.com/photo-1614332287897-cdc485fa562d?q=80&w=800';

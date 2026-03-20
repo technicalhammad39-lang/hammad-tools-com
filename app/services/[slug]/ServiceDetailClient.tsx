@@ -121,7 +121,10 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 blur-[120px] rounded-full -z-10" />
 
       <div className="max-w-7xl mx-auto">
-        <button onClick={() => router.back()} className="group inline-flex items-center space-x-3 text-brand-text/40 hover:text-primary mb-12 transition-all p-2 rounded-xl hover:bg-white/5">
+        <button 
+          onClick={() => router.back()} 
+          className="group inline-flex items-center space-x-3 text-brand-text/40 hover:text-primary mb-4 sm:mb-12 transition-all p-1 sm:p-2 rounded-xl hover:bg-white/5"
+        >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="uppercase font-black tracking-[0.2em] text-[10px]">Back to Services</span>
         </button>
@@ -166,7 +169,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
             {/* Quick Badges */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="glass p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 md:gap-4 group">
+              <div className="glass p-3 sm:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform flex-shrink-0">
                   <Sparkles className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
@@ -175,7 +178,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                   <div className="text-[10px] md:text-xs font-black uppercase text-emerald-400 leading-tight">{service.deliveryStatus || 'Instant'}</div>
                 </div>
               </div>
-              <div className="glass p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 md:gap-4 group">
+              <div className="glass p-3 sm:p-6 rounded-2xl md:rounded-[2rem] border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform flex-shrink-0">
                   <Clock className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
