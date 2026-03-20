@@ -82,7 +82,7 @@ const TestimonialCard = ({ t }: { t: Testimonial; i: number }) => (
         />
       </div>
       <div>
-        <h4 className="font-black text-brand-text text-[11px] uppercase tracking-tighter leading-none">{t.name}</h4>
+        <h4 className="font-black text-brand-text text-[11px] uppercase leading-none">{t.name}</h4>
         <p className="text-[8px] text-brand-text/40 font-black uppercase tracking-widest mt-1">{t.role}</p>
       </div>
     </div>
@@ -101,7 +101,7 @@ const Testimonials = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-7xl font-black mb-4 md:mb-6 tracking-tighter text-brand-text uppercase"
+            className="text-4xl md:text-7xl font-black mb-4 md:mb-6 text-brand-text uppercase"
           >
             <span className="font-serif italic text-white normal-case">What Our</span> <span className="internal-gradient">Legends</span> Say
           </motion.h2>

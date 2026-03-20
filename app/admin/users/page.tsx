@@ -117,7 +117,7 @@ const AdminUsers = () => {
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text mb-2">User <span className="text-primary">Registry</span></h1>
+          <h1 className="text-4xl font-black uppercase text-brand-text mb-2">User <span className="text-primary">Registry</span></h1>
           <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest">Total Accounts: {users.length}</p>
         </div>
         <div className="relative w-full md:w-96 group">
@@ -156,7 +156,7 @@ const AdminUsers = () => {
                         <User className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-black text-brand-text uppercase tracking-tighter text-sm">{u.displayName || 'Anonymous Entity'}</p>
+                        <p className="font-black text-brand-text uppercase text-sm">{u.displayName || 'Anonymous Entity'}</p>
                         <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/30 mt-1">{u.email}</p>
                       </div>
                     </div>
@@ -168,7 +168,7 @@ const AdminUsers = () => {
                       {u.role}
                     </span>
                   </td>
-                  <td className="p-8 text-xs font-black uppercase tracking-tighter text-brand-text/40">
+                  <td className="p-8 text-xs font-black uppercase text-brand-text/40">
                     {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
                   </td>
                   <td className="p-8 text-right">
@@ -213,7 +213,7 @@ const AdminUsers = () => {
           >
             <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-tighter text-brand-text">Activate <span className="text-primary">Service</span></h2>
+                <h2 className="text-2xl font-black uppercase text-brand-text">Activate <span className="text-primary">Service</span></h2>
                 <div className="mt-4 flex items-center space-x-3">
                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Duration:</p>
                    <select 
@@ -250,7 +250,7 @@ const AdminUsers = () => {
                       <Zap className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                       <div className="text-sm font-black text-brand-text uppercase tracking-tighter">{service.name}</div>
+                       <div className="text-sm font-black text-brand-text uppercase">{service.name}</div>
                        <div className="text-[10px] font-black text-primary uppercase">${service.price} Value</div>
                     </div>
                   </div>

@@ -42,7 +42,7 @@ const AdminDashboard = () => {
                 {stat.trend}
               </span>
             </div>
-            <div className="text-4xl font-black mb-1 text-brand-text tracking-tighter">{stat.value}</div>
+            <div className="text-4xl font-black mb-1 text-brand-text">{stat.value}</div>
             <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">{stat.label}</div>
           </motion.div>
         ))}
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
           <div className="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
              <div className="flex items-center gap-4">
                <div className="w-1.5 h-6 bg-primary rounded-full" />
-               <h2 className="text-2xl font-black uppercase tracking-tighter text-brand-text">Platform Overview</h2>
+               <h2 className="text-2xl font-black uppercase text-brand-text">Platform Overview</h2>
              </div>
              <button className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 px-6 py-2 rounded-full border border-primary/10">Full Report</button>
           </div>
@@ -68,7 +68,7 @@ const AdminDashboard = () => {
         <div className="glass rounded-[2.5rem] border border-white/5 p-10 shadow-2xl">
            <div className="flex items-center gap-4 mb-10">
              <div className="w-1.5 h-6 bg-accent rounded-full" />
-             <h2 className="text-2xl font-black uppercase tracking-tighter text-brand-text">System Alerts</h2>
+             <h2 className="text-2xl font-black uppercase text-brand-text">System Alerts</h2>
            </div>
            <div className="space-y-6">
              {[

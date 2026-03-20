@@ -155,7 +155,7 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 tracking-tighter text-brand-text uppercase leading-none text-center md:whitespace-nowrap`}
+              className={`text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 text-brand-text uppercase leading-none text-center md:whitespace-nowrap`}
             >
               <span className="font-serif italic text-white normal-case">Premium </span>
               <span className="internal-gradient inline">Subscriptions</span>
@@ -276,7 +276,7 @@ const ServicesSection = () => {
 
                 {/* Content Body */}
                 <div className="p-6 md:p-10 flex flex-col flex-1 relative z-20">
-                  <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors uppercase tracking-tighter leading-none">{service.name}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors uppercase leading-none">{service.name}</h3>
                   <p className="text-brand-text/40 mb-6 md:mb-10 line-clamp-2 text-xs md:sm font-medium leading-relaxed italic">{service.description}</p>
 
                   <div className="mt-auto">
@@ -285,7 +285,7 @@ const ServicesSection = () => {
                         <span className="text-[8px] text-brand-text/20 block uppercase tracking-[0.4em] font-black mb-1">Global Access</span>
                         <div className="flex items-baseline gap-1">
                           <span className="text-[10px] text-brand-text/40 font-bold">$</span>
-                          <span className="text-3xl md:text-4xl font-black text-brand-text tracking-tighter">{service.price}</span>
+                          <span className="text-3xl md:text-4xl font-black text-brand-text">{service.price}</span>
                         </div>
                       </div>
                       <div className="text-right">
@@ -336,7 +336,7 @@ const ServicesSection = () => {
             <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/5">
               <Search className="w-8 h-8 text-brand-text/10" />
             </div>
-            <h3 className="text-2xl font-black uppercase tracking-tighter text-brand-text mb-4">No Products Found</h3>
+            <h3 className="text-2xl font-black uppercase text-brand-text mb-4">No Products Found</h3>
             <p className="text-brand-text/40 font-medium">Try adjusting your search query.</p>
           </motion.div>
         )}

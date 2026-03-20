@@ -13,7 +13,8 @@ import {
   Plus, 
   Search,
   LogOut,
-  Ticket
+  Ticket,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -29,6 +30,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { id: 'orders', label: 'Order Management', href: '/admin/orders', icon: Zap },
     { id: 'tools', label: 'Manage Tools', href: '/admin/services', icon: ShoppingBag },
     { id: 'coupons', label: 'Coupons', href: '/admin/coupons', icon: Ticket },
     { id: 'giveaways', label: 'Giveaways', href: '/admin/giveaways', icon: Gift },
@@ -47,7 +49,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center border-b-4 border-[#FF8C2A]">
               <span className="text-brand-bg font-black text-2xl">H</span>
             </div>
-            <span className="text-2xl font-black tracking-tighter text-brand-text uppercase">
+            <span className="text-2xl font-black text-brand-text uppercase">
               Admin<span className="internal-gradient">Hub</span>
             </span>
           </Link>
@@ -95,7 +97,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               </div>
             </div>
             <div className="overflow-hidden">
-              <div className="font-black text-sm truncate text-brand-text uppercase tracking-tighter">{profile?.displayName || 'Admin'}</div>
+              <div className="font-black text-sm truncate text-brand-text uppercase">{profile?.displayName || 'Admin'}</div>
               <div className="text-[9px] font-black uppercase tracking-widest text-primary italic">System Overseer</div>
             </div>
           </div>

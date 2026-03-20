@@ -148,7 +148,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
       {/* Post Content */}
       <div className="px-4 pb-4">
-        <h2 className="text-xl font-black text-brand-text uppercase leading-none mb-3 tracking-tighter group-hover:text-primary transition-colors">
+        <h2 className="text-xl font-black text-brand-text uppercase leading-none mb-3 group-hover:text-primary transition-colors">
           {giveaway.title}
         </h2>
         <p className="text-brand-text/60 text-sm leading-relaxed mb-4">
@@ -330,7 +330,7 @@ export default function GiveawayPageClient() {
         {/* Feed Header */}
         <div className="flex items-center justify-between mb-12">
            <div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text">Mission <span className="internal-gradient">Feed</span></h1>
+              <h1 className="text-4xl font-black uppercase text-brand-text">Mission <span className="internal-gradient">Feed</span></h1>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/30">Hammad Tools Reward Protocol v2.0</p>
            </div>
            <div className="flex -space-x-3">

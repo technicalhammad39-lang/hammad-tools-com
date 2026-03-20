@@ -60,7 +60,7 @@ const AdminSocials = () => {
   return (
     <div className="max-w-4xl space-y-10">
       <div className="border-l-4 border-primary pl-8 py-2">
-        <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text mb-2">Social <span className="text-primary">Connections</span></h1>
+        <h1 className="text-4xl font-black uppercase text-brand-text mb-2">Social <span className="text-primary">Connections</span></h1>
         <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest leading-loose">Configure global social media links and communication portals.</p>
       </div>
 

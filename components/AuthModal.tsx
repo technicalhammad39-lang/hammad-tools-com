@@ -76,7 +76,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="p-10">
                 <div className="flex justify-between items-center mb-10">
                   <div>
-                    <h2 className="text-4xl font-black text-brand-text uppercase tracking-tighter">
+                    <h2 className="text-4xl font-black text-brand-text uppercase">
                       {mode === 'login' ? 'Welcome Back' : 'Join the Elite'}
                     </h2>
                     <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-widest mt-1">

@@ -20,7 +20,7 @@ const Footer = () => {
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center border-b-2 border-accent">
                 <span className="text-white font-black text-xl">H</span>
               </div>
-              <span className="text-2xl font-black tracking-tighter text-brand-text">
+              <span className="text-2xl font-black text-brand-text">
                 Hammad<span className="internal-gradient">Tools</span>
               </span>
             </Link>

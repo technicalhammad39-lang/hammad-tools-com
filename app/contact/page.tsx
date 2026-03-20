@@ -13,7 +13,7 @@ const ContactPage = () => {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter mb-4 text-brand-text md:whitespace-nowrap"
+            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-4 text-brand-text md:whitespace-nowrap"
           >
             <span className="font-serif italic text-white normal-case">Get</span> In <span className="internal-gradient">Touch</span>
           </motion.h1>

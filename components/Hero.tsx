@@ -47,7 +47,7 @@ const Hero = () => {
               <span className="text-xs font-semibold uppercase tracking-wider text-brand-text/80">Premium Subscription Platform</span>
             </motion.div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-8xl font-black leading-[1.1] md:leading-[1] mb-8 tracking-tighter text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
+            <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-8xl font-black leading-[1.1] md:leading-[1] mb-8 text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
               <span className="text-5xl sm:text-6xl md:text-8xl lg:text-8xl font-serif italic text-white leading-tight whitespace-nowrap">Unlock The</span>
               <span className="text-4xl sm:text-6xl md:text-8xl lg:text-8xl font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
                 <Typewriter

@@ -48,7 +48,7 @@ const Navbar = () => {
                 priority
               />
             </div>
-            <span className="text-xl sm:text-2xl font-black tracking-tighter text-brand-text uppercase leading-none">
+            <span className="text-xl sm:text-2xl font-black text-brand-text uppercase leading-none">
               Hammad<span className="internal-gradient">Tools</span>
             </span>
           </Link>
@@ -82,12 +82,6 @@ const Navbar = () => {
 
               {user ? (
                 <div className="flex items-center space-x-6 border-l border-white/5 pl-6">
-                  <Link href="/dashboard" className="hidden lg:flex p-2 hover:bg-white/5 rounded-full transition-colors text-brand-text/40 hover:text-primary">
-                    <LayoutDashboard className="w-5 h-5" />
-                  </Link>
-                  <button onClick={logout} className="hidden lg:flex p-2 hover:bg-white/5 rounded-full transition-colors text-accent/60 hover:text-accent">
-                    <LogOut className="w-5 h-5" />
-                  </button>
                   <Link href="/dashboard" className="w-10 h-10 rounded-xl overflow-hidden border border-primary/20 relative cursor-pointer hover:border-primary/50 transition-all hover:scale-105">
                     <Image 
                       src={profile?.photoURL || `https://ui-avatars.com/api/?name=${profile?.displayName}`} 
@@ -156,10 +150,9 @@ const Navbar = () => {
                 {user ? (
                   <div className="flex items-center justify-between">
                     <Link href="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 text-brand-text/40 font-black uppercase tracking-widest text-sm">
-                      <LayoutDashboard className="w-5 h-5" />
-                      <span>Dashboard</span>
+                      <User className="w-5 h-5" />
+                      <span>My Profile</span>
                     </Link>
-                    <button onClick={logout} className="text-accent/60 font-black uppercase tracking-widest text-sm">Logout</button>
                   </div>
                 ) : (
                   <button

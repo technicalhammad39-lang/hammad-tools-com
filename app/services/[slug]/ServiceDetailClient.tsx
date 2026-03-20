@@ -89,7 +89,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-brand-bg"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-2xl shadow-primary/20" /></div>;
   if (!service) return <div className="min-h-screen flex flex-col items-center justify-center text-brand-text bg-brand-bg">
     <Shield className="w-20 h-20 text-accent mb-6 opacity-20" />
-    <h2 className="text-3xl font-black uppercase mb-4 tracking-tighter">System Error: Service Missing</h2>
+    <h2 className="text-3xl font-black uppercase mb-4">System Error: Service Missing</h2>
     <Link href="/services" className="px-10 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest text-xs border-b-4 border-secondary transition-all hover:scale-105 active:scale-95">Back to Command Center</Link>
   </div>;
 
@@ -196,7 +196,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-[0.9]"
+                className="text-6xl md:text-8xl font-black mb-6 text-brand-text uppercase leading-[0.9]"
               >
                 {service.name}
               </motion.h1>
@@ -214,7 +214,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <Award className="w-6 h-6 text-primary" />
-                <h3 className="text-xl font-black uppercase tracking-tighter text-brand-text">Select your plan</h3>
+                <h3 className="text-xl font-black uppercase text-brand-text">Select your plan</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -307,7 +307,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30 mb-1">Final Transaction Amount</div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-6xl font-black text-brand-text tracking-tighter">${totalPrice}</span>
+                  <span className="text-6xl font-black text-brand-text">${totalPrice}</span>
                   {discount > 0 && <span className="text-xl font-black text-accent line-through opacity-40">${(currentPrice * quantity).toFixed(2)}</span>}
                 </div>
               </div>

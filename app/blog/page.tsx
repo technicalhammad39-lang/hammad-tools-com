@@ -126,7 +126,7 @@ const BlogPage = () => {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter mb-4 text-brand-text md:whitespace-nowrap"
+            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-4 text-brand-text md:whitespace-nowrap"
           >
             <span className="font-serif italic text-white normal-case">Latest</span> <span className="internal-gradient">Blogs</span>
           </motion.h1>
@@ -211,7 +211,7 @@ const BlogPage = () => {
                   </span>
                 </div>
                 
-                <h2 className="text-xl md:text-2xl font-black mb-3 group-hover:text-primary transition-colors leading-tight text-brand-text uppercase tracking-tighter">
+                <h2 className="text-xl md:text-2xl font-black mb-3 group-hover:text-primary transition-colors leading-tight text-brand-text uppercase">
                   {post.title}
                 </h2>
                 

@@ -41,7 +41,7 @@ export default function Home() {
                 className="w-1.5 h-1.5 rounded-full" 
                 style={{ backgroundColor: platform.color }}
               />
-              <span className="text-2xl font-black tracking-tighter text-brand-text/40 group-hover:text-brand-text transition-colors duration-300 uppercase italic">
+              <span className="text-2xl font-black text-brand-text/40 group-hover:text-brand-text transition-colors duration-300 uppercase italic">
                 {platform.name}
               </span>
             </div>
@@ -61,7 +61,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-5xl md:text-7xl font-black mb-6 tracking-tighter text-brand-text uppercase"
+              className="text-5xl md:text-7xl font-black mb-6 text-brand-text uppercase"
             >
               <span className="font-serif italic text-white normal-case">Why</span> Choose <span className="internal-gradient">Us</span>?
             </motion.h2>
@@ -133,7 +133,7 @@ export default function Home() {
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-lg md:text-2xl font-black mb-2 md:mb-4 text-brand-text uppercase tracking-tighter">{feature.title}</h3>
+                <h3 className="text-lg md:text-2xl font-black mb-2 md:mb-4 text-brand-text uppercase">{feature.title}</h3>
                 <p className="text-brand-text/50 leading-relaxed font-medium text-xs md:text-sm">{feature.desc}</p>
               </motion.div>
             ))}
@@ -200,7 +200,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-5xl md:text-7xl font-black mb-4 tracking-tighter text-brand-text uppercase">Got <span className="internal-gradient">Questions</span>?</h2>
+              <h2 className="text-5xl md:text-7xl font-black mb-4 text-brand-text uppercase">Got <span className="internal-gradient">Questions</span>?</h2>
               <p className="text-brand-text/40 font-black uppercase tracking-widest text-[10px]">Everything you need to know about Hammad Tools.</p>
             </div>
             <div className="space-y-6">
@@ -212,7 +212,7 @@ export default function Home() {
                 { q: "What payment methods do you accept?", a: "We currently process all orders via WhatsApp to ensure personalized service and instant delivery via manual confirmation." }
               ].map((item, i) => (
                 <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500">
-                  <summary className="p-8 cursor-pointer font-black text-sm uppercase tracking-tighter flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
+                  <summary className="p-8 cursor-pointer font-black text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
                     <span>{item.q}</span>
                     <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform duration-500 group-open:rotate-180 border border-primary/20">
                       <Zap className="w-4 h-4" />

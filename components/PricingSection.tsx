@@ -55,7 +55,7 @@ const PricingSection = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black mb-4 tracking-tighter uppercase"
+            className="text-4xl md:text-6xl font-black mb-4 uppercase"
           >
             Simple <span className="internal-gradient">Pricing</span> Plans
           </motion.h2>

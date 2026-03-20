@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Poppins as BrandFont } from 'next/font/google';
+import { Plus_Jakarta_Sans as BrandFont } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -9,7 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import CartDrawer from '@/components/CartDrawer';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
-const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800', '900'] });
+const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
 
 export const metadata: Metadata = {
   title: {

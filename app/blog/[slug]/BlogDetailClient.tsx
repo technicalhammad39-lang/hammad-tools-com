@@ -32,7 +32,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
   if (!post) return (
     <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4 text-center">
       <div>
-        <h1 className="text-4xl font-black text-brand-text mb-6 uppercase tracking-tighter">Transmission <span className="text-accent">Lost</span></h1>
+        <h1 className="text-4xl font-black text-brand-text mb-6 uppercase">Transmission <span className="text-accent">Lost</span></h1>
         <p className="text-brand-text/60 mb-10 max-w-md mx-auto">The article you're looking for has been archived or doesn't exist in our current timeline.</p>
         <Link href="/blog" className="bg-primary text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 inline-block hover:scale-105 transition-all">
           Return to Blog
@@ -70,7 +70,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
               {post.category}
             </motion.div>
             
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-[0.9] text-brand-text uppercase">
+            <h1 className="text-5xl md:text-7xl font-black mb-8 leading-[0.9] text-brand-text uppercase">
               {post.title.split(' ').slice(0, -1).join(' ')} <span className="internal-gradient">{post.title.split(' ').slice(-1)}</span>
             </h1>
             
@@ -87,7 +87,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
                 </div>
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-widest mb-1 text-brand-text/20">Written By</div>
-                  <div className="text-sm font-black text-brand-text uppercase tracking-tighter">{post.author}</div>
+                  <div className="text-sm font-black text-brand-text uppercase">{post.author}</div>
                 </div>
               </div>
               
@@ -99,7 +99,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
                 </div>
                 <div>
                   <div className="text-[10px] font-black uppercase tracking-widest mb-1 text-brand-text/20">Published</div>
-                  <div className="text-sm font-black text-brand-text uppercase tracking-tighter">{post.createdAt ? format(post.createdAt.toDate ? post.createdAt.toDate() : post.createdAt, 'MMMM dd, yyyy') : 'Recently'}</div>
+                  <div className="text-sm font-black text-brand-text uppercase">{post.createdAt ? format(post.createdAt.toDate ? post.createdAt.toDate() : post.createdAt, 'MMMM dd, yyyy') : 'Recently'}</div>
                 </div>
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
 
           <div className="glass rounded-[3rem] p-8 md:p-16 border border-white/5 mb-16">
             <div className="prose prose-invert prose-primary max-w-none 
-              prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tighter prose-headings:text-brand-text
+              prose-headings:font-black prose-headings:uppercase prose-headings:text-brand-text
               prose-p:text-brand-text/70 prose-p:leading-relaxed prose-p:text-lg
               prose-strong:text-primary prose-a:text-primary prose-a:no-underline hover:prose-a:underline
               prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10

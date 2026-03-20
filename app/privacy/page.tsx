@@ -15,7 +15,7 @@ const PrivacyPage = () => {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl font-bold mb-4 tracking-tight"
+            className="text-5xl font-bold mb-4"
           >
             Privacy <span className="text-primary">Policy</span>
           </motion.h1>

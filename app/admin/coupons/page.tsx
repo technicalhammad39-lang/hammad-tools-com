@@ -107,7 +107,7 @@ const AdminCoupons = () => {
   if (!isAdmin) {
     return (
       <div className="pt-32 pb-24 text-center">
-        <h1 className="text-3xl font-bold uppercase tracking-tighter text-brand-text">Access Blocked</h1>
+        <h1 className="text-3xl font-bold uppercase text-brand-text">Access Blocked</h1>
         <p className="mt-4 text-brand-text/40">Encryption key required for this sector.</p>
         <Link href="/" className="text-primary mt-8 inline-block font-black uppercase tracking-widest text-xs">Return to Surface</Link>
       </div>
@@ -118,7 +118,7 @@ const AdminCoupons = () => {
     <div className="min-h-screen">
       <div className="flex justify-between items-center mb-12">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-brand-text">Manage <span className="internal-gradient">Coupons</span></h1>
+          <h1 className="text-4xl font-black uppercase text-brand-text">Manage <span className="internal-gradient">Coupons</span></h1>
           <p className="text-brand-text/40 font-medium mt-2">Create and track discount codes for premium services.</p>
         </div>
         <button 
@@ -136,7 +136,7 @@ const AdminCoupons = () => {
           animate={{ opacity: 1, y: 0 }}
           className="glass rounded-3xl p-8 mb-12 border border-primary/20 bg-brand-soft/20"
         >
-          <h2 className="text-xl font-black mb-6 uppercase tracking-tighter text-brand-text">New Coupon Configuration</h2>
+          <h2 className="text-xl font-black mb-6 uppercase text-brand-text">New Coupon Configuration</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="space-y-2">
                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-2">Coupon Code</label>
