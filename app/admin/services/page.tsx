@@ -135,7 +135,7 @@ const AdminServices = () => {
               />
               <input 
                 type="number" 
-                placeholder="Base Price ($)"
+                placeholder="Base Price (Rs)"
                 className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
                 value={editForm.price || ''}
                 onChange={e => setEditForm({...editForm, price: Number(e.target.value)})}
@@ -184,7 +184,7 @@ const AdminServices = () => {
                   <button 
                     onClick={() => {
                       const plans = editForm.plans || [];
-                      setEditForm({...editForm, plans: [...plans, { name: 'New Plan', price: 0, benefits: ['Benefit 1'] }]});
+                      setEditForm({...editForm, plans: [...plans, { planName: 'New Plan', ourPrice: 0, officialPrice: 0, benefits: ['Benefit 1'] }]});
                     }}
                     className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-lg border border-emerald-500/20"
                   >
@@ -346,7 +346,7 @@ const AdminServices = () => {
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">{service.category}</span>
                       <span className="w-1 h-1 rounded-full bg-white/10" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">${service.price}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Rs {service.price}</span>
                       <span className="w-1 h-1 rounded-full bg-white/10" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{service.orderIndex || 0} RANK</span>
                     </div>

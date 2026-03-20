@@ -17,7 +17,8 @@ const AdminSocials = () => {
     instagram: '',
     youtube: '',
     linkedin: '',
-    whatsapp: '923209310656'
+    whatsapp: '923209310656',
+    googleBusiness: ''
   });
 
   useEffect(() => {
@@ -80,6 +81,32 @@ const AdminSocials = () => {
                   onChange={e => setSocials({...socials, facebook: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
                   placeholder="https://facebook.com/..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4 flex items-center gap-2">
+                   <Globe className="w-3 h-3" /> WhatsApp Phone/URL
+                </label>
+                <input 
+                  type="text" 
+                  value={socials.whatsapp}
+                  onChange={e => setSocials({...socials, whatsapp: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
+                  placeholder="e.g. 923209310656 or https://wa.me/..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4 flex items-center gap-2">
+                   <Globe className="w-3 h-3" /> Google Business URL
+                </label>
+                <input 
+                  type="text" 
+                  value={socials.googleBusiness}
+                  onChange={e => setSocials({...socials, googleBusiness: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
+                  placeholder="https://g.page/..."
                 />
               </div>
 

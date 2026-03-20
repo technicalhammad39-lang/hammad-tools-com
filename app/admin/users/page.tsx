@@ -251,7 +251,7 @@ const AdminUsers = () => {
                     </div>
                     <div className="text-left">
                        <div className="text-sm font-black text-brand-text uppercase">{service.name}</div>
-                       <div className="text-[10px] font-black text-primary uppercase">${service.price} Value</div>
+                       <div className="text-[10px] font-black text-primary uppercase">Rs {service.price} Value</div>
                     </div>
                   </div>
                   <Plus className="w-5 h-5 text-brand-text/20 group-hover:text-primary transition-colors" />

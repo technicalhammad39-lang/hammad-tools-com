@@ -119,12 +119,12 @@ export default function Home() {
                   rotateY: -5,
                   transition: { duration: 0.3 }
                 } : {}}
-                className="glass rounded-2xl md:rounded-[2rem] p-6 md:p-10 border border-white/5 group relative overflow-hidden transition-all duration-500 perspective-1000 bg-brand-soft/50 md:bg-transparent"
+                className="glass rounded-2xl md:rounded-[2rem] p-4 md:p-10 border border-white/5 group relative overflow-hidden transition-all duration-500 perspective-1000 bg-brand-soft/50 md:bg-transparent flex flex-row items-center md:items-start md:flex-col gap-4 md:gap-0"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 <div 
-                  className="w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-8 border transition-all"
+                  className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center mb-0 md:mb-8 border transition-all"
                   style={{ 
                     backgroundColor: `${feature.color}10`, 
                     borderColor: `${feature.color}30`,
@@ -133,8 +133,10 @@ export default function Home() {
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-lg md:text-2xl font-black mb-2 md:mb-4 text-brand-text uppercase">{feature.title}</h3>
-                <p className="text-brand-text/50 leading-relaxed font-medium text-xs md:text-sm">{feature.desc}</p>
+                <div className="flex flex-col">
+                  <h3 className="text-base sm:text-lg md:text-2xl font-black mb-1 md:mb-4 text-brand-text uppercase">{feature.title}</h3>
+                  <p className="text-brand-text/50 leading-relaxed font-medium text-[11px] sm:text-xs md:text-sm">{feature.desc}</p>
+                </div>
               </motion.div>
             ))}
           </div>

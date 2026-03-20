@@ -84,7 +84,7 @@ const CartDrawer = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-brand-text font-black text-sm uppercase tracking-widest truncate">{item.name}</h4>
-                      <p className="text-primary font-black mt-1 text-sm">${item.price}</p>
+                      <p className="text-primary font-black mt-1 text-sm">Rs {item.price}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[10px] text-brand-text/40 font-black uppercase tracking-widest">Qty: {item.quantity}</span>
                         <button
@@ -105,7 +105,7 @@ const CartDrawer = () => {
               <div className="p-6 border-t border-white/10 bg-black/40 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-brand-text/60 font-black uppercase tracking-widest text-xs">Subtotal</span>
-                  <span className="text-2xl font-black text-brand-text">${totalPrice.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-brand-text">Rs {totalPrice.toFixed(2)}</span>
                 </div>
                 <p className="text-[10px] text-brand-text/40 text-center uppercase tracking-widest font-black">
                   Instant Support & Fast Checkout via WhatsApp
@@ -113,8 +113,8 @@ const CartDrawer = () => {
                 <button
                   onClick={() => {
                     const phoneNumber = "923209310656";
-                    const itemsList = cart.map(item => `- ${item.name} (x${item.quantity}) - $${(item.price * item.quantity).toFixed(2)}`).join('%0A');
-                    const message = `Hello Hammad Tools! I would like to purchase:%0A%0A${itemsList}%0A%0ATotal: $${totalPrice.toFixed(2)}%0A%0APlease guide me with the next steps.`;
+                    const itemsList = cart.map(item => `- ${item.name} (x${item.quantity}) - Rs ${(item.price * item.quantity).toFixed(2)}`).join('%0A');
+                    const message = `Hello Hammad Tools! I would like to purchase:%0A%0A${itemsList}%0A%0ATotal: Rs ${totalPrice.toFixed(2)}%0A%0APlease guide me with the next steps.`;
                     window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
                     setIsCartOpen(false);
                   }}

@@ -155,7 +155,7 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 text-brand-text uppercase leading-none text-center md:whitespace-nowrap`}
+              className={`text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 text-brand-text uppercase leading-none text-center md:whitespace-nowrap`}
             >
               <span className="font-serif italic text-white normal-case">Premium </span>
               <span className="internal-gradient inline">Subscriptions</span>
@@ -284,7 +284,7 @@ const ServicesSection = () => {
                       <div>
                         <span className="text-[8px] text-brand-text/20 block uppercase tracking-[0.4em] font-black mb-1">Global Access</span>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-[10px] text-brand-text/40 font-bold">$</span>
+                          <span className="text-[10px] text-brand-text/40 font-bold whitespace-nowrap">Rs </span>
                           <span className="text-3xl md:text-4xl font-black text-brand-text">{service.price}</span>
                         </div>
                       </div>

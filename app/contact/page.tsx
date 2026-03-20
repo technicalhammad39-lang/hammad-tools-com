@@ -2,9 +2,15 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Mail, MessageSquare, Send, MapPin, Phone, Globe } from 'lucide-react';
+import { Mail, MessageSquare, Send, MapPin, Globe, Facebook, MessageCircle, Store } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 const ContactPage = () => {
+  const { settings } = useSettings();
+
+  // Helper to strip non-numeric chars for wa.me link
+  const cleanPhone = settings.supportPhone.replace(/\D/g, '');
+  const waLink = `https://wa.me/${cleanPhone}`;
   return (
     <main className="min-h-screen pt-20 md:pt-24 pb-20 px-4 bg-brand-bg">
       <div className="max-w-7xl mx-auto">
@@ -32,10 +38,10 @@ const ContactPage = () => {
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[
-                { label: 'Email Us', value: 'hammadkhaksar56@gmail.com', icon: Mail, color: 'text-primary' },
-                { label: 'Live Chat', value: 'Available 24/7', icon: MessageSquare, color: 'text-primary' },
-                { label: 'Location', value: 'Digital Space, Global', icon: MapPin, color: 'text-primary' },
-                { label: 'Socials', value: '@hammadtools_pro', icon: Globe, color: 'text-primary' },
+                { id: 'email', label: 'Email Us', value: settings.supportEmail, icon: Mail, color: 'text-primary' },
+                { id: 'chat', label: 'Live Chat', value: 'Available 24/7', icon: MessageSquare, color: 'text-primary' },
+                { id: 'location', label: 'Location', value: 'Digital Space, Global', icon: MapPin, color: 'text-primary' },
+                { id: 'socials', label: 'Socials', value: '', icon: Globe, color: 'text-primary' },
               ].map((item, i) => (
                 <motion.div
                   key={i}
@@ -47,9 +53,23 @@ const ContactPage = () => {
                   <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center ${item.color} border border-primary/20 shrink-0`}>
                     <item.icon className="w-5 h-5" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">{item.label}</div>
-                    <div className="font-black text-xs text-brand-text break-all">{item.value}</div>
+                    {item.id === 'socials' ? (
+                      <div className="flex items-center gap-3 mt-1">
+                        {settings.whatsappUrl && (
+                          <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#25D366] transition-colors"><MessageCircle className="w-4 h-4" /></a>
+                        )}
+                        {settings.facebookUrl && (
+                          <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#1877F2] transition-colors"><Facebook className="w-4 h-4" /></a>
+                        )}
+                        {settings.googleBusinessUrl && (
+                          <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#EA4335] transition-colors"><Store className="w-4 h-4" /></a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="font-black text-xs text-brand-text break-all">{item.value}</div>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -61,11 +81,16 @@ const ContactPage = () => {
               </div>
               <h3 className="text-2xl font-black mb-4 uppercase tracking-widest text-brand-text">Quick Support</h3>
               <p className="text-brand-text/60 text-sm mb-8 max-w-md">
-                For urgent matters, please join our Discord community for real-time assistance from our moderators and community members.
+                For urgent matters, please connect with us directly on WhatsApp for real-time assistance from our support team.
               </p>
-              <button className="bg-primary text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest border-b-2 border-accent hover:scale-105 transition-transform">
-                Join Discord
-              </button>
+              <a 
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-[#25D366] text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest border-b-4 border-[#128C7E] shadow-lg shadow-[#25D366]/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                Connect on WhatsApp
+              </a>
             </div>
           </div>
 

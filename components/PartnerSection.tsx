@@ -16,7 +16,7 @@ const partners = [
   {
     name: 'Khaksar Agency',
     desc: 'Leading digital solutions and premium service scaling for local markets.',
-    url: '#',
+    url: 'https://whatsapp.com/channel/0029VaoX5ax8V0tjn0fc1j08',
     logo: '/khaksar-crown', // Placeholder to trigger icon logic
     tag: 'Digital Partner'
   }

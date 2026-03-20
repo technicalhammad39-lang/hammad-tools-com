@@ -2,12 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Facebook, Twitter, Instagram, Youtube, Mail, MapPin, Phone } from 'lucide-react';
+import Image from 'next/image';
+import { Facebook, Mail, MapPin, Phone, MessageCircle, Store } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 import { usePathname } from 'next/navigation';
 
 const Footer = () => {
   const pathname = usePathname();
+  const { settings } = useSettings();
   if (pathname.startsWith('/admin')) return null;
 
   return (
@@ -17,8 +20,8 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-6">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center border-b-2 border-accent">
-                <span className="text-white font-black text-xl">H</span>
+              <div className="w-10 h-10 relative flex items-center justify-center">
+                <Image src="/logo-header.png" alt="Hammad Tools Logo" fill className="object-contain" />
               </div>
               <span className="text-2xl font-black text-brand-text">
                 Hammad<span className="internal-gradient">Tools</span>
@@ -28,15 +31,21 @@ const Footer = () => {
               The ultimate marketplace for premium digital subscriptions and tools. High-end services at affordable prices.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                <Instagram className="w-5 h-5" />
-              </a>
+              {settings.facebookUrl && (
+                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
+                  <Facebook className="w-5 h-5" />
+                </a>
+              )}
+              {settings.whatsappUrl && (
+                <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
+                  <MessageCircle className="w-5 h-5" />
+                </a>
+              )}
+              {settings.googleBusinessUrl && (
+                <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
+                  <Store className="w-5 h-5" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -60,19 +69,19 @@ const Footer = () => {
                 <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
                   <Mail className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest">hammadkhaksar56@gmail.com</span>
+                <span className="text-xs font-black uppercase tracking-widest break-all">{settings.supportEmail}</span>
               </li>
               <li className="flex items-center space-x-3 text-brand-text/60">
                 <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
                   <MapPin className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest">Digital World, Internet</span>
+                <span className="text-xs font-black uppercase tracking-widest break-all">Digital World, Internet</span>
               </li>
               <li className="flex items-center space-x-3 text-brand-text/60">
                 <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
                   <Phone className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest">+92 320 9310656</span>
+                <span className="text-xs font-black uppercase tracking-widest break-all">{settings.supportPhone}</span>
               </li>
             </ul>
           </div>

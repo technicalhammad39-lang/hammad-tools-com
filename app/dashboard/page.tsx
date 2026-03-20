@@ -155,7 +155,7 @@ const DashboardPage = () => {
 
   const stats = [
     { label: 'Active Subscriptions', value: activeSubs.toString(), icon: Zap, color: 'text-primary' },
-    { label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, icon: CreditCard, color: 'text-purple-500' },
+    { label: 'Total Spent', value: `Rs ${totalSpent.toFixed(2)}`, icon: CreditCard, color: 'text-purple-500' },
     { label: 'Giveaways Joined', value: joinedGiveaways.length.toString(), icon: Gift, color: 'text-pink-500' },
   ];
 
@@ -378,7 +378,7 @@ const DashboardPage = () => {
                          <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto">
                             <div className="text-right">
                                <div className="text-[9px] font-black tracking-widest text-brand-text/20 uppercase mb-1">Amount</div>
-                               <div className="text-xl font-black text-brand-text">${Number(order.price).toFixed(2)}</div>
+                               <div className="text-xl font-black text-brand-text">Rs {Number(order.price).toFixed(2)}</div>
                             </div>
                             <div className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase border ${
                                order.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-accent/10 text-accent border-accent/20'
