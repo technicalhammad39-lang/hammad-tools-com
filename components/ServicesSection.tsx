@@ -138,12 +138,12 @@ const ServicesSection = () => {
   }
 
   return (
-    <section className="py-16 md:py-32 relative overflow-hidden bg-brand-bg">
+    <section className="py-12 md:py-20 relative overflow-hidden bg-brand-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header Area */}
-        <div className="flex flex-col items-center text-center mb-16 gap-10">
-          <div className="max-w-3xl flex flex-col items-center">
+        <div className="flex flex-col items-center text-center mb-8 md:mb-12 gap-6 md:gap-8">
+          <div className="max-w-4xl flex flex-col items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -155,12 +155,12 @@ const ServicesSection = () => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`text-[40px] sm:text-6xl md:text-8xl font-black mb-6 tracking-tighter text-brand-text uppercase leading-none text-center`}
+              className={`text-[40px] sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 tracking-tighter text-brand-text uppercase leading-none text-center md:whitespace-nowrap`}
             >
-              <span className="md:inline">Premium </span>
-              <span className="internal-gradient md:inline">Subscriptions</span>
+              <span className="font-serif italic text-white normal-case">Premium </span>
+              <span className="internal-gradient inline">Subscriptions</span>
             </motion.h2>
-            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-2xl mx-auto text-center">
+            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-2xl mx-auto text-center mt-2">
               Deploy high-performance digital subscriptions, exclusive premium software, and elite tools with instant automated execution.
             </p>
           </div>

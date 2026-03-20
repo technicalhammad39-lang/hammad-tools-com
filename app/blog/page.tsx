@@ -119,22 +119,22 @@ const BlogPage = () => {
   }
 
   return (
-    <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen pt-20 md:pt-24 pb-20 px-4 bg-brand-bg">
+    <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-8 md:mb-12">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6 text-brand-text"
+            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter mb-4 text-brand-text md:whitespace-nowrap"
           >
-            Latest <span className="internal-gradient">Blogs</span>
+            <span className="font-serif italic text-white normal-case">Latest</span> <span className="internal-gradient">Blogs</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-brand-text/60 max-w-2xl mx-auto text-lg"
+            className="text-brand-text/60 max-w-2xl mx-auto text-base md:text-lg mt-2"
           >
             Stay updated with the latest trends in digital tools, design, and productivity.
           </motion.p>
