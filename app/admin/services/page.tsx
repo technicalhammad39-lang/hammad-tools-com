@@ -63,6 +63,8 @@ const AdminServices = () => {
     try {
       await updateDoc(doc(db, 'services', editingId), editForm);
       setEditingId(null);
+      setIsAdding(false);
+      setEditForm({});
     } catch (error) {
       console.error('Error updating service:', error);
     }
@@ -195,28 +197,39 @@ const AdminServices = () => {
                   {(editForm.plans || []).map((plan: any, planIdx: number) => (
                     <div key={planIdx} className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
                        <div className="flex gap-4">
-                          <input 
-                            type="text" 
-                            placeholder="Plan Name"
-                            className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs"
-                            value={plan.name}
-                            onChange={(e) => {
-                              const plans = [...editForm.plans];
-                              plans[planIdx].name = e.target.value;
-                              setEditForm({...editForm, plans});
-                            }}
-                          />
-                          <input 
-                            type="number" 
-                            placeholder="Price"
-                            className="w-24 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs"
-                            value={plan.price}
-                            onChange={(e) => {
-                              const plans = [...editForm.plans];
-                              plans[planIdx].price = Number(e.target.value);
-                              setEditForm({...editForm, plans});
-                            }}
-                          />
+                           <input 
+                             type="text" 
+                             placeholder="Plan Name"
+                             className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs"
+                             value={plan.planName || plan.name || ''}
+                             onChange={(e) => {
+                               const plans = [...editForm.plans];
+                               plans[planIdx].planName = e.target.value;
+                               setEditForm({...editForm, plans});
+                             }}
+                           />
+                           <input 
+                             type="number" 
+                             placeholder="Our Price"
+                             className="w-24 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs"
+                             value={plan.ourPrice !== undefined ? plan.ourPrice : plan.price || ''}
+                             onChange={(e) => {
+                               const plans = [...editForm.plans];
+                               plans[planIdx].ourPrice = Number(e.target.value);
+                               setEditForm({...editForm, plans});
+                             }}
+                           />
+                           <input 
+                             type="number" 
+                             placeholder="Official Price"
+                             className="w-28 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-xs"
+                             value={plan.officialPrice || ''}
+                             onChange={(e) => {
+                               const plans = [...editForm.plans];
+                               plans[planIdx].officialPrice = Number(e.target.value);
+                               setEditForm({...editForm, plans});
+                             }}
+                           />
                           <button 
                             onClick={() => {
                               const plans = editForm.plans.filter((_: any, i: number) => i !== planIdx);

@@ -107,12 +107,18 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
   useEffect(() => {
     if (service?.plans && service.plans.length > 0) {
-      setSelectedPlan(service.plans[0]);
+      const safePlans = service.plans.map((p: any) => ({
+        planName: p.planName || p.name || 'Standard Access',
+        ourPrice: p.ourPrice || p.price || 0,
+        officialPrice: p.officialPrice || (p.price ? p.price * 1.5 : 0),
+        benefits: p.benefits || []
+      }));
+      setSelectedPlan(safePlans[0]);
     } else if (service) {
       setSelectedPlan({
         planName: 'Standard Plan',
         ourPrice: service.price,
-        officialPrice: service.price * 1.5, // fallback calculation
+        officialPrice: service.price * 1.5,
         benefits: service.features || ['Premium Access', 'Instant Delivery']
       });
     }
@@ -195,7 +201,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               className="relative aspect-video md:aspect-square rounded-3xl md:rounded-[3.5rem] overflow-hidden border border-white/10 shadow-3xl group max-h-[40vh] md:max-h-none"
             >
               <Image
-                src={service.image}
+                src={(service as any).thumbnail || service.image || '/services-card.png'}
                 alt={service.name}
                 fill
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -244,6 +250,59 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 </div>
               </div>
             </div>
+
+            {/* Mobile Review Form exactly below Delivery Grid */}
+            <div className="mt-8">
+              <div className="glass p-6 md:p-8 rounded-[2rem] border border-white/5">
+                <h4 className="text-lg font-black uppercase tracking-widest text-brand-text mb-6">Leave a Review</h4>
+                <form onSubmit={handleReviewSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Your Name"
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Rating</label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="focus:outline-none hover:scale-110 transition-transform"
+                        >
+                          <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-primary text-primary' : 'text-brand-text/20'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Your Experience</label>
+                    <textarea 
+                      required
+                      placeholder="Tell others what you think..."
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={3}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text resize-none"
+                    ></textarea>
+                  </div>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmittingReview}
+                    className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs disabled:opacity-50 transition-all hover:bg-primary/90 shadow-lg shadow-primary/20"
+                  >
+                    {isSubmittingReview ? 'Publishing...' : 'Publish Review'}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
 
           {/* Right Column: Pricing & Purchase (7 cols) */}
@@ -275,20 +334,26 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
               {/* Horizontal Scrollable Row */}
               <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
-                {(service.plans && service.plans.length > 0 ? service.plans : [
+                {(service.plans && service.plans.length > 0 ? service.plans.map((p: any) => ({
+                    planName: p.planName || p.name || 'Standard Access',
+                    ourPrice: p.ourPrice || p.price || 0,
+                    officialPrice: p.officialPrice || (p.price ? p.price * 1.5 : 0),
+                    benefits: p.benefits || []
+                })) : [
                   { planName: 'Standard Access', ourPrice: service.price, officialPrice: service.price * 1.5, benefits: service.features || ['Elite Support', 'Full Warranty', 'Instant Delivery'] },
                   { planName: 'Business Pro', ourPrice: service.price * 2, officialPrice: service.price * 3, benefits: ['All Standard Features', 'Multi-Device Access', 'VIP Response'] }
-                ]).map((plan, i) => (
+                ]).map((plan: any, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedPlan(plan)}
                     className={`snap-center shrink-0 relative px-8 py-4 rounded-2xl border text-center transition-all ${
                       selectedPlan?.planName === plan.planName
-                        ? 'bg-primary text-black font-black shadow-lg shadow-primary/20 border-primary'
+                        ? 'bg-green-500 text-black font-black shadow-lg shadow-green-500/30 border-green-500'
                         : 'glass text-brand-text font-bold border-white/5 hover:border-white/20'
                     }`}
                   >
-                    <div className="text-xs uppercase tracking-widest whitespace-nowrap">
+                    <div className="text-xs uppercase tracking-widest whitespace-nowrap flex items-center justify-center gap-2">
+                      {selectedPlan?.planName === plan.planName && <CheckCircle2 className="w-4 h-4 text-black" />}
                       {plan.planName}
                     </div>
                   </button>
@@ -361,36 +426,38 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               </div>
             </div>
 
-            {/* Checkout Area */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-10 pt-4">
-              <div className="flex flex-col gap-2">
-                <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30 mb-1">Your Investment</div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-6xl md:text-7xl font-black text-brand-text">Rs {totalPrice}</span>
-                    {totalOfficialPrice !== totalPrice && (
-                      <span className="text-xl font-black text-accent line-through opacity-40">Rs {totalOfficialPrice}</span>
-                    )}
-                  </div>
-                  {savingsPercent > 0 && (
-                     <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0 shadow-lg shadow-emerald-500/10">
-                       Save {savingsPercent}%
-                     </div>
-                  )}
-                </div>
-                {discount > 0 && <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Extra {discount}% Coupon Applied!</div>}
-              </div>
+            {/* Checkout Area wrapped safely */}
+            <div className="pt-4 pb-10 md:pb-0">
+               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-10">
+                 <div className="flex flex-col gap-2">
+                   <div className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/30 mb-1">Your Investment</div>
+                   <div className="flex flex-row items-center gap-4 flex-wrap">
+                     <span className="text-6xl md:text-7xl font-black text-brand-text">Rs {totalPrice}</span>
+                     {totalOfficialPrice !== totalPrice && (
+                       <span className="text-lg font-black text-red-500 line-through">Rs {totalOfficialPrice}</span>
+                     )}
+                     {savingsPercent > 0 && (
+                        <div className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0 shadow-lg shadow-emerald-500/10">
+                          Save {savingsPercent}%
+                        </div>
+                     )}
+                   </div>
+                   {discount > 0 && <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-2">Extra {discount}% Coupon Applied!</div>}
+                 </div>
+               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleOrder}
-                className="w-full md:w-auto bg-primary text-black px-16 py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-4 border-b-8 border-secondary shadow-2xl shadow-primary/20 hover:shadow-primary/30 active:border-b-0 active:translate-y-2 transition-all group"
-              >
-                <span>Order Now</span>
-                <MessageCircle className="w-6 h-6 transition-transform group-hover:rotate-12" />
-                <ChevronRight className="w-4 h-4 opacity-30" />
-              </motion.button>
+               {/* Mobile Sticky Wrapper for Button */}
+               <div className="fixed bottom-0 left-0 w-full z-40 p-4 bg-black/90 backdrop-blur-xl md:relative md:bg-transparent md:p-0 md:mt-8 md:w-auto border-t border-white/10 md:border-0 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:shadow-none">
+                 <motion.button
+                   whileHover={{ scale: 1.02 }}
+                   whileTap={{ scale: 0.98 }}
+                   onClick={handleOrder}
+                   className="w-full bg-primary text-black px-16 py-5 md:py-6 rounded-2xl md:rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-4 border-b-[6px] md:border-b-8 border-secondary shadow-2xl shadow-primary/20 hover:shadow-primary/30 active:border-b-0 active:translate-y-2 transition-all group"
+                 >
+                   <span>Order Now</span>
+                   <MessageCircle className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
+                 </motion.button>
+               </div>
             </div>
 
             <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-4">
@@ -409,99 +476,42 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             <h3 className="text-3xl font-black uppercase text-brand-text">Customer Reviews</h3>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            {/* Review Form */}
-            <div className="lg:col-span-1">
-              <div className="glass p-8 rounded-[2rem] border border-white/5">
-                <h4 className="text-lg font-black uppercase tracking-widest text-brand-text mb-6">Leave a Review</h4>
-                <form onSubmit={handleReviewSubmit} className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Name</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Your Name"
-                      value={reviewName}
-                      onChange={(e) => setReviewName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Rating</label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          className="focus:outline-none hover:scale-110 transition-transform"
-                        >
-                          <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-primary text-primary' : 'text-brand-text/20'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Your Experience</label>
-                    <textarea 
-                      required
-                      placeholder="Tell others what you think..."
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      rows={4}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text resize-none"
-                    ></textarea>
-                  </div>
-                  <button 
-                    type="submit" 
-                    disabled={isSubmittingReview}
-                    className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs disabled:opacity-50 transition-all hover:bg-primary/90"
-                  >
-                    {isSubmittingReview ? 'Publishing...' : 'Publish Review'}
-                  </button>
-                </form>
+          {/* Display Slider */}
+          <div className="w-full overflow-hidden">
+            {reviews.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-10 glass border border-white/5 rounded-[2rem] text-center max-w-xl mx-auto">
+                <Star className="w-12 h-12 text-brand-text/10 mb-4" />
+                <p className="text-brand-text/40 font-bold uppercase tracking-widest text-sm">No reviews yet.</p>
+                <p className="text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to review!</p>
               </div>
-            </div>
-
-            {/* Display Reviews */}
-            <div className="lg:col-span-2 space-y-4">
-              {reviews.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-10 glass border border-white/5 rounded-[2rem] text-center h-full">
-                  <Star className="w-12 h-12 text-brand-text/10 mb-4" />
-                  <p className="text-brand-text/40 font-bold uppercase tracking-widest text-sm">No reviews yet.</p>
-                  <p className="text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to leave a review!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {reviews.map((review) => (
-                    <motion.div 
-                      key={review.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="glass p-6 rounded-2xl border border-white/5 flex flex-col justify-between"
-                    >
+            ) : (
+              <div className="flex overflow-x-auto gap-6 pb-8 snap-x hide-scrollbar px-2">
+                {reviews.map((review) => (
+                  <motion.div 
+                    key={review.id}
+                    className="snap-center shrink-0 glass p-8 rounded-3xl border border-white/5 flex flex-col justify-between w-[300px] md:w-[400px] hover:border-primary/20 transition-all hover:-translate-y-2 shadow-xl"
+                  >
+                    <div>
+                      <div className="flex gap-1 mb-4">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-brand-text/10'}`} />
+                        ))}
+                      </div>
+                      <p className="text-sm md:text-base font-medium text-brand-text/80 leading-relaxed mb-8 italic">"{review.text}"</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
                       <div>
-                        <div className="flex gap-1 mb-3">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-primary text-primary' : 'text-brand-text/10'}`} />
-                          ))}
-                        </div>
-                        <p className="text-sm font-medium text-brand-text/80 leading-relaxed mb-6">"{review.text}"</p>
+                        <div className="text-xs font-black uppercase tracking-widest text-brand-text">{review.userName}</div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Verified Customer</div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-brand-text">{review.userName}</div>
-                          <div className="text-[8px] font-black uppercase tracking-widest text-brand-text/30">Verified Customer</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

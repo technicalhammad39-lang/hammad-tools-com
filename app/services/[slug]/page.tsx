@@ -38,7 +38,7 @@ async function getService(slug: string): Promise<Service | null> {
         id: 'mock-1',
         name: 'Netflix Premium',
         description: 'Ultra HD streaming on 4 screens simultaneously. Global access.',
-        price: 9.99,
+        price: 500,
         image: 'https://picsum.photos/seed/netflix/800/600',
         category: 'Streaming',
         features: ['4K Ultra HD', '4 Screens at once', 'Offline downloads', 'No Ads'],

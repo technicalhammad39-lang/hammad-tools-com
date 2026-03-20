@@ -179,9 +179,14 @@ const DashboardPage = () => {
             <div className="text-sm font-black text-primary uppercase">{profile?.displayName?.split(' ')[0]}</div>
           </div>
         </div>
-        <button onClick={logout} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-brand-text/40">
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setActiveTab('settings')} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-brand-text/40 hover:text-primary transition-colors">
+            <Settings className="w-4 h-4" />
+          </button>
+          <button onClick={logout} className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-brand-text/40 hover:text-accent transition-colors">
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">

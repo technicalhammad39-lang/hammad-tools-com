@@ -14,16 +14,20 @@ import {
   Search,
   LogOut,
   Ticket,
-  Zap
+  Zap,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { AnimatePresence } from 'motion/react';
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const { profile, isAdmin, loading, logout } = useAuth();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   if (loading) return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-primary font-black uppercase tracking-widest">Loading...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-accent font-black uppercase tracking-widest">Access Denied</div>;
@@ -107,7 +111,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top Header */}
-        <header className="h-24 border-b border-white/5 bg-black/20 backdrop-blur-2xl flex items-center justify-between px-10 sticky top-0 z-50">
+        <header className="h-20 lg:h-24 border-b border-white/5 bg-black/20 backdrop-blur-2xl flex items-center justify-between px-4 lg:px-10 sticky top-0 z-50">
+          <div className="flex items-center gap-4 lg:hidden">
+            <Link href="/" className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center border-b-[3px] border-[#FF8C2A]">
+               <span className="text-brand-bg font-black text-xl">H</span>
+            </Link>
+          </div>
+
           <div className="relative w-[400px] hidden md:block group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text/20 w-5 h-5 group-focus-within:text-primary transition-colors" />
             <input 
@@ -117,7 +127,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             />
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 lg:gap-6 relative">
             <div className="hidden lg:flex flex-col items-end mr-4">
                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Server Status</div>
                <div className="flex items-center gap-2">
@@ -125,15 +135,73 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                  <span className="text-[9px] font-black text-emerald-500 uppercase">Operational</span>
                </div>
             </div>
-            <button className="bg-primary text-brand-bg px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 hover:scale-105 active:scale-95 transition-all">
+            <button className="hidden lg:flex bg-primary text-brand-bg px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest items-center gap-3 border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 hover:scale-105 active:scale-95 transition-all">
               <Plus className="w-4 h-4" /> Global Action
             </button>
+            
+            {/* Mobile Hamburger Menu Toggle */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-3 bg-white/5 rounded-xl text-brand-text/60 hover:text-primary transition-colors"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            {/* Mobile Utility Dropdown Dropdown */}
+            <AnimatePresence>
+              {isMobileMenuOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="absolute top-16 right-0 w-64 bg-black/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 shadow-2xl z-50 lg:hidden flex flex-col gap-2"
+                >
+                  {sidebarItems.slice(6).map(item => (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        pathname === item.href ? 'bg-primary text-black' : 'text-brand-text/60 hover:bg-white/5 hover:text-brand-text'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  ))}
+                  <div className="h-px bg-white/10 my-2" />
+                  <button onClick={logout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-accent/60 hover:bg-accent/10 hover:text-accent transition-all w-full text-left">
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </header>
 
-        <main className="flex-1 p-10 overflow-y-auto no-scrollbar">
+        <main className="flex-1 p-4 lg:p-10 overflow-y-auto no-scrollbar pb-32 lg:pb-10">
           {children}
         </main>
+
+        {/* Admin Mobile Bottom Navigation */}
+        <div className="lg:hidden fixed bottom-0 left-0 w-full z-40 bg-[#0A0A0A]/95 backdrop-blur-2xl border-t border-white/5 flex justify-between items-center py-3 px-3 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+          {sidebarItems.slice(0, 6).map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={`flex flex-col items-center gap-1.5 p-2 transition-all w-[16%] ${
+                pathname === item.href ? 'text-primary' : 'text-brand-text/40'
+              }`}
+            >
+              <div className={`p-2 rounded-xl transition-all ${pathname === item.href ? 'bg-primary/20' : ''}`}>
+                <item.icon className={`w-5 h-5 ${pathname === item.href ? 'drop-shadow-[0_0_8px_rgba(255,140,42,0.8)]' : ''}`} />
+              </div>
+              <span className="text-[7px] font-black uppercase tracking-wider text-center truncate w-full">
+                {item.label}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

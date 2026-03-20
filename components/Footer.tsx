@@ -54,6 +54,7 @@ const Footer = () => {
             <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-text">Quick Links</h4>
             <ul className="space-y-4">
               <li><Link href="/" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Home</Link></li>
+              <li><Link href="/about" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">About Us</Link></li>
               <li><Link href="/services" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Services</Link></li>
               <li><Link href="/pricing" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Pricing</Link></li>
               <li><Link href="/blog" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Blog</Link></li>
@@ -91,9 +92,9 @@ const Footer = () => {
             <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-text">Newsletter</h4>
             <p className="text-brand-text/60 mb-4 text-xs font-medium">Subscribe to get the latest updates and offers.</p>
             <form className="space-y-3">
-              <input 
-                type="email" 
-                placeholder="Your email address" 
+              <input
+                type="email"
+                placeholder="Your email address"
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary transition-colors text-xs text-brand-text"
               />
               <button className="w-full bg-primary text-white font-black uppercase tracking-widest py-3 rounded-xl border-b-2 border-accent transition-all text-xs">
@@ -106,7 +107,7 @@ const Footer = () => {
         <div className="pt-8 border-t border-white/5 text-center text-brand-text/40 text-[10px] font-black uppercase tracking-widest">
           <p>© {new Date().getFullYear()} Hammad Tools. All rights reserved.</p>
           <p className="mt-2 text-[9px] text-brand-text/30">
-            Developed by <a href="https://share.google/m5Mbu7GU1J4073KgO" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Clyro Tech Solutions</a> 
+            Developed by <a href="https://wa.me/923209310656" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Khaksar Agency</a>
             &nbsp; | Partnered with <a href="https://dailyhayat.net" target="_blank" rel="noopener noreferrer" className="text-secondary hover:underline">DailyHayat</a>
           </p>
           <div className="mt-4 space-x-6">

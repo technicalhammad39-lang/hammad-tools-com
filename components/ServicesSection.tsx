@@ -39,7 +39,7 @@ const mockServices: Service[] = [
     id: 'mock-1',
     name: 'Netflix Premium',
     description: 'Ultra HD streaming on 4 screens simultaneously. Global access.',
-    price: 9.99,
+    price: 500,
     image: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&q=80&w=800',
     category: 'Streaming',
     orderIndex: 1
@@ -184,10 +184,10 @@ const ServicesSection = () => {
         {/* Filters & Search - Only on /services page */}
         {pathname === '/services' && (
           <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 md:mb-16 items-center"
-            >
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 md:mb-16 items-center"
+          >
             {/* Search */}
             <div className="lg:col-span-4 relative group">
               <input
@@ -232,7 +232,7 @@ const ServicesSection = () => {
                 className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/5 transition-all duration-700 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
               >
                 {/* Link Overlay - Makes whole card clickable except for specific buttons */}
-                <Link 
+                <Link
                   href={`/services/${service.name.toLowerCase().replace(/ /g, '-')}`}
                   className="absolute inset-0 z-10"
                   aria-label={`View ${service.name}`}
