@@ -17,6 +17,7 @@ interface CartContextType {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
   removeFromCart: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -68,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('subhammad_cart', JSON.stringify(cart));
     
-    if (user && cart.length > 0) {
+    if (user) {
       const syncCart = async () => {
         try {
           await setDoc(doc(db, 'users', user.uid), { cart }, { merge: true });
@@ -97,6 +98,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
+  const updateQuantity = (id: string, quantity: number) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
+      )
+    );
+  };
+
   const clearCart = () => {
     setCart([]);
   };
@@ -110,6 +119,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cart,
         addToCart,
         removeFromCart,
+        updateQuantity,
         clearCart,
         totalItems,
         totalPrice,

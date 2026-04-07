@@ -60,14 +60,14 @@ interface Testimonial {
 }
 
 const TestimonialCard = ({ t }: { t: Testimonial; i: number }) => (
-  <div className="glass rounded-[2rem] p-6 border border-white/5 relative group hover:border-primary/30 transition-all duration-500 w-full flex-shrink-0">
+  <div className="glass rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 md:p-6 border border-white/5 relative group hover:border-primary/30 transition-all duration-500 w-full flex-shrink-0">
     <Quote className="absolute top-4 right-6 w-8 h-8 text-primary/5 group-hover:text-primary/10 transition-colors" />
 
     <div className="flex items-center space-x-1 mb-4 text-primary">
       {[...Array(t.rating)].map((_, starIdx) => <Star key={starIdx} className="w-2.5 h-2.5 fill-current" />)}
     </div>
 
-    <p className="text-brand-text/70 mb-6 leading-relaxed italic text-[11px] font-medium h-12 overflow-hidden line-clamp-2">
+    <p className="text-brand-text/70 mb-5 sm:mb-6 leading-relaxed italic text-[10px] sm:text-[11px] font-medium line-clamp-3 min-h-[48px]">
       &quot;{t.content}&quot;
     </p>
 
@@ -82,8 +82,8 @@ const TestimonialCard = ({ t }: { t: Testimonial; i: number }) => (
         />
       </div>
       <div>
-        <h4 className="font-black text-brand-text text-[11px] uppercase leading-none">{t.name}</h4>
-        <p className="text-[8px] text-brand-text/40 font-black uppercase tracking-widest mt-1">{t.role}</p>
+        <h4 className="font-black text-brand-text text-[10px] sm:text-[11px] uppercase leading-none">{t.name}</h4>
+        <p className="text-[7px] sm:text-[8px] text-brand-text/40 font-black uppercase tracking-widest mt-1">{t.role}</p>
       </div>
     </div>
   </div>
@@ -94,7 +94,7 @@ const Testimonials = () => {
   const row2 = testimonials.slice(3, 6);
 
   return (
-    <section className="py-16 md:py-32 relative bg-white/[0.01]">
+    <section className="py-16 md:py-32 relative bg-white/[0.01] overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 md:mb-20">
           <motion.h2 
@@ -109,29 +109,32 @@ const Testimonials = () => {
         </div>
 
         {/* Unified Layout: Dual-Row Auto Marquee for all screens */}
-        <div className="space-y-4 md:space-y-8 -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="relative space-y-4 md:space-y-8 -mx-4 sm:-mx-6 lg:-mx-8">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-24 lg:w-40 bg-gradient-to-r from-brand-bg to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-24 lg:w-40 bg-gradient-to-l from-brand-bg to-transparent z-10" />
+
           <Marquee speed={20} gradient={false} pauseOnHover={true}>
             {testimonials.slice(0, 3).map((t, i) => (
-              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
+              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[220px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
             {/* Repeat for seamless loop on wide screens if needed */}
             {testimonials.slice(0, 3).map((t, i) => (
-              <div key={i + 10} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
+              <div key={i + 10} className="mx-2 sm:mx-3 md:mx-4 w-[220px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
           </Marquee>
           <Marquee speed={15} direction="right" gradient={false} pauseOnHover={true}>
             {testimonials.slice(3, 6).map((t, i) => (
-              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
+              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[220px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
             {/* Repeat for seamless loop on wide screens if needed */}
             {testimonials.slice(3, 6).map((t, i) => (
-              <div key={i + 20} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
+              <div key={i + 20} className="mx-2 sm:mx-3 md:mx-4 w-[220px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}

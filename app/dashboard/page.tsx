@@ -16,6 +16,7 @@ import {
   AlertCircle,
   PackageCheck,
   Copy,
+  Gift,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
@@ -90,6 +91,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const [joinedGiveaways, setJoinedGiveaways] = useState<Array<{ id: string; giveawayId: string; giveawayTitle: string; createdAt?: any }>>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -100,6 +102,7 @@ export default function DashboardPage() {
     const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
     const entitlementQuery = query(collection(db, 'entitlements'), where('userId', '==', user.uid));
     const notificationsQuery = query(collection(db, 'notifications'), where('recipientId', '==', user.uid));
+    const giveawaysQuery = query(collection(db, 'user_entries'), where('userId', '==', user.uid));
 
     const unsubOrders = onSnapshot(ordersQuery, (snapshot) => {
       const data = snapshot.docs
@@ -142,10 +145,24 @@ export default function DashboardPage() {
       console.error('Failed to load notifications:', error);
     });
 
+    const unsubGiveaways = onSnapshot(giveawaysQuery, (snapshot) => {
+      const data = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...(doc.data() as { giveawayId: string; giveawayTitle: string; createdAt?: any }) }))
+        .sort((a, b) => {
+          const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || 0;
+          const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || 0;
+          return bTime - aTime;
+        });
+      setJoinedGiveaways(data);
+    }, (error) => {
+      console.error('Failed to load giveaways:', error);
+    });
+
     return () => {
       unsubOrders();
       unsubEntitlements();
       unsubNotifications();
+      unsubGiveaways();
     };
   }, [user]);
 
@@ -160,6 +177,26 @@ export default function DashboardPage() {
   const completedOrders = useMemo(() => orders.filter((order) => order.status === 'completed'), [orders]);
 
   const unreadNotifications = useMemo(() => notifications.filter((item) => !item.read), [notifications]);
+  const orderUpdates = useMemo(
+    () =>
+      orders
+        .map((order) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          adminMessage: order.adminMessage,
+          deliveryDetails: order.deliveryDetails,
+          rejectionReason: order.rejectionReason,
+          createdAt: order.updatedAt || order.createdAt,
+          items: (order.items || []).map((item) => item.productTitle).join(', '),
+        }))
+        .sort((a, b) => {
+          const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || 0;
+          const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || 0;
+          return bTime - aTime;
+        }),
+    [orders]
+  );
 
   if (authLoading) {
     return (
@@ -242,9 +279,17 @@ export default function DashboardPage() {
                     </h2>
                     <p className="text-brand-text/40 text-xs uppercase tracking-[0.2em] font-black mt-2">Realtime access and order lifecycle</p>
                   </div>
-                  <Link href="/tools" className="bg-primary text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary">
-                    Buy More Tools
-                  </Link>
+                  <div className="flex flex-wrap gap-3">
+                    <Link href="/tools" className="bg-primary text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary">
+                      Buy Tools
+                    </Link>
+                    <Link href="/services" className="bg-white/5 text-brand-text px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border border-white/10 hover:border-primary/40">
+                      Services
+                    </Link>
+                    <Link href="/giveaway" className="bg-white/5 text-brand-text px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border border-white/10 hover:border-primary/40">
+                      Giveaway
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -262,6 +307,28 @@ export default function DashboardPage() {
                       <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">{stat.label}</div>
                     </div>
                   ))}
+                </div>
+
+                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
+                  <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                    <h3 className="text-lg font-black uppercase text-brand-text">My Giveaways</h3>
+                    <Link href="/giveaway" className="text-[9px] font-black uppercase tracking-widest text-primary">View all</Link>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {joinedGiveaways.length === 0 ? (
+                      <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">No giveaways joined yet.</div>
+                    ) : (
+                      joinedGiveaways.slice(0, 3).map((entry) => (
+                        <div key={entry.id} className="p-6 flex items-center justify-between gap-4">
+                          <div>
+                            <div className="text-base font-black uppercase text-brand-text">{entry.giveawayTitle}</div>
+                            <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">Joined: {formatDate(entry.createdAt)}</div>
+                          </div>
+                          <Gift className="w-5 h-5 text-primary" />
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
@@ -449,35 +516,77 @@ export default function DashboardPage() {
             {activeTab === 'notifications' && (
               <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <h2 className="text-3xl font-black uppercase text-brand-text">Notifications</h2>
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden divide-y divide-white/5">
-                  {notifications.length === 0 ? (
-                    <div className="p-10 text-center text-[10px] uppercase tracking-widest font-black text-brand-text/30">No notifications.</div>
-                  ) : notifications.map((notification) => (
-                    <button
-                      key={notification.id}
-                    onClick={async () => {
-                        try {
-                          await updateDoc(doc(db, 'notifications', notification.id), {
-                            read: true,
-                            updatedAt: new Date(),
-                          });
-                        } catch (error) {
-                          console.error('Failed to mark notification read:', error);
-                          toast.error('Failed to update notification');
-                        }
-                      }}
-                      className="w-full text-left p-6 hover:bg-white/5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-black uppercase text-brand-text">{notification.title}</div>
-                          <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/50 mt-1">{notification.body}</div>
-                          <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/30 mt-2">{formatDate(notification.createdAt)}</div>
+                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
+                  <div className="p-5 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/50">
+                    In-app Notifications
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {notifications.length === 0 ? (
+                      <div className="p-10 text-center text-[10px] uppercase tracking-widest font-black text-brand-text/30">No notifications.</div>
+                    ) : notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={async () => {
+                          try {
+                            await updateDoc(doc(db, 'notifications', notification.id), {
+                              read: true,
+                              updatedAt: new Date(),
+                            });
+                          } catch (error) {
+                            console.error('Failed to mark notification read:', error);
+                            toast.error('Failed to update notification');
+                          }
+                        }}
+                        className="w-full text-left p-6 hover:bg-white/5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-black uppercase text-brand-text">{notification.title}</div>
+                            <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/50 mt-1">{notification.body}</div>
+                            <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/30 mt-2">{formatDate(notification.createdAt)}</div>
+                          </div>
+                          {!notification.read ? <span className="w-2 h-2 rounded-full bg-primary mt-2" /> : null}
                         </div>
-                        {!notification.read ? <span className="w-2 h-2 rounded-full bg-primary mt-2" /> : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
+                  <div className="p-5 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/50">
+                    Order Updates & Admin Messages
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {orderUpdates.length === 0 ? (
+                      <div className="p-10 text-center text-[10px] uppercase tracking-widest font-black text-brand-text/30">No order updates yet.</div>
+                    ) : orderUpdates.map((update) => (
+                      <div key={update.id} className="p-6 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-black uppercase text-brand-text">{update.orderNumber}</div>
+                          <div className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${statusClass(update.status)}`}>
+                            {update.status.replace('_', ' ')}
+                          </div>
+                        </div>
+                        <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">{update.items}</div>
+                        {update.adminMessage ? (
+                          <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                            Admin Message: {update.adminMessage}
+                          </div>
+                        ) : null}
+                        {update.deliveryDetails ? (
+                          <div className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 break-all">
+                            Delivery Details: {update.deliveryDetails}
+                          </div>
+                        ) : null}
+                        {update.rejectionReason ? (
+                          <div className="text-[10px] font-black uppercase tracking-widest text-accent bg-accent/10 border border-accent/20 rounded-xl px-4 py-3">
+                            Rejection Reason: {update.rejectionReason}
+                          </div>
+                        ) : null}
+                        <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/30">{formatDate(update.createdAt)}</div>
                       </div>
-                    </button>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}

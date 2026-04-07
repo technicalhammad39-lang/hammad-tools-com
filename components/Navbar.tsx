@@ -9,7 +9,6 @@ import { Menu, X, User, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import AuthModal from '@/components/AuthModal';
-import NotificationBell from '@/components/NotificationBell';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -91,12 +90,6 @@ const Navbar = () => {
                 )}
               </button>
 
-              <NotificationBell
-                buttonClassName="p-0 bg-transparent border-0"
-                iconClassName="w-5 h-5"
-                badgeClassName="border-[#FF8C2A]"
-              />
-
               {user ? (
                 <div className="flex items-center border-l border-white/5 pl-4">
                   <Link href="/dashboard" className="w-10 h-10 rounded-xl overflow-hidden border border-primary/20 relative cursor-pointer hover:border-primary/50 transition-all hover:scale-105">
@@ -122,11 +115,6 @@ const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <div className="xl:hidden flex items-center space-x-4">
-            <NotificationBell
-              buttonClassName="p-0 bg-transparent border-0"
-              iconClassName="w-4 h-4"
-              badgeClassName="border-[#FF8C2A]"
-            />
             <button 
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 text-brand-text/40"
