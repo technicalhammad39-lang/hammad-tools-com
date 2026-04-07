@@ -73,32 +73,32 @@ export default function AboutClient() {
             viewport={{ once: true }}
             className="grid grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6"
           >
-            <div className="p-5 md:p-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center justify-center text-center bg-white/5">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
-                <Globe className="w-5 h-5 md:w-8 md:h-8 text-white" />
+            <div className="p-5 md:p-8 rounded-3xl border border-black/10 shadow-2xl flex flex-col items-center justify-center text-center bg-[#F7F7F7]">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
+                <Globe className="w-5 h-5 md:w-8 md:h-8 text-[#111111]" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-white">50+</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-white/60 mt-1">Countries Served</p>
+              <h3 className="text-2xl md:text-4xl font-black text-[#111111]">50+</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Countries Served</p>
             </div>
-            <div className="p-5 md:p-8 rounded-3xl border border-primary/30 shadow-2xl flex flex-col items-center justify-center text-center bg-primary">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/15 flex items-center justify-center mb-4">
-                <Users className="w-5 h-5 md:w-8 md:h-8 text-black" />
+            <div className="p-5 md:p-8 rounded-3xl border border-black/10 shadow-2xl flex flex-col items-center justify-center text-center bg-[#FFF2B3]">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
+                <Users className="w-5 h-5 md:w-8 md:h-8 text-[#111111]" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-black">10k+</h3>
+              <h3 className="text-2xl md:text-4xl font-black text-[#111111]">10k+</h3>
               <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Active Creators</p>
             </div>
-            <div className="p-5 md:p-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center justify-center text-center bg-white/5">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
-                <Award className="w-5 h-5 md:w-8 md:h-8 text-white" />
+            <div className="p-5 md:p-8 rounded-3xl border border-black/10 shadow-2xl flex flex-col items-center justify-center text-center bg-[#F7F7F7]">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
+                <Award className="w-5 h-5 md:w-8 md:h-8 text-[#111111]" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-white">99%</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-white/60 mt-1">Satisfaction Rate</p>
+              <h3 className="text-2xl md:text-4xl font-black text-[#111111]">99%</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Satisfaction Rate</p>
             </div>
-            <div className="p-5 md:p-8 rounded-3xl border border-primary/30 shadow-2xl flex flex-col items-center justify-center text-center bg-primary">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/15 flex items-center justify-center mb-4">
-                <Shield className="w-5 h-5 md:w-8 md:h-8 text-black" />
+            <div className="p-5 md:p-8 rounded-3xl border border-black/10 shadow-2xl flex flex-col items-center justify-center text-center bg-[#FFF2B3]">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
+                <Shield className="w-5 h-5 md:w-8 md:h-8 text-[#111111]" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-black">24/7</h3>
+              <h3 className="text-2xl md:text-4xl font-black text-[#111111]">24/7</h3>
               <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Security & Support</p>
             </div>
           </motion.div>
