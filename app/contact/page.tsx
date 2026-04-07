@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Mail, MessageSquare, Send, MapPin, Globe, Facebook, MessageCircle, Store } from 'lucide-react';
+import { Mail, MessageSquare, Send, MapPin, Globe } from 'lucide-react';
+import { FaFacebook, FaInstagram, FaWhatsapp, FaSnapchat, FaTiktok, FaGoogle } from 'react-icons/fa6';
 import { useSettings } from '@/context/SettingsContext';
 
 const ContactPage = () => {
@@ -58,13 +59,22 @@ const ContactPage = () => {
                     {item.id === 'socials' ? (
                       <div className="flex items-center gap-3 mt-1">
                         {settings.whatsappUrl && (
-                          <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#25D366] transition-colors"><MessageCircle className="w-4 h-4" /></a>
+                          <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#25D366] transition-colors" title="WhatsApp"><FaWhatsapp className="w-4 h-4" /></a>
+                        )}
+                        {settings.instagramUrl && (
+                          <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#E4405F] transition-colors" title="Instagram"><FaInstagram className="w-4 h-4" /></a>
                         )}
                         {settings.facebookUrl && (
-                          <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#1877F2] transition-colors"><Facebook className="w-4 h-4" /></a>
+                          <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#1877F2] transition-colors" title="Facebook"><FaFacebook className="w-4 h-4" /></a>
+                        )}
+                        {settings.snapchatUrl && (
+                          <a href={settings.snapchatUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#FFFC00] transition-colors" title="Snapchat"><FaSnapchat className="w-4 h-4" /></a>
+                        )}
+                        {settings.tiktokUrl && (
+                          <a href={settings.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#000000] transition-colors" title="TikTok"><FaTiktok className="w-4 h-4" /></a>
                         )}
                         {settings.googleBusinessUrl && (
-                          <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#EA4335] transition-colors"><Store className="w-4 h-4" /></a>
+                          <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="text-brand-text/60 hover:text-[#EA4335] transition-colors" title="Google Business"><FaGoogle className="w-4 h-4" /></a>
                         )}
                       </div>
                     ) : (

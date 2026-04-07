@@ -1,10 +1,10 @@
 {
-  "projectId": "multitoolsfree",
-  "appId": "1:796099468520:web:bffaf38d4ec7b5fc38fd5d",
-  "apiKey": "AIzaSyDrKADUjgGymuPFp3krjzjc3DJCIVvWNCE",
-  "authDomain": "multitoolsfree.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-66ad0f18-f374-40ab-aa7c-b970e8cc986f",
-  "storageBucket": "multitoolsfree.firebasestorage.app",
-  "messagingSenderId": "796099468520",
-  "measurementId": ""
+  "apiKey": "AIzaSyBpGNrt_QY1msTtYBIKyYw8sc-0YSc7qlM",
+  "authDomain": "hammadtools-3243d.firebaseapp.com",
+  "projectId": "hammadtools-3243d",
+  "storageBucket": "hammadtools-3243d.firebasestorage.app",
+  "messagingSenderId": "401018030777",
+  "appId": "1:401018030777:web:c82896d463db5ca69fa968",
+  "measurementId": "G-WREYC53365",
+  "firestoreDatabaseId": "(default)"
 }

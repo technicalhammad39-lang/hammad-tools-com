@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Hero from '@/components/Hero';
 import ServicesSection from '@/components/ServicesSection';
+import GoogleBusinessReviews from '@/components/GoogleBusinessReviews';
 import PartnerSection from '@/components/PartnerSection';
 import Testimonials from '@/components/Testimonials';
 import { motion } from 'motion/react';
@@ -106,7 +107,9 @@ export default function Home() {
                 icon: <Globe className="w-5 h-5 md:w-8 md:h-8" />,
                 color: "#FFA94D"
               }
-            ].map((feature, index) => (
+            ].map((feature, index) => {
+              const isWhiteCard = index % 2 === 0;
+              return (
               <motion.div
                 key={feature.title}
                 initial={typeof window !== 'undefined' && window.innerWidth < 768 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -119,29 +122,32 @@ export default function Home() {
                   rotateY: -5,
                   transition: { duration: 0.3 }
                 } : {}}
-                className="glass rounded-2xl md:rounded-[2rem] p-4 md:p-10 border border-white/5 group relative overflow-hidden transition-all duration-500 perspective-1000 bg-brand-soft/50 md:bg-transparent flex flex-row items-center md:items-start md:flex-col gap-4 md:gap-0"
+                className={`rounded-2xl md:rounded-[2rem] p-4 md:p-10 border border-white/40 group relative overflow-hidden transition-all duration-500 perspective-1000 flex flex-row items-center md:items-start md:flex-col gap-4 md:gap-0 shadow-[0_20px_50px_rgba(255,214,0,0.18)] ${
+                  isWhiteCard
+                    ? 'bg-[linear-gradient(135deg,#FFFFFF_0%,#FFF9E6_55%,#FFFFFF_100%)]'
+                    : 'bg-[linear-gradient(135deg,#FFFBEA_0%,#FFD600_48%,#FFF6CC_100%)]'
+                }`}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 
-                <div 
-                  className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-xl md:rounded-2xl flex items-center justify-center mb-0 md:mb-8 border transition-all"
-                  style={{ 
-                    backgroundColor: `${feature.color}10`, 
-                    borderColor: `${feature.color}30`,
-                    color: feature.color
-                  }}
+                <div
+                  className="shrink-0 flex items-center justify-center mb-0 md:mb-6 transition-all animate-float"
+                  style={{ color: feature.color }}
                 >
                   {feature.icon}
                 </div>
                 <div className="flex flex-col">
-                  <h3 className="text-base sm:text-lg md:text-2xl font-black mb-1 md:mb-4 text-brand-text uppercase">{feature.title}</h3>
-                  <p className="text-brand-text/50 leading-relaxed font-medium text-[11px] sm:text-xs md:text-sm">{feature.desc}</p>
+                  <h3 className="text-base sm:text-lg md:text-2xl font-black mb-1 md:mb-4 text-[#1A1A1A] uppercase">{feature.title}</h3>
+                  <p className="text-[#1A1A1A]/70 leading-relaxed font-medium text-[11px] sm:text-xs md:text-sm">{feature.desc}</p>
                 </div>
               </motion.div>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>
+
+      <GoogleBusinessReviews />
 
       <PartnerSection />
 
@@ -207,11 +213,11 @@ export default function Home() {
             </div>
             <div className="space-y-6">
               {[
-                { q: "How do I receive my subscription?", a: "After payment, your credentials will be sent instantly to your WhatsApp/Email and will also be available in your dashboard." },
+                { q: "How do I receive my subscription?", a: "After payment proof verification, your credentials are delivered inside your dashboard and linked to your account automatically." },
                 { q: "Are these subscriptions legal?", a: "Yes, we provide legitimate access to premium services through official channels and bulk enterprise accounts." },
-                { q: "What if my account stops working?", a: "We offer a full warranty on all our services. If any issue arises, our 24/7 support team will fix it or provide a replacement via WhatsApp." },
+                { q: "What if my account stops working?", a: "We offer a full warranty on all our services. If any issue arises, open a support request and our team will fix or replace access after review." },
                 { q: "Can I cancel my subscription?", a: "Yes, you can cancel your monthly plans at any time from your dashboard settings." },
-                { q: "What payment methods do you accept?", a: "We currently process all orders via WhatsApp to ensure personalized service and instant delivery via manual confirmation." }
+                { q: "What payment methods do you accept?", a: "Checkout shows all active payment methods configured by admin, including wallet, bank, and transfer options with live account details." }
               ].map((item, i) => (
                 <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500">
                   <summary className="p-8 cursor-pointer font-black text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
@@ -232,3 +238,4 @@ export default function Home() {
     </div>
   );
 }
+

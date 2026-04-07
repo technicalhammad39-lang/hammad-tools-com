@@ -5,14 +5,15 @@ import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
 import { collection, getDocs, updateDoc, doc, query, orderBy } from 'firebase/firestore';
-import { User, Shield, ShieldAlert, Mail, Calendar, Search, Plus, Zap, CheckCircle2, X } from 'lucide-react';
+import { User, Search, Plus, Zap, CheckCircle2, X } from 'lucide-react';
 import { serverTimestamp, addDoc } from 'firebase/firestore';
+import { useToast } from '@/components/ToastProvider';
 
 interface UserProfile {
   id: string;
   displayName: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'manager' | 'user';
   createdAt: any;
 }
 
@@ -24,6 +25,7 @@ interface Service {
 
 const AdminUsers = () => {
   const { isAdmin } = useAuth();
+  const toast = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,14 @@ const AdminUsers = () => {
     }
   }, [isAdmin]);
 
+  if (!isAdmin) {
+    return (
+      <div className="pt-32 pb-24 text-center">
+        <h1 className="text-3xl font-bold">Access Denied</h1>
+      </div>
+    );
+  }
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -49,6 +59,7 @@ const AdminUsers = () => {
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -61,6 +72,7 @@ const AdminUsers = () => {
       setServices(data);
     } catch (error) {
       console.error('Error fetching services:', error);
+      toast.error('Failed to load tools/services');
     }
   };
 
@@ -86,25 +98,29 @@ const AdminUsers = () => {
       });
 
       // Also mark in public orders if necessary, but service_activations is primary
-      alert(`Successfully activated ${service.name} for ${duration} days!`);
+      toast.success('Activation complete', `${service.name} activated for ${duration} days.`);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error activating service:', error);
-      alert('Failed to activate service');
+      toast.error('Activation failed', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setActivating(false);
     }
   };
 
-  const toggleRole = async (userId: string, currentRole: string) => {
-    if (!confirm(`Are you sure you want to change this user's role to ${currentRole === 'admin' ? 'user' : 'admin'}?`)) return;
+  const updateRole = async (userId: string, currentRole: string, nextRole: UserProfile['role']) => {
+    if (currentRole === nextRole) {
+      return;
+    }
+    if (!confirm(`Are you sure you want to change this user's role to ${nextRole}?`)) return;
     try {
       await updateDoc(doc(db, 'users', userId), {
-        role: currentRole === 'admin' ? 'user' : 'admin'
+        role: nextRole
       });
       fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
     }
   };
 
@@ -163,7 +179,11 @@ const AdminUsers = () => {
                   </td>
                   <td className="p-8">
                     <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      u.role === 'admin' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/5 text-brand-text/40 border-white/10'
+                      u.role === 'admin'
+                        ? 'bg-primary/10 text-primary border-primary/20'
+                        : u.role === 'manager'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-white/5 text-brand-text/40 border-white/10'
                     }`}>
                       {u.role}
                     </span>
@@ -179,15 +199,15 @@ const AdminUsers = () => {
                       >
                         <Zap className="w-3.5 h-3.5" /> Activate
                       </button>
-                      <button 
-                        onClick={() => toggleRole(u.id, u.role)}
-                        className={`p-2.5 rounded-xl transition-all border ${
-                          u.role === 'admin' ? 'bg-accent/10 text-accent border-accent/20 hover:bg-accent/20' : 'bg-white/5 text-brand-text/40 border-white/10 hover:text-brand-text'
-                        }`}
-                        title={u.role === 'admin' ? 'Revoke Protocol' : 'Grant Admin'}
+                      <select
+                        value={u.role}
+                        onChange={(event) => updateRole(u.id, u.role, event.target.value as UserProfile['role'])}
+                        className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest text-brand-text/60 focus:outline-none focus:border-primary"
                       >
-                        {u.role === 'admin' ? <ShieldAlert className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
-                      </button>
+                        <option value="user">User</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                      </select>
                     </div>
                   </td>
                 </tr>

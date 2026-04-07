@@ -1,12 +1,14 @@
-import React from 'react';
+﻿import React from 'react';
 import { Metadata } from 'next';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import ServiceDetailClient from './ServiceDetailClient';
 
 interface Service {
   id: string;
+  title?: string;
   name: string;
+  slug?: string;
   description: string;
   price: number;
   image: string;
@@ -18,35 +20,44 @@ interface Service {
 async function getService(slug: string): Promise<Service | null> {
   try {
     const servicesRef = collection(db, 'services');
-    const q = query(servicesRef);
+    const q = query(servicesRef, where('slug', '==', slug));
     const querySnapshot = await getDocs(q);
 
-    let foundService = null;
-    querySnapshot.forEach((doc) => {
+    const docSnap = querySnapshot.docs[0];
+    if (docSnap) {
+      const data = docSnap.data();
+      const serviceTitle = (data.title || data.name || '').toString();
+      const serviceSlug = (data.slug || serviceTitle.toLowerCase().replace(/ /g, '-')).toString();
+
+      if ((data.type || 'tools') !== 'tools' || data.active === false) {
+        return null;
+      }
+
+      return {
+        id: docSnap.id,
+        ...data,
+        name: data.name || serviceTitle,
+        slug: serviceSlug,
+      } as Service;
+    }
+
+    const fallbackSnapshot = await getDocs(servicesRef);
+    let foundService: Service | null = null;
+    fallbackSnapshot.forEach((doc) => {
       const data = doc.data();
-      const serviceSlug = data.name.toLowerCase().replace(/ /g, '-');
-      if (serviceSlug === slug) {
-        foundService = { id: doc.id, ...data } as Service;
+      const serviceTitle = (data.title || data.name || '').toString();
+      const derivedSlug = serviceTitle.toLowerCase().replace(/ /g, '-');
+      if (derivedSlug === slug && (data.type || 'tools') === 'tools' && data.active !== false) {
+        foundService = {
+          id: doc.id,
+          ...data,
+          name: data.name || serviceTitle,
+          slug: derivedSlug,
+        } as Service;
       }
     });
 
-    if (foundService) return foundService;
-
-    // Mock for netflix
-    if (slug === 'netflix-premium') {
-      return {
-        id: 'mock-1',
-        name: 'Netflix Premium',
-        description: 'Ultra HD streaming on 4 screens simultaneously. Global access.',
-        price: 500,
-        image: 'https://picsum.photos/seed/netflix/800/600',
-        category: 'Streaming',
-        features: ['4K Ultra HD', '4 Screens at once', 'Offline downloads', 'No Ads'],
-        longDescription: 'Experience Netflix like never before with our premium plan. Enjoy unlimited movies, TV shows, and mobile games on four supported devices at a time in Ultra HD.'
-      };
-    }
-
-    return null;
+    return foundService;
   } catch (error) {
     console.error('Error fetching service:', error);
     return null;
@@ -81,3 +92,4 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
 
   return <ServiceDetailClient service={service} loading={false} />;
 }
+

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, Chrome, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ToastProvider';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   
   const { login, loginWithEmail, signupWithEmail } = useAuth();
+  const toast = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +29,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       if (mode === 'login') {
         await loginWithEmail(email, password);
+        toast.success('Logged in');
       } else {
         await signupWithEmail(email, password, name);
+        toast.success('Account created');
       }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      const message = err?.message || 'Authentication failed';
+      setError(message);
+      toast.error('Authentication failed', message);
     } finally {
       setLoading(false);
     }
@@ -43,9 +49,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setError(null);
     try {
       await login();
+      toast.success('Logged in');
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Google login failed');
+      const message = err?.message || 'Google login failed';
+      setError(message);
+      toast.error('Login failed', message);
     } finally {
       setLoading(false);
     }

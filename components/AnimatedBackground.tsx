@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
 
 const AnimatedBackground = () => {
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -41,39 +43,40 @@ const AnimatedBackground = () => {
         className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#FF8C2A]/5 rounded-full blur-[150px]"
       />
 
-      {/* Floating Particles/Shapes - Only render on client to avoid hydration mismatch */}
-      {mounted && [...Array(20)].map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ 
-            opacity: 0, 
-            x: Math.random() * 100 + "%", 
-            y: Math.random() * 100 + "%",
-            scale: Math.random() * 0.5 + 0.5,
-            rotate: 0,
-          }}
-          animate={{
-            opacity: [0.1, 0.3, 0.1],
-            y: ["-10%", "110%"],
-            rotate: 360,
-          }}
-          transition={{
-            duration: Math.random() * 20 + 20,
-            repeat: Infinity,
-            ease: "linear",
-            delay: Math.random() * 10,
-          }}
-          className="absolute w-1 h-1 bg-[#FFD600]/20 rounded-full"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-          }}
-        />
-      ))}
+      {/* Snowfall/Particle Animation - Only render on specific routes */}
+      {mounted && ['/', '/about', '/services', '/blog', '/giveaway'].includes(pathname) && (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(50)].map((_, i) => (
+            <motion.div
+              key={`snow-${i}`}
+              initial={{ 
+                opacity: 0, 
+                x: Math.random() * 100 + "%", 
+                y: -20,
+                scale: Math.random() * 0.3 + 0.2,
+              }}
+              animate={{
+                opacity: [0, 0.4, 0],
+                y: ["0%", "100%"],
+                x: (Math.random() - 0.5) * 20 + "%", // Settle drift
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "linear",
+                delay: Math.random() * 20,
+              }}
+              className="absolute w-1 h-1 bg-white rounded-full blur-[1px]"
+              style={{
+                left: `${Math.random() * 100}%`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 contrast-150 brightness-50" />
-      <div className="absolute inset-0 cyber-grid opacity-[0.1]" />
+      {/* Grainy Texture Overlay */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 contrast-150 brightness-50" />
     </div>
   );
 };

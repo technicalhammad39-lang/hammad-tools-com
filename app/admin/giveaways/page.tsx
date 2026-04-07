@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, Timestamp, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, Timestamp, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { uploadFile } from '@/lib/storage-utils';
+import { useToast } from '@/components/ToastProvider';
 
 interface Giveaway {
   id: string;
@@ -20,10 +21,13 @@ interface Giveaway {
   status: 'active' | 'ended';
   participantsCount: number;
   image: string;
+  adminAvatar?: string;
+  adminName?: string;
 }
 
 const AdminGiveaways = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isStaff } = useAuth();
+  const toast = useToast();
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,11 +38,13 @@ const AdminGiveaways = () => {
     description: '',
     prize: '',
     winnersCount: 1,
-    status: 'active'
+    status: 'active',
+    image: ''
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isStaff) return;
 
     const q = query(collection(db, 'giveaways'), orderBy('endDate', 'desc'));
     
@@ -48,24 +54,44 @@ const AdminGiveaways = () => {
       setLoading(false);
     }, (error) => {
       console.error('Error fetching giveaways:', error);
+      toast.error('Failed to load giveaways');
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [isStaff]);
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
+    if (!form.title || !form.prize) return;
+    
     try {
-      await addDoc(collection(db, 'giveaways'), {
+      const data = {
         ...form,
-        endDate: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // Default 7 days
-        participantsCount: 0,
-        createdAt: Timestamp.now()
-      });
+        endDate: form.endDate || Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        participantsCount: form.participantsCount || 0,
+        updatedAt: serverTimestamp(),
+        adminAvatar: user?.photoURL || '',
+        adminName: user?.displayName || 'Admin'
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, 'giveaways', editingId), data);
+        toast.success('Giveaway updated');
+      } else {
+        await addDoc(collection(db, 'giveaways'), {
+          ...data,
+          createdAt: serverTimestamp(),
+          likedBy: []
+        });
+        toast.success('Giveaway created');
+      }
+      
       setIsAdding(false);
+      setEditingId(null);
       setForm({ title: '', description: '', prize: '', winnersCount: 1, status: 'active', image: '' });
     } catch (error) {
-      console.error('Error adding giveaway:', error);
+      console.error('Error saving giveaway:', error);
+      toast.error('Failed to save giveaway', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
@@ -73,12 +99,14 @@ const AdminGiveaways = () => {
     if (!confirm('Are you sure you want to delete this giveaway?')) return;
     try {
       await deleteDoc(doc(db, 'giveaways', id));
+      toast.success('Giveaway deleted');
     } catch (error) {
       console.error('Error deleting giveaway:', error);
+      toast.error('Failed to delete giveaway', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
-  if (!isAdmin) {
+  if (!isStaff) {
     return (
       <div className="pt-32 pb-24 text-center">
         <h1 className="text-3xl font-bold">Access Denied</h1>
@@ -111,7 +139,7 @@ const AdminGiveaways = () => {
             animate={{ opacity: 1, y: 0 }}
             className="glass rounded-3xl p-8 mb-12 border-primary/20"
           >
-            <h2 className="text-2xl font-bold mb-6">Create Giveaway</h2>
+            <h2 className="text-2xl font-bold mb-6">{editingId ? 'Edit Giveaway' : 'Create Giveaway'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <input 
                 type="text" 
@@ -158,7 +186,7 @@ const AdminGiveaways = () => {
                           const url = await uploadFile(file, `giveaways/${Date.now()}_${file.name}`, setUploadProgress);
                           setForm({ ...form, image: url });
                         } catch (error) {
-                          alert('Upload failed');
+                          toast.error('Upload failed', 'Unable to upload image.');
                         } finally {
                           setUploading(false);
                           setUploadProgress(0);
@@ -176,8 +204,10 @@ const AdminGiveaways = () => {
               onChange={e => setForm({...form, description: e.target.value})}
             />
             <div className="flex justify-end space-x-4">
-              <button onClick={() => setIsAdding(false)} className="px-6 py-3 rounded-xl font-bold text-brand-text/60 hover:text-brand-text">Cancel</button>
-              <button onClick={handleAdd} className="bg-primary px-8 py-3 rounded-xl font-bold text-white">Launch Giveaway</button>
+              <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="px-6 py-3 rounded-xl font-bold text-brand-text/60 hover:text-brand-text">Cancel</button>
+              <button onClick={handleSave} className="bg-primary px-8 py-3 rounded-xl font-bold text-white">
+                {editingId ? 'Push Update' : 'Launch Giveaway'}
+              </button>
             </div>
           </motion.div>
         )}
@@ -211,6 +241,24 @@ const AdminGiveaways = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => {
+                    setForm({
+                      title: giveaway.title,
+                      description: giveaway.description,
+                      prize: giveaway.prize,
+                      winnersCount: giveaway.winnersCount,
+                      status: giveaway.status,
+                      image: giveaway.image,
+                      endDate: giveaway.endDate
+                    });
+                    setEditingId(giveaway.id);
+                    setIsAdding(true);
+                  }}
+                  className="p-3 bg-primary/10 hover:bg-primary/20 rounded-xl text-primary transition-all"
+                >
+                  <Edit2 className="w-5 h-5" />
+                </button>
                 <button 
                   onClick={() => handleDelete(giveaway.id)}
                   className="p-3 bg-accent/10 hover:bg-accent/20 rounded-xl text-accent transition-all"

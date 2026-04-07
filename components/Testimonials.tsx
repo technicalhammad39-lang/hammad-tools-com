@@ -94,7 +94,7 @@ const Testimonials = () => {
   const row2 = testimonials.slice(3, 6);
 
   return (
-    <section className="py-16 md:py-32 relative overflow-hidden bg-white/[0.01]">
+    <section className="py-16 md:py-32 relative bg-white/[0.01]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 md:mb-20">
           <motion.h2 
@@ -109,29 +109,29 @@ const Testimonials = () => {
         </div>
 
         {/* Unified Layout: Dual-Row Auto Marquee for all screens */}
-        <div className="space-y-4 md:space-y-8">
+        <div className="space-y-4 md:space-y-8 -mx-4 sm:-mx-6 lg:-mx-8">
           <Marquee speed={20} gradient={false} pauseOnHover={true}>
             {testimonials.slice(0, 3).map((t, i) => (
-              <div key={i} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
+              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
             {/* Repeat for seamless loop on wide screens if needed */}
             {testimonials.slice(0, 3).map((t, i) => (
-              <div key={i + 10} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
+              <div key={i + 10} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
           </Marquee>
           <Marquee speed={15} direction="right" gradient={false} pauseOnHover={true}>
             {testimonials.slice(3, 6).map((t, i) => (
-              <div key={i} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
+              <div key={i} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}
             {/* Repeat for seamless loop on wide screens if needed */}
             {testimonials.slice(3, 6).map((t, i) => (
-              <div key={i + 20} className="mx-3 md:mx-4 w-[300px] md:w-[400px]">
+              <div key={i + 20} className="mx-2 sm:mx-3 md:mx-4 w-[260px] sm:w-[300px] md:w-[360px] lg:w-[380px]">
                 <TestimonialCard t={t} i={i} />
               </div>
             ))}

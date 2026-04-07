@@ -10,7 +10,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, testConnection } from '@/firebase';
 import { safeGetDoc, safeSetDoc, OperationType, handleFirestoreError } from '@/lib/firebase-utils';
 
@@ -19,7 +19,7 @@ interface UserProfile {
   email: string;
   displayName: string;
   photoURL: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'manager';
   createdAt: any;
 }
 
@@ -32,6 +32,8 @@ interface AuthContextType {
   signupWithEmail: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
+  isManager: boolean;
+  isStaff: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: serverTimestamp(),
             };
             await safeSetDoc(userDocRef, newProfile, `users/${user.uid}`);
+          } else if (userDoc && userDoc.exists()) {
+            const data = userDoc.data() as UserProfile;
+            if (user.email === 'technicalhammad39@gmail.com' && data.role !== 'admin') {
+              await updateDoc(userDocRef, { role: 'admin' });
+            }
           }
         } catch (error) {
           console.error('Error during user profile initialization:', error);
@@ -144,7 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithEmail,
       signupWithEmail,
       logout, 
-      isAdmin: profile?.role === 'admin' 
+      isAdmin: profile?.role === 'admin',
+      isManager: profile?.role === 'manager',
+      isStaff: profile?.role === 'admin' || profile?.role === 'manager',
     }}>
       {children}
     </AuthContext.Provider>

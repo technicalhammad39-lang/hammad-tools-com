@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Mail, MapPin, Phone, MessageCircle, Store } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
+import { FaFacebook, FaInstagram, FaWhatsapp, FaSnapchat, FaTiktok, FaGoogle } from 'react-icons/fa6';
 import { useSettings } from '@/context/SettingsContext';
 
 import { usePathname } from 'next/navigation';
@@ -30,20 +31,35 @@ const Footer = () => {
             <p className="text-brand-text/60 leading-relaxed text-sm font-medium">
               The ultimate marketplace for premium digital subscriptions and tools. High-end services at affordable prices.
             </p>
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               {settings.facebookUrl && (
-                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                  <Facebook className="w-5 h-5" />
+                <a href={settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="Facebook">
+                  <FaFacebook className="w-5 h-5" />
+                </a>
+              )}
+              {settings.instagramUrl && (
+                <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="Instagram">
+                  <FaInstagram className="w-5 h-5" />
                 </a>
               )}
               {settings.whatsappUrl && (
-                <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                  <MessageCircle className="w-5 h-5" />
+                <a href={settings.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="WhatsApp">
+                  <FaWhatsapp className="w-5 h-5" />
+                </a>
+              )}
+              {settings.snapchatUrl && (
+                <a href={settings.snapchatUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="Snapchat">
+                  <FaSnapchat className="w-5 h-5" />
+                </a>
+              )}
+              {settings.tiktokUrl && (
+                <a href={settings.tiktokUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="TikTok">
+                  <FaTiktok className="w-5 h-5" />
                 </a>
               )}
               {settings.googleBusinessUrl && (
-                <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text">
-                  <Store className="w-5 h-5" />
+                <a href={settings.googleBusinessUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-primary/20 transition-colors border border-white/10 text-brand-text" title="Google Business">
+                  <FaGoogle className="w-5 h-5" />
                 </a>
               )}
             </div>
@@ -54,9 +70,9 @@ const Footer = () => {
             <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-text">Quick Links</h4>
             <ul className="space-y-4">
               <li><Link href="/" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Home</Link></li>
+              <li><Link href="/tools" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Premium Tools</Link></li>
+              <li><Link href="/services" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Agency Services</Link></li>
               <li><Link href="/about" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">About Us</Link></li>
-              <li><Link href="/services" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Services</Link></li>
-              <li><Link href="/pricing" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Pricing</Link></li>
               <li><Link href="/blog" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Blog</Link></li>
               <li><Link href="/giveaway" className="text-brand-text/60 hover:text-primary transition-colors text-xs font-black uppercase tracking-widest">Giveaway</Link></li>
             </ul>

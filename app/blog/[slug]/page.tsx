@@ -17,9 +17,15 @@ interface BlogPost {
 
 async function getPost(slug: string): Promise<BlogPost | null> {
   try {
+    // Some browsers or Next.js versions might provide the slug already decoded or partially encoded.
+    // We'll normalize it to ensure we match the 'strict slug' in the database.
+    const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim();
+    
+    console.log('Fetching post for slug:', normalizedSlug);
+
     const q = query(
       collection(db, 'blogPosts'),
-      where('slug', '==', slug),
+      where('slug', '==', normalizedSlug),
       limit(1)
     );
     const snapshot = await getDocs(q);
@@ -27,6 +33,19 @@ async function getPost(slug: string): Promise<BlogPost | null> {
       const doc = snapshot.docs[0];
       return { id: doc.id, ...doc.data() } as BlogPost;
     }
+    
+    // Fallback: Check if the slug was saved RAW without strictness (legacy support)
+    const rawQ = query(
+      collection(db, 'blogPosts'),
+      where('slug', '==', slug),
+      limit(1)
+    );
+    const rawSnapshot = await getDocs(rawQ);
+    if (!rawSnapshot.empty) {
+        const doc = rawSnapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as BlogPost;
+    }
+
     return null;
   } catch (error) {
     console.error('Error fetching post:', error);

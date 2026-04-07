@@ -6,9 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Share2, Save, Loader2, Facebook, Twitter, Instagram, Youtube, Linkedin, Globe } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 const AdminSocials = () => {
   const { isAdmin } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [socials, setSocials] = useState({
@@ -17,8 +19,10 @@ const AdminSocials = () => {
     instagram: '',
     youtube: '',
     linkedin: '',
-    whatsapp: '923209310656',
-    googleBusiness: ''
+    whatsapp: 'https://whatsapp.com/channel/0029VaoX5ax8V0tjn0fc1j08',
+    googleBusiness: '',
+    snapchat: '',
+    tiktok: ''
   });
 
   useEffect(() => {
@@ -35,6 +39,7 @@ const AdminSocials = () => {
       }
     } catch (error) {
       console.error('Error fetching socials:', error);
+      toast.error('Failed to load social links');
     } finally {
       setLoading(false);
     }
@@ -48,9 +53,10 @@ const AdminSocials = () => {
         ...socials,
         updatedAt: serverTimestamp()
       });
-      alert('Social links updated successfully!');
+      toast.success('Social links updated');
     } catch (error) {
       console.error('Error saving socials:', error);
+      toast.error('Failed to save social links', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setSaving(false);
     }
@@ -146,6 +152,31 @@ const AdminSocials = () => {
                   onChange={e => setSocials({...socials, youtube: e.target.value})}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
                   placeholder="https://youtube.com/..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4 flex items-center gap-2">
+                   <Share2 className="w-3 h-3" /> Snapchat URL
+                </label>
+                <input 
+                  type="text" 
+                  value={socials.snapchat}
+                  onChange={e => setSocials({...socials, snapchat: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
+                  placeholder="https://snapchat.com/add/..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4 flex items-center gap-2">
+                   <Share2 className="w-3 h-3" /> TikTok URL
+                </label>
+                <input 
+                  type="text" 
+                  value={socials.tiktok}
+                  onChange={e => setSocials({...socials, tiktok: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-primary transition-colors text-brand-text font-bold"
+                  placeholder="https://tiktok.com/@..."
                 />
               </div>
             </div>

@@ -3,28 +3,31 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { ExternalLink, Globe, Zap, Globe2, Crown } from 'lucide-react';
-
-const partners = [
-  {
-    name: 'DailyHayat',
-    desc: 'Premier network for digital trends and global news updates.',
-    url: 'https://dailyhayat.net',
-    logo: '/dailyhayat.png',
-    tag: 'Strategic Partner'
-  },
-  {
-    name: 'Khaksar Agency',
-    desc: 'Leading digital solutions and premium service scaling for local markets.',
-    url: 'https://whatsapp.com/channel/0029VaoX5ax8V0tjn0fc1j08',
-    logo: '/khaksar-crown', // Placeholder to trigger icon logic
-    tag: 'Digital Partner'
-  }
-];
+import { ExternalLink, Globe, Zap, Crown } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 const PartnerSection = () => {
+  const { settings } = useSettings();
+  
+  const partners = [
+    {
+      name: 'DailyHayat',
+      desc: 'Premier network for digital trends and global news updates.',
+      url: 'https://dailyhayat.net',
+      logo: '/dailyhayat.png',
+      tag: 'Strategic Partner'
+    },
+    {
+      name: 'Khaksar Agency',
+      desc: 'Leading digital solutions and premium service scaling for local markets.',
+      url: settings.whatsappUrl,
+      logo: '/khaksar-crown', 
+      tag: 'Digital Partner'
+    }
+  ];
+
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden bg-brand-bg">
+    <section className="py-14 md:py-20 relative overflow-hidden bg-brand-bg">
     {/* Reduce top spacing fix */}
     <div className="-mt-12" />
       {/* Background Decorative Elements */}
@@ -32,15 +35,7 @@ const PartnerSection = () => {
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-24">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.3em] text-brand-text/40 mb-8"
-          >
-            <Globe2 className="w-3 h-3 text-primary" />
-            Our Network
-          </motion.div>
+        <div className="text-center mb-16 md:mb-20">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -52,7 +47,7 @@ const PartnerSection = () => {
           <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 max-w-6xl mx-auto">
           {partners.map((partner, index) => (
             <motion.div
               key={partner.name}
@@ -66,12 +61,12 @@ const PartnerSection = () => {
                 href={partner.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="block h-full glass p-10 rounded-[3rem] border border-white/5 hover:border-primary/40 transition-all duration-500 bg-brand-soft/5 overflow-hidden"
+                className="block h-full p-10 rounded-[3rem] border border-white/60 transition-all duration-500 overflow-hidden bg-[linear-gradient(135deg,#FFFFFF_0%,#FFF9E6_55%,#FFFFFF_100%)] group-hover:bg-[linear-gradient(135deg,#FFF7D6_0%,#FFE27A_55%,#FFF7D6_100%)] shadow-[0_20px_50px_rgba(255,214,0,0.18)] group-hover:shadow-[0_28px_70px_rgba(255,214,0,0.25)]"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 
                 <div className="flex justify-between items-start mb-12">
-                   <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center p-4 border border-white/10 group-hover:scale-110 transition-transform">
+                   <div className="w-20 h-20 rounded-2xl bg-black/5 flex items-center justify-center p-4 border border-black/10 group-hover:scale-110 transition-transform">
                       {partner.name === 'Khaksar Agency' ? (
                         <Crown className="w-10 h-10 text-primary" />
                       ) : (
@@ -84,31 +79,21 @@ const PartnerSection = () => {
                         />
                       )}
                    </div>
-                   <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[8px] font-black uppercase text-primary tracking-widest">
+                   <div className="px-4 py-1.5 rounded-full bg-black/5 border border-black/10 text-[8px] font-black uppercase text-[#1A1A1A] tracking-widest">
                       {partner.tag}
                    </div>
                 </div>
 
-                <h3 className="text-2xl font-black text-brand-text uppercase mb-4 flex items-center gap-3">
+                <h3 className="text-2xl font-black text-[#1A1A1A] uppercase mb-4 flex items-center gap-3">
                    {partner.name}
-                   <ExternalLink className="w-4 h-4 text-brand-text/10 group-hover:text-primary transition-colors" />
+                   <ExternalLink className="w-4 h-4 text-[#1A1A1A]/30 group-hover:text-[#1A1A1A] transition-colors" />
                 </h3>
-                <p className="text-brand-text/40 text-sm font-medium leading-relaxed mb-10">
+                <p className="text-[#1A1A1A]/60 text-sm font-medium leading-relaxed mb-10">
                    {partner.desc}
                 </p>
 
-                <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                         {[1, 2, 3].map(i => (
-                           <div key={i} className="w-6 h-6 rounded-full border-2 border-brand-bg bg-white/10 font-black text-[6px] flex items-center justify-center">
-                              {i}
-                           </div>
-                         ))}
-                      </div>
-                      <span className="text-[10px] font-black text-brand-text/20 uppercase">Trust Index Baseline</span>
-                   </div>
-                   <Zap className="w-5 h-5 text-primary opacity-20 group-hover:opacity-100 transition-opacity" />
+                <div className="pt-8 border-t border-black/10 flex items-center justify-end">
+                   <Zap className="w-5 h-5 text-primary opacity-50 group-hover:opacity-100 transition-opacity" />
                 </div>
               </a>
             </motion.div>

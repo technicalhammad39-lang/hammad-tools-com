@@ -1,35 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Fields: uid, email, displayName, photoURL, role, createdAt
-    //
-    // Collection: services
-    // Fields: name, description, price, icon, category, features, active
-    //
-    // Collection: orders
-    // Fields: userId, serviceId, serviceName, price, status, createdAt, expiresAt
-    //
-    // Collection: blogPosts
-    // Fields: title, slug, content, excerpt, thumbnail, author, authorId, category, tags, published, createdAt
-    //
-    // Collection: giveaways
-    // Fields: title, description, image, prize, totalWinners, deadline, status, winners, createdAt
-    //
-    // Collection: giveaways/{giveawayId}/entries
-    // Fields: giveawayId, userId, email, bonusEntries, createdAt
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -38,57 +9,153 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdminByEmail() {
+      return isAuthenticated() &&
+        request.auth.token.email == "technicalhammad39@gmail.com";
+    }
+
+    function isAdminByDoc() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isManagerByDoc() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "manager";
+    }
+
     function isAdmin() {
-      return isAuthenticated() && 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "technicalhammad39@gmail.com" && request.auth.token.email_verified == true));
+      return isAdminByEmail() || isAdminByDoc();
+    }
+
+    function isStaff() {
+      return isAdmin() || isManagerByDoc();
     }
 
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
 
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    function isValidRating(value) {
+      return (value is int || value is float) && value >= 1 && value <= 5;
     }
 
-    // ===============================================================
-    // Collection Rules
-    // ===============================================================
-
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isOwner(userId) && 
-        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
-        (request.resource.data.role == 'user' || isAdmin());
-      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow read: if isOwner(userId) || isStaff();
+      allow create: if isOwner(userId) &&
+        hasOnlyAllowedFields(["uid", "email", "displayName", "photoURL", "role", "createdAt"]) &&
+        (request.resource.data.role == "user" || isAdmin());
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /services/{serviceId} {
       allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /payment_methods/{paymentMethodId} {
+      allow read: if (resource.data.active == true) || isAdmin();
       allow write: if isAdmin();
     }
 
-    match /orders/{orderId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin();
+    match /agency_services/{serviceId} {
+      allow read: if true;
+      allow write: if isStaff();
     }
 
     match /blogPosts/{postId} {
-      allow read: if resource.data.published == true || isAdmin();
-      allow write: if isAdmin();
+      allow read: if resource.data.published == true || isStaff();
+      allow write: if isStaff();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if resource.data.active == true || isStaff();
+      allow write: if isStaff();
+    }
+
+    match /service_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if
+        hasOnlyAllowedFields(["serviceSlug", "userName", "text", "rating", "createdAt"]) &&
+        request.resource.data.serviceSlug is string &&
+        request.resource.data.userName is string &&
+        request.resource.data.text is string &&
+        isValidRating(request.resource.data.rating);
+      allow update, delete: if isStaff();
+    }
+
+    match /service_activations/{activationId} {
+      allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create, update, delete: if isStaff();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isStaff();
+    }
+
+    match /entitlements/{entitlementId} {
+      allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create, update, delete: if isStaff();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.recipientId);
+      allow create, delete: if isStaff();
+      allow update: if isStaff() || (
+        isAuthenticated() &&
+        request.auth.uid == resource.data.recipientId &&
+        request.resource.data.recipientId == resource.data.recipientId &&
+        request.resource.data.read is bool
+      );
+    }
+
+    match /push_tokens/{tokenId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+    }
+
+    match /notification_dispatches/{dispatchId} {
+      allow read, write: if isStaff();
     }
 
     match /giveaways/{giveawayId} {
       allow read: if true;
-      allow write: if isAdmin();
-      
-      match /entries/{entryId} {
-        allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow write: if isStaff();
+
+      match /comments/{commentId} {
+        allow read: if true;
         allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isAdmin();
+        allow update, delete: if isStaff();
       }
+
+      match /entries/{entryId} {
+        allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isStaff();
+      }
+    }
+
+    match /user_entries/{entryId} {
+      allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isStaff();
     }
   }
 }
+

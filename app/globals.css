@@ -5,14 +5,14 @@
   --color-primary-neon: #FFEA00; /* Neon Yellow */
   --color-secondary: #FF8C2A; /* Accent Orange */
   --color-accent: #FFA94D; /* Glow Orange */
-  --color-brand-bg: #0A0A0A; /* Deep Black */
-  --color-brand-soft: #121212; /* Soft Dark */
-  --color-brand-card: #1A1A1A; /* Card Dark */
+  --color-brand-bg: #161616; /* Deep Charcoal */
+  --color-brand-soft: #242424; /* Soft Dark */
+  --color-brand-card: #2A2A2A; /* Card Dark */
   --color-brand-text: #F5F5F5; /* Text White */
 }
 
 :root {
-  --background: #0A0A0A;
+  --background: #161616;
   --foreground: #F5F5F5;
   --primary: #FFD600;
   --secondary: #FF8C2A;
@@ -71,11 +71,7 @@ body {
   box-shadow: 0 0 20px rgba(255, 140, 42, 0.2), 0 0 40px rgba(255, 140, 42, 0.1);
 }
 
-.cyber-grid {
-  background-image: linear-gradient(rgba(255, 214, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 214, 0, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
+
 
 .sharp-accent {
   position: relative;

@@ -9,6 +9,9 @@ interface GlobalSettings {
   supportPhone: string;
   whatsappUrl: string;
   facebookUrl: string;
+  instagramUrl: string;
+  snapchatUrl: string;
+  tiktokUrl: string;
   googleBusinessUrl: string;
 }
 
@@ -20,9 +23,12 @@ interface SettingsContextType {
 const defaultSettings: GlobalSettings = {
   supportEmail: 'hammadkhaksar56@gmail.com',
   supportPhone: '+92 320 9310656',
-  whatsappUrl: 'https://wa.me/923209310656',
-  facebookUrl: 'https://facebook.com/hammadtools',
-  googleBusinessUrl: '#',
+  whatsappUrl: 'https://whatsapp.com/channel/0029VaoX5ax8V0tjn0fc1j08',
+  facebookUrl: 'https://www.facebook.com/share/1DuzaVsvAN/',
+  instagramUrl: 'https://www.instagram.com/hammad_khaksar56?',
+  snapchatUrl: 'https://www.snapchat.com/add/hammad_khak56',
+  tiktokUrl: 'https://www.tiktok.com/@hammad_khaksar',
+  googleBusinessUrl: 'https://share.google/sFQ5dERBroxbbbgef',
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -61,6 +67,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             ...prev,
             whatsappUrl: data.whatsapp || prev.whatsappUrl, 
             facebookUrl: data.facebook || prev.facebookUrl,
+            instagramUrl: data.instagram || prev.instagramUrl,
+            snapchatUrl: data.snapchat || prev.snapchatUrl,
+            tiktokUrl: data.tiktok || prev.tiktokUrl,
             googleBusinessUrl: data.googleBusiness || prev.googleBusinessUrl,
           }));
         }

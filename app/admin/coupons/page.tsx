@@ -11,6 +11,7 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  setDoc,
   query, 
   orderBy, 
   onSnapshot 
@@ -22,9 +23,11 @@ import {
   Calendar, 
   CheckCircle2, 
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ToastProvider';
 
 interface Coupon {
   id: string;
@@ -35,7 +38,8 @@ interface Coupon {
 }
 
 const AdminCoupons = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
+  const toast = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -47,7 +51,7 @@ const AdminCoupons = () => {
   });
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isStaff) return;
 
     const q = query(collection(db, 'coupons'), orderBy('code'));
     
@@ -57,11 +61,12 @@ const AdminCoupons = () => {
       setLoading(false);
     }, (error) => {
       console.error('Error fetching coupons:', error);
+      toast.error('Failed to load coupons');
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [isStaff]);
 
   const generateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -73,25 +78,33 @@ const AdminCoupons = () => {
   };
 
   const handleAdd = async () => {
-    if (!newCoupon.code.trim()) return;
+    if (!newCoupon.code.trim()) {
+      toast.error('Coupon code required');
+      return;
+    }
     try {
-      await addDoc(collection(db, 'coupons'), {
+      const formattedCode = newCoupon.code.toUpperCase().trim();
+      await setDoc(doc(db, 'coupons', formattedCode), {
         ...newCoupon,
-        code: newCoupon.code.toUpperCase().trim(),
+        code: formattedCode,
         createdAt: new Date().toISOString()
       });
       setIsAdding(false);
       setNewCoupon({ code: '', discountPercentage: 10, active: true, expiryDate: '' });
+      toast.success('Coupon created');
     } catch (error) {
       console.error('Error adding coupon:', error);
+      toast.error('Failed to create coupon', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
       await updateDoc(doc(db, 'coupons', id), { active: !currentStatus });
+      toast.success('Coupon updated');
     } catch (error) {
       console.error('Error toggling coupon:', error);
+      toast.error('Failed to update coupon');
     }
   };
 
@@ -99,12 +112,14 @@ const AdminCoupons = () => {
     if (!confirm('Are you sure you want to delete this coupon code permanently?')) return;
     try {
       await deleteDoc(doc(db, 'coupons', id));
+      toast.success('Coupon deleted');
     } catch (error) {
       console.error('Error deleting coupon:', error);
+      toast.error('Failed to delete coupon');
     }
   };
 
-  if (!isAdmin) {
+  if (!isStaff) {
     return (
       <div className="pt-32 pb-24 text-center">
         <h1 className="text-3xl font-bold uppercase text-brand-text">Access Blocked</h1>
@@ -116,14 +131,16 @@ const AdminCoupons = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="flex justify-between items-center mb-12">
-        <div>
-          <h1 className="text-4xl font-black uppercase text-brand-text">Manage <span className="internal-gradient">Coupons</span></h1>
-          <p className="text-brand-text/40 font-medium mt-2">Create and track discount codes for premium services.</p>
+      <div className="flex flex-col items-center justify-center text-center mb-10 gap-6">
+        <div className="flex flex-col items-center">
+          <h1 className="text-3xl md:text-5xl font-black uppercase text-brand-text leading-tight">
+            Manage <span className="internal-gradient">Coupons</span>
+          </h1>
+          <p className="text-brand-text/40 text-[10px] md:text-sm font-black uppercase tracking-widest mt-2 px-10">Discount & Promotion Intelligence</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="bg-primary hover:bg-primary/90 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center space-x-3 transition-all border-b-4 border-secondary shadow-xl shadow-primary/10"
+          className="w-full md:w-auto bg-primary text-brand-bg px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
           <span>Generate Code</span>
@@ -132,11 +149,19 @@ const AdminCoupons = () => {
 
       {isAdding && (
         <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-3xl p-8 mb-12 border border-primary/20 bg-brand-soft/20"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed inset-0 md:relative md:inset-auto w-full h-full md:h-auto bg-[#121212] md:bg-brand-soft/20 z-[60] md:z-auto overflow-y-auto md:overflow-visible rounded-none md:rounded-3xl p-6 md:p-8 mb-12 border-none md:border border-primary/20 backdrop-blur-3xl md:backdrop-blur-none"
         >
-          <h2 className="text-xl font-black mb-6 uppercase text-brand-text">New Coupon Configuration</h2>
+          <div className="max-w-4xl mx-auto pt-20 relative">
+            <button 
+              onClick={() => setIsAdding(false)}
+              className="absolute top-4 left-0 flex items-center gap-2 text-brand-text/40 hover:text-primary transition-colors py-2 px-4 bg-white/5 rounded-xl border border-white/5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Abort Configuration</span>
+            </button>
+            <h2 className="text-2xl font-black mb-6 uppercase text-brand-text">New Coupon Configuration</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="space-y-2">
                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-2">Coupon Code</label>
@@ -187,9 +212,10 @@ const AdminCoupons = () => {
                </label>
             </div>
           </div>
-          <div className="flex justify-end space-x-4">
-            <button onClick={() => setIsAdding(false)} className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-brand-text/40 hover:text-brand-text transition-colors">Abort</button>
-            <button onClick={handleAdd} className="bg-primary px-10 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] text-black border-b-4 border-secondary shadow-lg shadow-primary/10">Deploy Coupon</button>
+          <div className="flex flex-col md:flex-row justify-end gap-4 p-6 border-t border-white/5 bg-black/40">
+            <button onClick={() => setIsAdding(false)} className="order-2 md:order-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] text-brand-text/40 hover:text-brand-text transition-colors">Abort Mission</button>
+            <button onClick={handleAdd} className="order-1 md:order-2 bg-primary px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] text-black border-b-4 border-secondary shadow-xl shadow-primary/10 active:border-b-0 transition-all">Deploy Coupon</button>
+          </div>
           </div>
         </motion.div>
       )}

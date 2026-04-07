@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
 import { uploadFile } from '@/lib/storage-utils';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
+import { useToast } from '@/components/ToastProvider';
 
 const BlogCMS = () => {
-  const { isAdmin, profile } = useAuth();
+  const { isStaff, profile } = useAuth();
+  const toast = useToast();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -30,7 +32,7 @@ const BlogCMS = () => {
   });
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isStaff) return;
 
     const q = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'));
     
@@ -39,16 +41,20 @@ const BlogCMS = () => {
       setLoading(false);
     }, (error) => {
       console.error('Error fetching posts:', error);
+      toast.error('Failed to load posts');
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [isStaff]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const sanitizedSlug = formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    
     const postData = {
       ...formData,
+      slug: sanitizedSlug,
       tags: formData.tags.split(',').map(t => t.trim()),
       author: profile?.displayName || 'Admin',
       authorId: profile?.uid,
@@ -58,17 +64,20 @@ const BlogCMS = () => {
     try {
       if (editingPost) {
         await updateDoc(doc(db, 'blogPosts', editingPost.id), postData);
+        toast.success('Post updated');
       } else {
         await addDoc(collection(db, 'blogPosts'), {
           ...postData,
           createdAt: serverTimestamp(),
         });
+        toast.success('Post created');
       }
       setIsAdding(false);
       setEditingPost(null);
       setFormData({ title: '', slug: '', excerpt: '', content: '', thumbnail: '', category: 'General', published: false, tags: '' });
     } catch (error) {
       console.error('Error saving post:', error);
+      toast.error('Failed to save post', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
@@ -76,22 +85,29 @@ const BlogCMS = () => {
     if (confirm('Are you sure you want to delete this post?')) {
       try {
         await deleteDoc(doc(db, 'blogPosts', id));
+        toast.success('Post deleted');
       } catch (error) {
         console.error('Error deleting post:', error);
+        toast.error('Failed to delete post', error instanceof Error ? error.message : 'Please try again.');
       }
     }
   };
 
-  if (!isAdmin) return <div className="pt-32 text-center">Access Denied.</div>;
+  if (!isStaff) return <div className="pt-32 text-center">Access Denied.</div>;
 
   return (
     <div className="pt-32 pb-24 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-12">
-          <h1 className="text-4xl font-bold">Blog <span className="text-primary">CMS</span></h1>
+        <div className="flex flex-col items-center justify-center text-center mb-10 gap-6">
+          <div className="flex flex-col items-center">
+            <h1 className="text-3xl md:text-5xl font-black uppercase text-brand-text leading-tight">
+              Blog <span className="text-primary">CMS</span>
+            </h1>
+            <p className="text-brand-text/40 text-[10px] md:text-sm font-black uppercase tracking-widest mt-2 px-10">Content & News Distribution Hub</p>
+          </div>
           <button 
             onClick={() => setIsAdding(true)}
-            className="bg-primary text-white px-6 py-3 rounded-2xl font-bold flex items-center space-x-2"
+            className="w-full md:w-auto bg-primary text-brand-bg px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 transition-all active:scale-95"
           >
             <Plus className="w-5 h-5" />
             <span>Add New Post</span>
@@ -100,15 +116,20 @@ const BlogCMS = () => {
 
         {(isAdding || editingPost) && (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-[2.5rem] p-10 border-white/10 mb-12"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="fixed inset-0 md:relative md:inset-auto w-full h-full md:h-auto bg-[#121212] md:bg-transparent z-[60] md:z-auto overflow-y-auto md:overflow-visible rounded-none md:rounded-[2.5rem] p-6 md:p-10 border-none md:border border-white/10 mb-12 backdrop-blur-3xl md:backdrop-blur-none"
           >
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold">{editingPost ? 'Edit Post' : 'Create New Post'}</h2>
-              <button onClick={() => { setIsAdding(false); setEditingPost(null); }} className="p-2 hover:bg-white/10 rounded-full">
-                <X className="w-6 h-6" />
+            <div className="max-w-4xl mx-auto pt-20 relative">
+              <button 
+                onClick={() => { setIsAdding(false); setEditingPost(null); }}
+                className="absolute top-4 left-0 flex items-center gap-2 text-brand-text/40 hover:text-primary transition-colors py-2 px-4 bg-white/5 rounded-xl border border-white/5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Abort Mission</span>
               </button>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-black uppercase text-brand-text">{editingPost ? 'Edit Intel' : 'New Deployment'}</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -128,7 +149,10 @@ const BlogCMS = () => {
                   <input 
                     type="text" 
                     value={formData.slug}
-                    onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                    onChange={(e) => {
+                      const strictSlug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                      setFormData({...formData, slug: strictSlug})
+                    }}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
                     required
                   />
@@ -168,7 +192,7 @@ const BlogCMS = () => {
                               const url = await uploadFile(file, `blog/${Date.now()}_${file.name}`, setUploadProgress);
                               setFormData({ ...formData, thumbnail: url });
                             } catch (error) {
-                              alert('Upload failed');
+                              toast.error('Upload failed', 'Unable to upload image.');
                             } finally {
                               setUploading(false);
                               setUploadProgress(0);
@@ -227,13 +251,15 @@ const BlogCMS = () => {
                 </div>
               </div>
 
-              <div className="md:col-span-2 pt-6">
-                <button type="submit" className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>{editingPost ? 'Update Post' : 'Create Post'}</span>
+              <div className="md:col-span-2 flex flex-col md:flex-row justify-end gap-4 p-6 border-t border-white/5 bg-black/40 -mx-6 -mb-6 md:mx-0 md:mb-0 md:rounded-b-[2.5rem] mt-8">
+                <button type="button" onClick={() => { setIsAdding(false); setEditingPost(null); }} className="order-2 md:order-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] text-brand-text/40 hover:text-brand-text transition-colors">Abort Session</button>
+                <button type="submit" className="order-1 md:order-2 bg-primary text-brand-bg px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 active:border-b-0 transition-all flex items-center justify-center gap-2">
+                  <Save className="w-4 h-4" />
+                  <span>{editingPost ? 'Push Update' : 'Authorize Deployment'}</span>
                 </button>
               </div>
             </form>
+            </div>
           </motion.div>
         )}
 

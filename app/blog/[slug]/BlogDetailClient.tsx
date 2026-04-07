@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Calendar, Share2, ArrowLeft, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -122,12 +123,12 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
             <div className="prose prose-invert prose-primary max-w-none 
               prose-headings:font-black prose-headings:uppercase prose-headings:text-brand-text
               prose-p:text-brand-text/70 prose-p:leading-relaxed prose-p:text-lg
-              prose-strong:text-primary prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+              prose-strong:text-primary prose-a:text-blue-500 prose-a:underline hover:prose-a:text-blue-400 cursor-pointer
               prose-img:rounded-[2rem] prose-img:border prose-img:border-white/10
               prose-img:mx-auto
               prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl
             ">
-              <ReactMarkdown>{post.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
             </div>
           </div>
 

@@ -6,9 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Settings, Save, Loader2, ShieldCheck, Globe, Bell } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 const AdminSettings = () => {
   const { isAdmin } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [siteConfig, setSiteConfig] = useState({
@@ -34,6 +36,7 @@ const AdminSettings = () => {
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
+      toast.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
@@ -47,9 +50,10 @@ const AdminSettings = () => {
         ...siteConfig,
         updatedAt: serverTimestamp()
       });
-      alert('Global settings updated successfully!');
+      toast.success('Settings updated');
     } catch (error) {
       console.error('Error saving settings:', error);
+      toast.error('Failed to save settings', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setSaving(false);
     }
