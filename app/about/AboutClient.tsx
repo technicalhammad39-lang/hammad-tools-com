@@ -48,11 +48,10 @@ export default function AboutClient() {
             viewport={{ once: true }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent blur-3xl -z-10 rounded-[3rem]"></div>
-            <div className="glass p-6 md:p-10 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-primary to-emerald-500"></div>
+            <div className="glass p-6 md:p-10 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden bg-white/5">
+               <div className="absolute top-0 left-0 w-2 h-full bg-primary"></div>
                <Shield className="w-8 h-8 md:w-12 md:h-12 text-primary mb-6" />
-               <h2 className="text-2xl md:text-4xl font-black uppercase text-brand-text mb-4">Our Mission & Vision</h2>
+               <h2 className="text-2xl md:text-4xl font-black uppercase text-white mb-4">Our Mission & Vision</h2>
                <div className="space-y-4 text-brand-text/70 font-medium leading-relaxed text-sm md:text-base">
                   <p>
                     "Our vision is simple: democratize access to elite digital resources. We empower creators by removing the barriers of fragmented subscriptions and high costs."
@@ -74,33 +73,33 @@ export default function AboutClient() {
             viewport={{ once: true }}
             className="grid grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6"
           >
-            <div className="glass p-5 md:p-8 rounded-3xl border border-white/5 shadow-2xl hover:border-primary/30 transition-all hover:-translate-y-2 flex flex-col items-center justify-center text-center group">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Globe className="w-5 h-5 md:w-8 md:h-8 text-primary" />
+            <div className="p-5 md:p-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center justify-center text-center bg-white/5">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                <Globe className="w-5 h-5 md:w-8 md:h-8 text-white" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-brand-text">50+</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-brand-text/40 mt-1">Countries Served</p>
+              <h3 className="text-2xl md:text-4xl font-black text-white">50+</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-white/60 mt-1">Countries Served</p>
             </div>
-            <div className="glass p-5 md:p-8 rounded-3xl border border-white/5 shadow-2xl hover:border-emerald-500/30 transition-all hover:-translate-y-2 flex flex-col items-center justify-center text-center group md:translate-y-10">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Users className="w-5 h-5 md:w-8 md:h-8 text-emerald-400" />
+            <div className="p-5 md:p-8 rounded-3xl border border-primary/30 shadow-2xl flex flex-col items-center justify-center text-center bg-primary">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/15 flex items-center justify-center mb-4">
+                <Users className="w-5 h-5 md:w-8 md:h-8 text-black" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-brand-text">10k+</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-brand-text/40 mt-1">Active Creators</p>
+              <h3 className="text-2xl md:text-4xl font-black text-black">10k+</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Active Creators</p>
             </div>
-            <div className="glass p-5 md:p-8 rounded-3xl border border-white/5 shadow-2xl hover:border-accent/30 transition-all hover:-translate-y-2 flex flex-col items-center justify-center text-center group">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Award className="w-5 h-5 md:w-8 md:h-8 text-accent" />
+            <div className="p-5 md:p-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col items-center justify-center text-center bg-white/5">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                <Award className="w-5 h-5 md:w-8 md:h-8 text-white" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-brand-text">99%</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-brand-text/40 mt-1">Satisfaction Rate</p>
+              <h3 className="text-2xl md:text-4xl font-black text-white">99%</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-white/60 mt-1">Satisfaction Rate</p>
             </div>
-            <div className="glass p-5 md:p-8 rounded-3xl border border-white/5 shadow-2xl hover:border-blue-500/30 transition-all hover:-translate-y-2 flex flex-col items-center justify-center text-center group md:translate-y-10">
-              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Shield className="w-5 h-5 md:w-8 md:h-8 text-blue-400" />
+            <div className="p-5 md:p-8 rounded-3xl border border-primary/30 shadow-2xl flex flex-col items-center justify-center text-center bg-primary">
+              <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-black/15 flex items-center justify-center mb-4">
+                <Shield className="w-5 h-5 md:w-8 md:h-8 text-black" />
               </div>
-              <h3 className="text-2xl md:text-4xl font-black text-brand-text">24/7</h3>
-              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-brand-text/40 mt-1">Security & Support</p>
+              <h3 className="text-2xl md:text-4xl font-black text-black">24/7</h3>
+              <p className="text-[8px] md:text-[10px] uppercase font-black tracking-widest text-black/70 mt-1">Security & Support</p>
             </div>
           </motion.div>
         </div>
