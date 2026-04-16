@@ -25,7 +25,7 @@ export default function Home() {
       <Hero />
       
       {/* Logo Marquee Section */}
-      <section className="py-8 md:py-12 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
+      <section className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
         <Marquee gradient={true} gradientColor="black" gradientWidth={100} speed={40} pauseOnHover={true}>
           {[
             { name: 'Netflix', color: '#E50914' },
@@ -37,12 +37,12 @@ export default function Home() {
             { name: 'Amazon Prime', color: '#00A8E1' },
             { name: 'Crunchyroll', color: '#F47521' },
           ].map((platform) => (
-            <div key={platform.name} className="flex items-center space-x-2 md:space-x-3 mx-8 md:mx-16 group">
+            <div key={platform.name} className="flex items-center space-x-1.5 md:space-x-3 mx-5 md:mx-14 group">
               <div 
-                className="w-1.5 h-1.5 rounded-full" 
+                className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" 
                 style={{ backgroundColor: platform.color }}
               />
-              <span className="text-2xl font-black text-brand-text/40 group-hover:text-brand-text transition-colors duration-300 uppercase italic">
+              <span className="text-base sm:text-xl md:text-2xl font-black text-brand-text/40 group-hover:text-brand-text transition-colors duration-300 uppercase italic">
                 {platform.name}
               </span>
             </div>

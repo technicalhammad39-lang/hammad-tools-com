@@ -26,6 +26,7 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence } from 'motion/react';
 import NotificationBell from '@/components/NotificationBell';
+import AdminOrderTicker from '@/components/AdminOrderTicker';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '@/firebase';
 
@@ -139,10 +140,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
         ordersSnap.forEach((doc) => {
           const data = doc.data() as any;
-          const orderNumber = data.orderNumber || 'Order';
-          const haystack = `${orderNumber} ${data.userEmail || ''} ${data.userName || ''}`.toLowerCase();
+          const orderNumber = data.orderId || data.order_id || data.orderNumber || 'Order';
+          const haystack = `${orderNumber} ${data.userEmail || data.email || ''} ${data.userPhone || data.phone || ''} ${data.userName || ''}`.toLowerCase();
           if (haystack.includes(needle)) {
-            results.push({ id: `order-${doc.id}`, label: orderNumber, sub: 'Order', href: '/admin/orders' });
+            results.push({ id: `order-${doc.id}`, label: orderNumber, sub: 'Order', href: `/admin/orders?order=${doc.id}` });
           }
         });
 
@@ -382,6 +383,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             </AnimatePresence>
           </div>
         </header>
+
+        <AdminOrderTicker />
 
         <main className="flex-1 p-4 lg:p-10 overflow-y-auto no-scrollbar pb-32 lg:pb-10">
           {children}

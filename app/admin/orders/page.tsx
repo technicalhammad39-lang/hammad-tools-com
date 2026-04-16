@@ -1,72 +1,184 @@
 ﻿'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   CheckCircle2,
   XCircle,
-  Clock,
   Loader2,
-  MessageSquare,
-  ShieldCheck,
-  Eye,
   Send,
-  PackageCheck,
+  ExternalLink,
+  Copy,
+  Paperclip,
+  X,
 } from 'lucide-react';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { db, auth } from '@/firebase';
-import type { EntitlementRecord, OrderRecord } from '@/lib/types/domain';
+import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
+import { db } from '@/firebase';
+import type { OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
+import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
+import { uploadFile } from '@/lib/storage-utils';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'pending_verification', label: 'Pending' },
+  { id: 'pending', label: 'Pending' },
   { id: 'approved', label: 'Approved' },
   { id: 'rejected', label: 'Rejected' },
-  { id: 'needs_info', label: 'Needs Info' },
-  { id: 'completed', label: 'Completed' },
 ] as const;
 
-function formatDate(value: any) {
-  const date = value?.toDate?.() || (value ? new Date(value) : null);
-  if (!date || Number.isNaN(date.getTime())) {
-    return 'N/A';
-  }
-  return date.toLocaleString();
-}
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function statusStyles(status: string) {
-  if (status === 'approved') {
-    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+  const normalized = normalizeOrderStatus(status);
+  if (normalized === 'approved') {
+    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
   }
-  if (status === 'rejected') {
-    return 'bg-accent/10 text-accent border-accent/20';
+  if (normalized === 'rejected') {
+    return 'bg-accent/10 text-accent border-accent/30';
   }
-  if (status === 'completed') {
-    return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+  return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+}
+
+function paymentMethodName(order: OrderRecord) {
+  const legacy = (order as any).paymentMethodName;
+  return order.paymentMethodSnapshot?.name || legacy || '';
+}
+
+function senderAccount(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.senderAccount || proof?.senderNumber || '';
+}
+
+function transactionValue(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.transactionId || '';
+}
+
+function screenshotUrl(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.screenshotUrl || '';
+}
+
+function getPrimaryItem(order: OrderRecord) {
+  const explicit = (order as any).itemSummary?.[0];
+  if (explicit) {
+    return explicit;
   }
-  if (status === 'needs_info') {
-    return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+  return (order.items || [])[0] || null;
+}
+
+function getOrderPlanLabel(order: OrderRecord) {
+  const primary = getPrimaryItem(order);
+  return primary?.selectedPlanName || (order as any).primaryPlanName || order.selectedPlanName || '';
+}
+
+function getOrderDuration(order: OrderRecord) {
+  const primary = getPrimaryItem(order) as any;
+  return primary?.durationLabel || (order as any).primaryDuration || (order as any).duration || '';
+}
+
+function getOrderPlanType(order: OrderRecord) {
+  const primary = getPrimaryItem(order) as any;
+  return primary?.planType || (order as any).primaryPlanType || '';
+}
+
+function getOrderCoupon(order: OrderRecord) {
+  const data = order as any;
+  return data.couponCode || data.appliedCouponCode || data.coupon?.code || '';
+}
+
+function getTargetEmail(order: OrderRecord) {
+  const anyOrder = order as any;
+  return anyOrder.deliveryEmail || anyOrder.targetEmail || order.userEmail || order.email || '';
+}
+
+function getOrderQuantity(order: OrderRecord) {
+  if (typeof order.quantityTotal === 'number' && order.quantityTotal > 0) {
+    return order.quantityTotal;
   }
-  return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+  return (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+}
+
+function productSummary(order: OrderRecord) {
+  const titles = (order.items || []).map((item) => item.productTitle).filter(Boolean);
+  if (!titles.length) {
+    return '';
+  }
+  return titles.join(', ');
+}
+
+function getOrderCustomerName(order: OrderRecord) {
+  return order.userName || '';
+}
+
+function orderPriority(status: string) {
+  const normalized = normalizeOrderStatus(status);
+  if (normalized === 'pending') {
+    return 0;
+  }
+  if (normalized === 'approved') {
+    return 1;
+  }
+  return 2;
+}
+
+function DataField({
+  label,
+  value,
+  onCopy,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  onCopy: () => void;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${
+        highlight ? 'bg-primary/85 border-primary text-black' : 'bg-[#D7D7D7] border-[#D7D7D7] text-black'
+      }`}
+    >
+      <div className="min-w-0">
+        <div className="text-[11px] font-bold leading-tight text-black">{label}</div>
+        <div className="text-sm font-semibold leading-tight text-black whitespace-pre-wrap break-words">{value || '-'}</div>
+      </div>
+      <button
+        onClick={onCopy}
+        className={`shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold rounded-lg px-2.5 py-1 ${
+          highlight ? 'bg-black/15 hover:bg-black/25' : 'bg-black/10 hover:bg-black/20'
+        }`}
+      >
+        <Copy className="w-3.5 h-3.5" /> Copy
+      </button>
+    </div>
+  );
 }
 
 export default function AdminOrdersPage() {
-  const { isStaff } = useAuth();
+  const params = useSearchParams();
+  const requestedOrder = params.get('order');
+  const { isStaff, user } = useAuth();
   const toast = useToast();
+
   const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]['id']>('all');
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]['id']>('pending');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [deliveryDetails, setDeliveryDetails] = useState('');
-  const [internalNote, setInternalNote] = useState('');
   const [error, setError] = useState('');
+  const [composerMessage, setComposerMessage] = useState('');
+  const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
+  const [statusModal, setStatusModal] = useState<{
+    type: 'approve' | 'reject';
+    value: string;
+  } | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isStaff) {
@@ -77,72 +189,61 @@ export default function AdminOrdersPage() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Omit<OrderRecord, 'id'>) }));
+        const data = snapshot.docs.map((snap) => ({
+          id: snap.id,
+          ...(snap.data() as Omit<OrderRecord, 'id'>),
+        }));
         setOrders(data);
         setLoading(false);
       },
-      (error) => {
-        console.error('Failed to load orders:', error);
-        toast.error('Failed to load orders', 'Check your Firebase connection.');
+      (snapshotError) => {
+        console.error('Failed to load orders:', snapshotError);
+        toast.error('Failed to load orders', 'Please check your Firestore connection.');
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [isStaff]);
+  }, [isStaff, toast]);
 
   useEffect(() => {
-    if (!selectedOrderId) {
-      setEntitlements([]);
+    if (!orders.length) {
       return;
     }
 
-    const entitlementsQuery = query(collection(db, 'entitlements'), where('orderId', '==', selectedOrderId));
-    const unsubscribe = onSnapshot(entitlementsQuery, (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<EntitlementRecord, 'id'>) }))
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        });
-      setEntitlements(data);
-    }, (error) => {
-      console.error('Failed to load entitlements:', error);
-      toast.error('Failed to load entitlements');
-    });
+    if (requestedOrder && orders.some((order) => order.id === requestedOrder)) {
+      setSelectedOrderId(requestedOrder);
+    }
+  }, [orders, requestedOrder]);
 
-    return () => unsubscribe();
-  }, [selectedOrderId]);
-
-  const selectedOrder = useMemo(
-    () => orders.find((order) => order.id === selectedOrderId) || null,
-    [orders, selectedOrderId]
+  const sortedOrders = useMemo(
+    () =>
+      [...orders].sort((a, b) => {
+        const byStatus = orderPriority(a.status) - orderPriority(b.status);
+        if (byStatus !== 0) {
+          return byStatus;
+        }
+        const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
+        const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
+        return bTime - aTime;
+      }),
+    [orders]
   );
 
-  useEffect(() => {
-    if (!selectedOrder) {
-      setMessage('');
-      setRejectionReason('');
-      setDeliveryDetails('');
-      setInternalNote('');
-      return;
-    }
-
-    setMessage(selectedOrder.adminMessage || '');
-    setRejectionReason(selectedOrder.rejectionReason || '');
-    setDeliveryDetails(selectedOrder.deliveryDetails || '');
-    setInternalNote(selectedOrder.internalNote || '');
-  }, [selectedOrder]);
-
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return sortedOrders.filter((order) => {
       const searchable = [
-        order.orderNumber,
+        getOrderDisplayId(order),
         order.userEmail,
+        order.email,
+        order.userPhone,
+        order.phone,
         order.userName,
-        order.paymentProof?.senderNumber,
-        order.paymentProof?.transactionId,
+        paymentMethodName(order),
+        senderAccount(order),
+        transactionValue(order),
+        getOrderPlanLabel(order),
+        getOrderDuration(order),
         ...(order.items || []).map((item) => item.productTitle),
       ]
         .filter(Boolean)
@@ -150,117 +251,288 @@ export default function AdminOrdersPage() {
         .toLowerCase();
 
       const matchesSearch = searchable.includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || normalizeOrderStatus(order.status) === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [orders, searchTerm, statusFilter]);
+  }, [sortedOrders, searchTerm, statusFilter]);
+
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) || null,
+    [orders, selectedOrderId]
+  );
 
   const stats = useMemo(
     () => ({
-      pending: orders.filter((order) => order.status === 'pending_verification').length,
-      approved: orders.filter((order) => order.status === 'approved').length,
-      rejected: orders.filter((order) => order.status === 'rejected').length,
-      completed: orders.filter((order) => order.status === 'completed').length,
+      pending: orders.filter((order) => normalizeOrderStatus(order.status) === 'pending').length,
+      approved: orders.filter((order) => normalizeOrderStatus(order.status) === 'approved').length,
+      rejected: orders.filter((order) => normalizeOrderStatus(order.status) === 'rejected').length,
     }),
     [orders]
   );
+
+  const orderMessages = useMemo(() => {
+    if (!selectedOrder?.messages || !Array.isArray(selectedOrder.messages)) {
+      return [] as Array<{
+        senderRole: string;
+        senderId: string;
+        message: string;
+        createdAt: any;
+        attachmentUrl?: string;
+        attachmentName?: string;
+      }>;
+    }
+
+    return [...selectedOrder.messages].sort((a, b) => {
+      const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || new Date(a.createdAt || 0).getTime() || 0;
+      const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || new Date(b.createdAt || 0).getTime() || 0;
+      return aTime - bTime;
+    });
+  }, [selectedOrder?.messages]);
 
   if (!isStaff) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;
   }
 
-  async function runAction(
-    action: 'approve' | 'reject' | 'request_info' | 'send_message' | 'mark_completed' | 'add_internal_note'
+  async function uploadMessageAttachment(orderId: string, file: File) {
+    if (!user) {
+      throw new Error('You must be logged in as admin.');
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      throw new Error('Attachment size must be less than 10MB.');
+    }
+    const extension = file.name.split('.').pop() || 'file';
+    const uploadedUrl = await uploadFile(
+      file,
+      `order-messages/${orderId}/${user.uid}-${Date.now()}.${extension}`
+    );
+    return {
+      url: uploadedUrl,
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+    };
+  }
+
+  async function pushOrderMessage(
+    order: OrderRecord,
+    content: string,
+    messageType: 'message' | 'approval' | 'rejection',
+    title: string,
+    nextStatus?: 'pending' | 'approved' | 'rejected',
+    attachment?: { url: string; name: string; type: string; size: number } | null
   ) {
+    if (!user) {
+      throw new Error('You must be logged in as admin to update orders.');
+    }
+
+    const trimmed = content.trim();
+    if (!trimmed && !attachment) {
+      throw new Error('Message or attachment is required.');
+    }
+
+    const existingMessages = Array.isArray(order.messages) ? [...order.messages] : [];
+    const newMessage = {
+      senderRole: 'admin',
+      senderId: user.uid,
+      message: trimmed,
+      attachmentUrl: attachment?.url || '',
+      attachmentName: attachment?.name || '',
+      attachmentType: attachment?.type || '',
+      attachmentSize: attachment?.size || 0,
+      createdAt: new Date(),
+    };
+
+    const orderRef = doc(db, 'orders', order.id);
+    const batch = writeBatch(db);
+    const previewText = trimmed || `Attachment: ${attachment?.name || 'file'}`;
+
+    const updatePayload: Record<string, unknown> = {
+      adminMessage: trimmed || order.adminMessage || '',
+      latestMessagePreview: previewText.slice(0, 220),
+      latestMessageAt: serverTimestamp(),
+      messages: [...existingMessages, newMessage],
+      tickerState: 'opened',
+      tickerOpenedAt: serverTimestamp(),
+      openedByAdminId: user.uid,
+      updatedAt: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    };
+
+    if (nextStatus) {
+      updatePayload.status = nextStatus;
+      updatePayload.statusUpdatedAt = serverTimestamp();
+      updatePayload.status_updated_at = serverTimestamp();
+      if (nextStatus === 'rejected') {
+        updatePayload.rejectionReason = trimmed;
+      }
+      if (nextStatus === 'approved') {
+        updatePayload.rejectionReason = '';
+      }
+    }
+
+    batch.update(orderRef, updatePayload);
+
+    if (order.userId) {
+      const notificationRef = doc(collection(db, 'notifications'));
+      batch.set(notificationRef, {
+        recipientId: order.userId,
+        recipientRole: 'user',
+        type: messageType === 'message' ? 'order_message' : 'order_status',
+        title,
+        body: previewText,
+        link: `/dashboard?order=${encodeURIComponent(order.id)}`,
+        orderId: order.id,
+        metadata: {
+          orderId: getOrderDisplayId(order),
+          status: nextStatus || normalizeOrderStatus(order.status),
+          attachmentUrl: attachment?.url || '',
+          attachmentName: attachment?.name || '',
+        },
+        read: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  async function handleApprove(inputMessage?: string) {
     if (!selectedOrder) {
-      return;
+      return false;
     }
 
     setError('');
     setActionLoading(true);
-
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('Missing admin token. Please login again.');
-      }
-
-      let token = await currentUser.getIdToken(true);
-      let response = await fetch(`/api/orders/${selectedOrder.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          action,
-          message,
-          rejectionReason,
-          deliveryDetails,
-          internalNote,
-        }),
-      });
-
-      if (response.status === 401) {
-        token = await currentUser.getIdToken(true);
-        response = await fetch(`/api/orders/${selectedOrder.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            action,
-            message,
-            rejectionReason,
-            deliveryDetails,
-            internalNote,
-          }),
-        });
-      }
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || 'Failed to update order.');
-      }
-      toast.success('Order updated', `Action ${action.replace('_', ' ')} completed.`);
+      const text =
+        (inputMessage || '').trim() ||
+        `Your order ${getOrderDisplayId(selectedOrder)} has been approved. Please check your dashboard details.`;
+      await pushOrderMessage(selectedOrder, text, 'approval', 'Order Approved', 'approved');
+      toast.success('Order approved', getOrderDisplayId(selectedOrder));
+      return true;
     } catch (actionError) {
-      const message = actionError instanceof Error ? actionError.message : 'Failed to update order.';
+      const message = actionError instanceof Error ? actionError.message : 'Failed to approve order.';
       setError(message);
-      toast.error('Order update failed', message);
+      toast.error('Approve failed', message);
+      return false;
     } finally {
       setActionLoading(false);
     }
   }
 
+  async function handleReject(reasonInput?: string) {
+    if (!selectedOrder) {
+      return false;
+    }
+
+    const reason = (reasonInput || '').trim();
+    if (!reason) {
+      setError('Rejection reason is required.');
+      return false;
+    }
+
+    setError('');
+    setActionLoading(true);
+    try {
+      await pushOrderMessage(selectedOrder, reason, 'rejection', 'Order Rejected', 'rejected');
+      toast.success('Order rejected', getOrderDisplayId(selectedOrder));
+      return true;
+    } catch (actionError) {
+      const message = actionError instanceof Error ? actionError.message : 'Failed to reject order.';
+      setError(message);
+      toast.error('Reject failed', message);
+      return false;
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleSendMessage() {
+    if (!selectedOrder) {
+      return false;
+    }
+
+    setError('');
+    setActionLoading(true);
+    try {
+      let attachment: { url: string; name: string; type: string; size: number } | null = null;
+      if (composerAttachment) {
+        setAttachmentUploading(true);
+        attachment = await uploadMessageAttachment(selectedOrder.id, composerAttachment);
+      }
+      await pushOrderMessage(selectedOrder, composerMessage, 'message', 'Order Message', undefined, attachment);
+      setComposerMessage('');
+      setComposerAttachment(null);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = '';
+      }
+      toast.success('Message sent', getOrderDisplayId(selectedOrder));
+      return true;
+    } catch (actionError) {
+      const msg = actionError instanceof Error ? actionError.message : 'Failed to send message.';
+      setError(msg);
+      toast.error('Message failed', msg);
+      return false;
+    } finally {
+      setActionLoading(false);
+      setAttachmentUploading(false);
+    }
+  }
+
+  async function copyValue(value: string, label: string) {
+    if (!value) {
+      toast.error(`${label} is empty`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch (copyError) {
+      console.error('Copy failed:', copyError);
+      toast.error(`Failed to copy ${label.toLowerCase()}`);
+    }
+  }
+
+  const selectedPrimaryItem = selectedOrder ? getPrimaryItem(selectedOrder) : null;
+  const selectedProductName = selectedPrimaryItem?.productTitle || productSummary(selectedOrder || ({} as OrderRecord));
+  const selectedPlanName = selectedOrder ? getOrderPlanLabel(selectedOrder) : '';
+  const selectedDuration = selectedOrder ? getOrderDuration(selectedOrder) : '';
+  const selectedPlanType = selectedOrder ? getOrderPlanType(selectedOrder) : '';
+  const selectedCoupon = selectedOrder ? getOrderCoupon(selectedOrder) : '';
+  const selectedScreenshotUrl = selectedOrder ? screenshotUrl(selectedOrder) : '';
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-brand-text uppercase">Order <span className="internal-gradient">Management</span></h1>
-          <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Realtime Verification Workflow</p>
+          <h1 className="text-4xl font-black text-brand-text uppercase">
+            Order <span className="internal-gradient">Management</span>
+          </h1>
+          <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-[0.3em] mt-2">
+            Realtime Review + Messaging
+          </p>
         </div>
 
-        <div className="relative group w-full md:w-80">
+        <div className="relative group w-full md:w-96">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20 group-focus-within:text-primary transition-colors" />
           <input
             type="text"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search order, user, txid..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary/50"
+            placeholder="Search order, customer, payment..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Pending', value: stats.pending, color: 'text-amber-400', bg: 'bg-amber-400/5' },
           { label: 'Approved', value: stats.approved, color: 'text-emerald-400', bg: 'bg-emerald-400/5' },
           { label: 'Rejected', value: stats.rejected, color: 'text-accent', bg: 'bg-accent/5' },
-          { label: 'Completed', value: stats.completed, color: 'text-blue-400', bg: 'bg-blue-400/5' },
         ].map((stat) => (
-          <div key={stat.label} className={`p-5 rounded-2xl border border-white/5 ${stat.bg}`}>
+          <div key={stat.label} className={`p-4 rounded-2xl border border-white/5 ${stat.bg}`}>
             <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
             <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">{stat.label}</div>
           </div>
@@ -272,246 +544,400 @@ export default function AdminOrdersPage() {
           <button
             key={filter.id}
             onClick={() => setStatusFilter(filter.id)}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${statusFilter === filter.id ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-brand-text/40'}`}
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+              statusFilter === filter.id
+                ? 'bg-primary border-primary text-black'
+                : 'bg-white/5 border-white/10 text-brand-text/40'
+            }`}
           >
             {filter.label}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 glass rounded-[2rem] border border-white/5 overflow-hidden">
-          {loading ? (
-            <div className="py-24 flex justify-center"><Loader2 className="w-10 h-10 text-primary animate-spin" /></div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="py-24 text-center text-brand-text/30 text-xs uppercase tracking-widest font-black">No orders found.</div>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="xl:col-span-8 glass rounded-[2rem] border border-primary/20 p-4 md:p-6 lg:p-7 min-h-[640px]">
+          {!selectedOrder ? (
+            <div className="h-full grid place-items-center text-center text-brand-text/40 text-sm font-semibold px-4">
+              Pick an order from the right list to open full order details.
+            </div>
           ) : (
-            <div className="divide-y divide-white/5">
-              {filteredOrders.map((order) => (
-                <button
-                  key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
-                  className={`w-full text-left p-6 hover:bg-white/5 transition-colors ${selectedOrderId === order.id ? 'bg-white/5' : ''}`}
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-black uppercase text-brand-text">{order.orderNumber || order.id}</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">
-                        {order.userName || 'Customer'} · {order.userEmail || 'No email'}
-                      </div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/20 mt-2">
-                        {(order.items || []).map((item) => item.productTitle).join(', ')}
-                      </div>
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-white/10 bg-[#252525] p-4 md:p-5">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="space-y-2 min-w-0">
+                    <div className="text-[11px] text-brand-text/45">Ordered Item</div>
+                    <h2 className="text-2xl md:text-[2rem] leading-tight font-semibold text-primary break-words">
+                      {selectedProductName || 'N/A'}
+                    </h2>
+                    <div className="text-sm text-brand-text/70 break-words">
+                      {selectedPlanName || 'No plan'}
+                      {selectedDuration ? ` • ${selectedDuration}` : ''}
+                      {selectedPlanType ? ` • ${selectedPlanType}` : ''}
                     </div>
+                    <div className="text-xs text-brand-text/55 break-words">
+                      Order ID: {getOrderDisplayId(selectedOrder)} • Qty: {getOrderQuantity(selectedOrder)}
+                    </div>
+                    <div className="text-xs text-brand-text/45">Created: {formatDateTime(selectedOrder.createdAt)}</div>
+                  </div>
 
-                    <div className="text-right">
-                      <div className="text-sm font-black text-primary">Rs {Number(order.totalAmount || 0).toFixed(2)}</div>
-                      <div className={`inline-flex mt-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${statusStyles(order.status)}`}>
-                        {order.status.replace('_', ' ')}
-                      </div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-2">{formatDate(order.createdAt)}</div>
+                  <div className="shrink-0 md:text-right">
+                    <div className="text-[10px] uppercase tracking-widest text-brand-text/40">Total Price</div>
+                    <div className="text-4xl font-black text-primary">Rs {Number(selectedOrder.totalAmount || 0).toFixed(2)}</div>
+                    <div className="mt-2 flex md:justify-end items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center rounded-lg bg-[#F6921E] text-black px-3 py-1 text-xs font-semibold">
+                        {selectedCoupon ? `Coupon (${selectedCoupon})` : 'No Coupon'}
+                      </span>
+                      <span className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-semibold border ${statusStyles(selectedOrder.status)}`}>
+                        {formatOrderStatusLabel(selectedOrder.status)}
+                      </span>
                     </div>
                   </div>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-white/15 bg-[#252525] p-4 md:p-5 space-y-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 text-primary">
+                  <div className="text-base md:text-2xl font-medium break-words">
+                    <span className="text-brand-text/65 text-xs mr-2">User Name:</span>
+                    {getOrderCustomerName(selectedOrder) || 'Unknown user'}
+                  </div>
+                  <div className="text-base md:text-2xl font-medium break-all lg:text-right">
+                    <span className="text-brand-text/65 text-xs mr-2">Customer Email:</span>
+                    {selectedOrder.userEmail || selectedOrder.email || '-'}
+                  </div>
+                </div>
+
+                <DataField
+                  label="Delivery Email"
+                  value={getTargetEmail(selectedOrder)}
+                  onCopy={() => {
+                    void copyValue(getTargetEmail(selectedOrder), 'Delivery email');
+                  }}
+                />
+                <DataField
+                  label="Phone"
+                  value={selectedOrder.userPhone || selectedOrder.phone || ''}
+                  onCopy={() => {
+                    void copyValue(selectedOrder.userPhone || selectedOrder.phone || '', 'Phone');
+                  }}
+                />
+                <DataField
+                  label="Payment Method"
+                  value={paymentMethodName(selectedOrder)}
+                  onCopy={() => {
+                    void copyValue(paymentMethodName(selectedOrder), 'Payment method');
+                  }}
+                  highlight
+                />
+                <DataField
+                  label="Sender Account"
+                  value={senderAccount(selectedOrder)}
+                  onCopy={() => {
+                    void copyValue(senderAccount(selectedOrder), 'Sender account');
+                  }}
+                />
+                <DataField
+                  label="Transaction ID"
+                  value={transactionValue(selectedOrder)}
+                  onCopy={() => {
+                    void copyValue(transactionValue(selectedOrder), 'Transaction ID');
+                  }}
+                />
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 pt-1">
+                  <div className="rounded-xl border border-white/10 bg-[#696C71] p-4 min-h-[240px]">
+                    {selectedScreenshotUrl ? (
+                      <button
+                        onClick={() => setReceiptViewerUrl(selectedScreenshotUrl)}
+                        className="w-full h-full text-left"
+                      >
+                        <img
+                          src={selectedScreenshotUrl}
+                          alt="Payment receipt preview"
+                          className="w-full h-full max-h-[320px] object-cover rounded-lg border border-white/20"
+                        />
+                        <div className="mt-2 text-[11px] text-white/85 inline-flex items-center gap-1.5">
+                          <ExternalLink className="w-3.5 h-3.5" /> Tap to open fullscreen
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="w-full h-full rounded-lg bg-[#9FA2A7] text-white/90 grid place-items-center text-center text-xl leading-snug px-4">
+                        Image not uploaded
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-[#3A3C3F] p-3 flex flex-col min-h-[240px]">
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
+                      {orderMessages.length === 0 ? (
+                        <div className="h-full min-h-[120px] grid place-items-center text-sm text-white/60">
+                          No messages yet
+                        </div>
+                      ) : (
+                        orderMessages.map((entry, index) => {
+                          const isAdmin = entry.senderRole === 'admin';
+                          return (
+                            <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                                  isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-[#E4E4E4] text-[#2A2A2A]'
+                                }`}
+                              >
+                                {entry.message ? <div>{entry.message}</div> : null}
+                                {entry.attachmentUrl ? (
+                                  <a
+                                    href={entry.attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                                      isAdmin ? 'text-black/90' : 'text-[#2A2A2A]'
+                                    }`}
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                    {entry.attachmentName || 'Attachment'}
+                                  </a>
+                                ) : null}
+                                <div className={`mt-2 text-[10px] ${isAdmin ? 'text-black/65' : 'text-[#2A2A2A]/60'}`}>
+                                  {formatDateTime(entry.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="pt-1.5 space-y-2">
+                      {composerAttachment ? (
+                        <div className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white flex items-center justify-between gap-2">
+                          <span className="truncate">{composerAttachment.name}</span>
+                          <button
+                            onClick={() => {
+                              setComposerAttachment(null);
+                              if (attachmentInputRef.current) {
+                                attachmentInputRef.current.value = '';
+                              }
+                            }}
+                            className="text-white/70 hover:text-white"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => attachmentInputRef.current?.click()}
+                          className="shrink-0 h-[42px] w-[42px] rounded-xl bg-[#1F2124] border border-white/15 text-white/80 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors"
+                          title="Attach file"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                        <input
+                          ref={attachmentInputRef}
+                          type="file"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] || null;
+                            setComposerAttachment(file);
+                          }}
+                        />
+                        <textarea
+                          value={composerMessage}
+                          onChange={(event) => setComposerMessage(event.target.value)}
+                          placeholder="Type a message"
+                          rows={2}
+                          className="flex-1 resize-none rounded-xl bg-[#E3C642] text-black placeholder:text-black/70 px-3 py-2.5 text-sm leading-tight focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            void handleSendMessage();
+                          }}
+                          disabled={actionLoading || attachmentUploading}
+                          className="shrink-0 h-[42px] px-4 rounded-xl bg-primary text-black border border-primary/70 inline-flex items-center gap-1.5 disabled:opacity-60"
+                        >
+                          {actionLoading || attachmentUploading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-semibold">Send</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {error ? (
+                <div className="text-sm text-accent bg-accent/10 border border-accent/20 rounded-xl px-4 py-3">{error}</div>
+              ) : null}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => setStatusModal({ type: 'approve', value: selectedOrder.adminMessage || '' })}
+                  disabled={actionLoading}
+                  className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Approve Order
                 </button>
-              ))}
+                <button
+                  onClick={() => setStatusModal({ type: 'reject', value: selectedOrder.rejectionReason || '' })}
+                  disabled={actionLoading}
+                  className="bg-accent/15 text-accent border border-accent/30 rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  <XCircle className="w-4 h-4" /> Reject Order
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="glass rounded-[2rem] border border-white/5 p-6 min-h-[500px]">
-          {!selectedOrder ? (
-            <div className="h-full grid place-items-center text-center text-brand-text/30 text-xs uppercase tracking-widest font-black">
-              Select an order to inspect details.
+        <div className="xl:col-span-4 glass rounded-[2rem] border border-white/5 overflow-hidden">
+          <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+            Orders ({filteredOrders.length})
+          </div>
+          {loading ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-20 text-center text-brand-text/30 text-sm">No orders found.</div>
           ) : (
-            <div className="space-y-5">
-              <div>
-                <h2 className="text-xl font-black uppercase text-brand-text">{selectedOrder.orderNumber || selectedOrder.id}</h2>
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">{selectedOrder.userName} · {selectedOrder.userEmail}</div>
-                <div className={`inline-flex mt-3 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${statusStyles(selectedOrder.status)}`}>
-                  {selectedOrder.status.replace('_', ' ')}
-                </div>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Payment Proof</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">Sender: {selectedOrder.paymentProof?.senderName} · {selectedOrder.paymentProof?.senderNumber}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">TXID: {selectedOrder.paymentProof?.transactionId}</div>
-                {selectedOrder.paymentProof?.screenshotUrl ? (
-                  <div className="space-y-2">
-                    <a
-                      href={selectedOrder.paymentProof.screenshotUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary"
-                    >
-                      <Eye className="w-4 h-4" /> View Screenshot
-                    </a>
-                    <img
-                      src={selectedOrder.paymentProof.screenshotUrl}
-                      alt="Payment proof"
-                      className="w-full max-h-48 object-cover rounded-xl border border-white/10"
-                    />
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Payment Method</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">{selectedOrder.paymentMethodSnapshot?.name}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">
-                  {selectedOrder.paymentMethodSnapshot?.accountTitle} · {selectedOrder.paymentMethodSnapshot?.accountNumber}
-                </div>
-                {selectedOrder.paymentMethodSnapshot?.instructions ? (
-                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">{selectedOrder.paymentMethodSnapshot.instructions}</div>
-                ) : null}
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Timestamps</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Created: {formatDate(selectedOrder.createdAt)}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Updated: {formatDate(selectedOrder.updatedAt)}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Approved: {formatDate(selectedOrder.approvedAt)}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Completed: {formatDate(selectedOrder.completedAt)}</div>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Items</div>
-                {(selectedOrder.items || []).map((item, index) => (
-                  <div key={`${item.productId}-${index}`} className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                    {item.productTitle} · {item.selectedPlanName || 'Standard'} · Qty {item.quantity}
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Access Entitlements</div>
-                {entitlements.length === 0 ? (
-                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">No entitlement record yet.</div>
-                ) : (
-                  entitlements.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-3">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                        {entry.productTitle} · {entry.planName || 'Standard'}
+            <div className="divide-y divide-white/5 max-h-[920px] overflow-y-auto">
+              {filteredOrders.map((order) => {
+                const primary = getPrimaryItem(order);
+                const paymentName = paymentMethodName(order);
+                return (
+                  <div
+                    key={order.id}
+                    onClick={() => setSelectedOrderId(order.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedOrderId(order.id);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-4 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                      selectedOrderId === order.id ? 'bg-white/10 border-l-2 border-primary' : 'hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="text-base font-semibold text-brand-text break-words">
+                        {primary?.productTitle || productSummary(order) || 'No item title'}
                       </div>
-                      <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${statusStyles(entry.status)}`}>
-                        {entry.status}
+                      <div className="text-[11px] text-brand-text/65 break-words">
+                        {getOrderPlanLabel(order) || 'No plan'}
+                        {getOrderDuration(order) ? ` • ${getOrderDuration(order)}` : ''}
+                      </div>
+                      <div className="text-[11px] text-brand-text/55 break-words">
+                        {order.userName || order.userEmail || order.email || 'Customer'}
+                      </div>
+                      <div className="text-[11px] text-brand-text/45 break-words">{paymentName || 'No payment method'}</div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold text-primary">Rs {Number(order.totalAmount || 0).toFixed(2)}</div>
+                        <div className={`inline-flex px-2.5 py-1 rounded-md text-[10px] font-semibold border ${statusStyles(order.status)}`}>
+                          {formatOrderStatusLabel(order.status)}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="text-[10px] text-brand-text/35">{formatDateTime(order.createdAt)}</div>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedOrderId(order.id);
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary text-black text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          View
+                        </button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-
-              <textarea
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder="Admin message to buyer"
-                className="w-full h-20 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary resize-none"
-              />
-
-              <textarea
-                value={deliveryDetails}
-                onChange={(event) => setDeliveryDetails(event.target.value)}
-                placeholder="Delivery / subscription details"
-                className="w-full h-20 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary resize-none"
-              />
-
-              <textarea
-                value={rejectionReason}
-                onChange={(event) => setRejectionReason(event.target.value)}
-                placeholder="Rejection reason (required for reject)"
-                className="w-full h-16 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary resize-none"
-              />
-
-              <textarea
-                value={internalNote}
-                onChange={(event) => setInternalNote(event.target.value)}
-                placeholder="Internal note"
-                className="w-full h-16 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary resize-none"
-              />
-
-              {error ? (
-                <div className="text-[10px] font-black uppercase tracking-widest text-accent bg-accent/10 border border-accent/20 rounded-xl px-4 py-3">{error}</div>
-              ) : null}
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => runAction('approve')}
-                  disabled={actionLoading}
-                  className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Approve
-                </button>
-                <button
-                  onClick={() => runAction('reject')}
-                  disabled={actionLoading}
-                  className="bg-accent/15 text-accent border border-accent/30 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  <XCircle className="w-4 h-4" /> Reject
-                </button>
-                <button
-                  onClick={() => runAction('request_info')}
-                  disabled={actionLoading}
-                  className="bg-purple-500/15 text-purple-400 border border-purple-500/30 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  <Clock className="w-4 h-4" /> Request Info
-                </button>
-                <button
-                  onClick={() => runAction('send_message')}
-                  disabled={actionLoading}
-                  className="bg-white/10 text-brand-text border border-white/20 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  <Send className="w-4 h-4" /> Message
-                </button>
-                <button
-                  onClick={() => runAction('mark_completed')}
-                  disabled={actionLoading}
-                  className="col-span-2 bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  <PackageCheck className="w-4 h-4" /> Mark Completed
-                </button>
-                <button
-                  onClick={() => runAction('add_internal_note')}
-                  disabled={actionLoading}
-                  className="col-span-2 bg-primary/15 text-primary border border-primary/30 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4" /> Save Internal Note
-                </button>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Status History</div>
-                <div className="max-h-40 overflow-y-auto space-y-3">
-                  {(selectedOrder.statusHistory || []).length === 0 ? (
-                    <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/20">No history available.</div>
-                  ) : (
-                    (selectedOrder.statusHistory || []).map((entry, index) => (
-                      <div key={`${entry.status}-${index}`} className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                        <span className="text-primary">{entry.status}</span> · {entry.message}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Messages</div>
-                <div className="max-h-40 overflow-y-auto space-y-2">
-                  {(selectedOrder.messages || []).length === 0 ? (
-                    <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/20">No messages yet.</div>
-                  ) : (
-                    (selectedOrder.messages || []).map((entry, index) => (
-                      <div key={`${entry.senderId}-${index}`} className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                        <MessageSquare className="w-3 h-3 inline mr-1 text-primary" /> {entry.senderRole}: {entry.message}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {receiptViewerUrl ? (
+        <div className="fixed inset-0 z-[130] bg-black/90 p-4 md:p-8">
+          <button
+            onClick={() => setReceiptViewerUrl('')}
+            className="absolute top-4 right-4 z-10 p-2.5 rounded-xl bg-black/55 border border-white/20 text-white hover:border-primary/50"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="w-full h-full grid place-items-center">
+            <img
+              src={receiptViewerUrl}
+              alt="Payment receipt"
+              className="max-w-full max-h-full object-contain rounded-xl border border-white/15"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {statusModal ? (
+        <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0E0E0E] shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+              <div className="text-sm font-semibold text-brand-text">
+                {statusModal.type === 'approve' ? 'Approve Order' : 'Reject Order'}
+              </div>
+              <button
+                onClick={() => setStatusModal(null)}
+                className="p-2 rounded-lg bg-white/5 border border-white/10 text-brand-text/50 hover:text-brand-text"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="text-[12px] text-brand-text/50 break-words">
+                {selectedOrder ? `Order ${getOrderDisplayId(selectedOrder)} - ${selectedProductName || 'Item'}` : ''}
+              </div>
+              <textarea
+                value={statusModal.value}
+                onChange={(event) => setStatusModal((prev) => (prev ? { ...prev, value: event.target.value } : prev))}
+                placeholder={statusModal.type === 'approve' ? 'Approval message (optional)' : 'Rejection reason (required)'}
+                className="w-full h-32 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary resize-none"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setStatusModal(null)}
+                  className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-[11px] font-semibold text-brand-text/60"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const success =
+                      statusModal.type === 'approve'
+                        ? await handleApprove(statusModal.value)
+                        : await handleReject(statusModal.value);
+                    if (success) {
+                      setStatusModal(null);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  className="px-4 py-2 rounded-xl border border-primary/30 bg-primary text-black text-[11px] font-semibold disabled:opacity-60 flex items-center gap-2"
+                >
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

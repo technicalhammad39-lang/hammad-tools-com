@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
 import {
   ShoppingCart,
-  Zap,
   ChevronRight,
   Star,
   Search,
@@ -28,7 +27,13 @@ function getSlug(service: ProductItem) {
 }
 
 function getPrice(service: ProductItem) {
-  return Number(service.salePrice ?? service.price ?? 0);
+  return Number(service.price ?? service.salePrice ?? 0);
+}
+
+function getOriginalPrice(service: ProductItem) {
+  const original = Number(service.salePrice ?? 0);
+  const current = getPrice(service);
+  return original > current ? original : 0;
 }
 
 const ServicesSection = () => {
@@ -195,6 +200,7 @@ const ServicesSection = () => {
             {displayServices.map((service, index) => {
               const title = getTitle(service);
               const price = getPrice(service);
+              const originalPrice = getOriginalPrice(service);
               const image = service.image || service.thumbnail || '/services-card.png';
               const categoryName = service.categoryName || service.category || 'General';
 
@@ -224,13 +230,10 @@ const ServicesSection = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">
-                      <span className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-[0.2em] px-5 py-2.5 rounded-xl border border-white/10">
+                    <div className="absolute top-6 left-6 right-6 flex justify-start items-start z-20">
+                      <span className="bg-black/60 backdrop-blur-md text-white text-[9px] font-black tracking-[0.2em] px-5 py-2.5 rounded-xl border border-white/10">
                         {categoryName}
                       </span>
-                      <div className="w-10 h-10 rounded-xl bg-primary/20 backdrop-blur-md border border-primary/30 flex items-center justify-center text-primary">
-                        <Zap className="w-5 h-5 fill-current" />
-                      </div>
                     </div>
 
                     <div className="absolute bottom-6 left-6 md:left-10 right-6 md:right-10 flex items-center justify-between z-20">
@@ -248,7 +251,7 @@ const ServicesSection = () => {
                   </div>
 
                   <div className="p-6 md:p-10 flex flex-col flex-1 relative z-20">
-                    <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors uppercase leading-none">{title}</h3>
+                    <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors leading-none whitespace-pre-wrap break-words">{title}</h3>
                     <p className="text-brand-text/40 mb-6 md:mb-10 line-clamp-2 text-xs md:sm font-medium leading-relaxed italic">{service.description}</p>
 
                     <div className="mt-auto">
@@ -259,6 +262,9 @@ const ServicesSection = () => {
                             <span className="text-[10px] text-brand-text/40 font-bold whitespace-nowrap">Rs</span>
                             <span className="text-3xl md:text-4xl font-black text-brand-text">{price}</span>
                           </div>
+                          {originalPrice > 0 ? (
+                            <div className="text-xs text-brand-text/35 line-through mt-1">Rs {originalPrice}</div>
+                          ) : null}
                         </div>
                         <div className="text-right">
                           <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest block bg-emerald-400/10 px-3 py-1 rounded-lg">Instant</span>
@@ -292,7 +298,6 @@ const ServicesSection = () => {
                             whileTap={{ scale: 0.98 }}
                             className="w-full bg-primary text-black py-3 md:py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 md:gap-3 border-b-4 border-secondary shadow-xl shadow-primary/10 group/order"
                           >
-                            <Zap className="w-4 h-4 fill-current transition-transform group-hover/order:scale-125" />
                             <span>Buy Now</span>
                           </motion.button>
                         </Link>

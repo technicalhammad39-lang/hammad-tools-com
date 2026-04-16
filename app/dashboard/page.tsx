@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -8,91 +8,114 @@ import {
   Bell,
   Settings,
   LogOut,
-  Zap,
-  Clock,
   Loader2,
+  MessageSquare,
   CheckCircle2,
+  Clock,
   XCircle,
-  AlertCircle,
-  PackageCheck,
-  Copy,
-  Gift,
 } from 'lucide-react';
-import Image from 'next/image';
-import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 import { db } from '@/firebase';
-import type { EntitlementRecord, NotificationRecord, OrderRecord } from '@/lib/types/domain';
+import type { NotificationRecord, OrderRecord } from '@/lib/types/domain';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
-
-function formatDate(value: any) {
-  const date = value?.toDate?.() || (value ? new Date(value) : null);
-  if (!date || Number.isNaN(date.getTime())) {
-    return 'N/A';
-  }
-  return date.toLocaleString();
-}
+import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 
 function statusClass(status: string) {
-  if (status === 'approved' || status === 'active') {
+  const normalized = normalizeOrderStatus(status);
+  if (normalized === 'approved') {
     return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
   }
-  if (status === 'pending_verification' || status === 'needs_info' || status === 'pending') {
-    return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
-  }
-  if (status === 'rejected') {
+  if (normalized === 'rejected') {
     return 'bg-accent/10 border-accent/20 text-accent';
   }
-  if (status === 'expired') {
-    return 'bg-orange-500/10 border-orange-500/20 text-orange-400';
-  }
-  if (status === 'completed') {
-    return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
-  }
-  return 'bg-white/10 border-white/20 text-brand-text/60';
+  return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
 }
 
-function CountdownTimer({ expiresAt }: { expiresAt: any }) {
-  const [remaining, setRemaining] = useState('');
-
-  useEffect(() => {
-    const targetDate = expiresAt?.toDate?.() || (expiresAt ? new Date(expiresAt) : null);
-    if (!targetDate) {
-      setRemaining('Lifetime');
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const delta = targetDate.getTime() - now;
-      if (delta <= 0) {
-        setRemaining('Expired');
-        clearInterval(interval);
-        return;
-      }
-
-      const days = Math.floor(delta / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((delta % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((delta % (1000 * 60 * 60)) / (1000 * 60));
-      setRemaining(`${days}d ${hours}h ${minutes}m`);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [expiresAt]);
-
-  return <span className="font-mono text-primary">{remaining || 'Calculating...'}</span>;
+function getPrimaryItem(order: OrderRecord) {
+  const explicit = (order as any).itemSummary?.[0];
+  if (explicit) {
+    return explicit;
+  }
+  return (order.items || [])[0] || null;
 }
 
-export default function DashboardPage() {
+function getOrderProductName(order: OrderRecord) {
+  const primary = getPrimaryItem(order);
+  if (primary?.productTitle) {
+    return primary.productTitle;
+  }
+  if (order.primaryItemName) {
+    return order.primaryItemName;
+  }
+  const fallback = (order.items || []).map((item) => item.productTitle).filter(Boolean);
+  return fallback.join(', ') || 'Unknown item';
+}
+
+function getOrderPlan(order: OrderRecord) {
+  const primary = getPrimaryItem(order) as any;
+  return primary?.selectedPlanName || order.primaryPlanName || order.selectedPlanName || 'Standard';
+}
+
+function getOrderQuantity(order: OrderRecord) {
+  if (typeof order.quantityTotal === 'number' && order.quantityTotal > 0) {
+    return order.quantityTotal;
+  }
+  return (order.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+}
+
+function getOrderDeliveryEmail(order: OrderRecord) {
+  const anyOrder = order as any;
+  return anyOrder.deliveryEmail || anyOrder.targetEmail || order.userEmail || order.email || '-';
+}
+
+function getOrderPhone(order: OrderRecord) {
+  return order.userPhone || order.phone || '-';
+}
+
+function getPaymentMethod(order: OrderRecord) {
+  const anyOrder = order as any;
+  return order.paymentMethodSnapshot?.name || anyOrder.paymentMethodName || '-';
+}
+
+function getSenderAccount(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.senderAccount || proof?.senderNumber || '-';
+}
+
+function getTransactionId(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.transactionId || '-';
+}
+
+function getScreenshotUrl(order: OrderRecord) {
+  const proof = order.paymentProof as any;
+  return proof?.screenshotUrl || '';
+}
+
+function DashboardPageContent() {
+  const params = useSearchParams();
+  const requestedOrder = params.get('order');
   const { user, profile, logout, loading: authLoading } = useAuth();
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'notifications' | 'settings'>('overview');
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'messages' | 'notifications' | 'settings'>(
+    'overview'
+  );
   const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
-  const [joinedGiveaways, setJoinedGiveaways] = useState<Array<{ id: string; giveawayId: string; giveawayTitle: string; createdAt?: any }>>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [manualSelectedOrderId, setManualSelectedOrderId] = useState<string | null>(null);
+  const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -100,102 +123,98 @@ export default function DashboardPage() {
     }
 
     const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
-    const entitlementQuery = query(collection(db, 'entitlements'), where('userId', '==', user.uid));
     const notificationsQuery = query(collection(db, 'notifications'), where('recipientId', '==', user.uid));
-    const giveawaysQuery = query(collection(db, 'user_entries'), where('userId', '==', user.uid));
 
-    const unsubOrders = onSnapshot(ordersQuery, (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<OrderRecord, 'id'>) }))
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        });
-      setOrders(data);
-      setLoadingData(false);
-    }, (error) => {
-      console.error('Failed to load orders:', error);
-      setLoadingData(false);
-    });
+    const unsubOrders = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        const data = snapshot.docs
+          .map((snap) => ({ id: snap.id, ...(snap.data() as Omit<OrderRecord, 'id'>) }))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
+            const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
+            return bTime - aTime;
+          });
 
-    const unsubEntitlements = onSnapshot(entitlementQuery, (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<EntitlementRecord, 'id'>) }))
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        });
-      setEntitlements(data);
-    }, (error) => {
-      console.error('Failed to load entitlements:', error);
-    });
+        setOrders(data);
+        setLoadingData(false);
+      },
+      (snapshotError) => {
+        console.error('Failed to load orders:', snapshotError);
+        toast.error('Failed to load orders');
+        setLoadingData(false);
+      }
+    );
 
-    const unsubNotifications = onSnapshot(notificationsQuery, (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<NotificationRecord, 'id'>) }))
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-          const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        });
-      setNotifications(data);
-    }, (error) => {
-      console.error('Failed to load notifications:', error);
-    });
-
-    const unsubGiveaways = onSnapshot(giveawaysQuery, (snapshot) => {
-      const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as { giveawayId: string; giveawayTitle: string; createdAt?: any }) }))
-        .sort((a, b) => {
-          const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || 0;
-          const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        });
-      setJoinedGiveaways(data);
-    }, (error) => {
-      console.error('Failed to load giveaways:', error);
-    });
+    const unsubNotifications = onSnapshot(
+      notificationsQuery,
+      (snapshot) => {
+        const data = snapshot.docs
+          .map((snap) => ({ id: snap.id, ...(snap.data() as Omit<NotificationRecord, 'id'>) }))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
+            const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
+            return bTime - aTime;
+          });
+        setNotifications(data);
+      },
+      (snapshotError) => {
+        console.error('Failed to load notifications:', snapshotError);
+        toast.error('Failed to load notifications');
+      }
+    );
 
     return () => {
       unsubOrders();
-      unsubEntitlements();
       unsubNotifications();
-      unsubGiveaways();
     };
-  }, [user]);
+  }, [user, toast]);
 
-  const activeEntitlements = useMemo(() => entitlements.filter((item) => item.status === 'active'), [entitlements]);
-  const expiredEntitlements = useMemo(() => entitlements.filter((item) => item.status === 'expired'), [entitlements]);
+  const selectedOrderId = useMemo(() => {
+    if (requestedOrder && orders.some((order) => order.id === requestedOrder)) {
+      return requestedOrder;
+    }
+
+    if (manualSelectedOrderId && orders.some((order) => order.id === manualSelectedOrderId)) {
+      return manualSelectedOrderId;
+    }
+
+    return orders[0]?.id || null;
+  }, [manualSelectedOrderId, orders, requestedOrder]);
+
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) || null,
+    [orders, selectedOrderId]
+  );
+
+  const messages = useMemo(() => {
+    if (!selectedOrder?.messages || !Array.isArray(selectedOrder.messages)) {
+      return [] as Array<{ senderRole: string; senderId: string; message: string; createdAt: any }>;
+    }
+
+    return [...selectedOrder.messages].sort((a, b) => {
+      const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || new Date(a.createdAt || 0).getTime() || 0;
+      const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || new Date(b.createdAt || 0).getTime() || 0;
+      return aTime - bTime;
+    });
+  }, [selectedOrder]);
 
   const pendingOrders = useMemo(
-    () => orders.filter((order) => order.status === 'pending_verification' || order.status === 'needs_info'),
+    () => orders.filter((order) => normalizeOrderStatus(order.status) === 'pending').length,
     [orders]
   );
-  const rejectedOrders = useMemo(() => orders.filter((order) => order.status === 'rejected'), [orders]);
-  const completedOrders = useMemo(() => orders.filter((order) => order.status === 'completed'), [orders]);
-
-  const unreadNotifications = useMemo(() => notifications.filter((item) => !item.read), [notifications]);
-  const orderUpdates = useMemo(
-    () =>
-      orders
-        .map((order) => ({
-          id: order.id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          adminMessage: order.adminMessage,
-          deliveryDetails: order.deliveryDetails,
-          rejectionReason: order.rejectionReason,
-          createdAt: order.updatedAt || order.createdAt,
-          items: (order.items || []).map((item) => item.productTitle).join(', '),
-        }))
-        .sort((a, b) => {
-          const aTime = (a.createdAt as any)?.toDate?.()?.getTime?.() || 0;
-          const bTime = (b.createdAt as any)?.toDate?.()?.getTime?.() || 0;
-          return bTime - aTime;
-        }),
+  const approvedOrders = useMemo(
+    () => orders.filter((order) => normalizeOrderStatus(order.status) === 'approved').length,
     [orders]
+  );
+  const rejectedOrders = useMemo(
+    () => orders.filter((order) => normalizeOrderStatus(order.status) === 'rejected').length,
+    [orders]
+  );
+
+  const unreadNotifications = useMemo(
+    () => notifications.filter((notification) => !notification.read),
+    [notifications]
   );
 
   if (authLoading) {
@@ -207,35 +226,63 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-accent font-black uppercase tracking-widest">Please login to access dashboard</div>;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-accent font-black uppercase tracking-widest">
+        Please login to access dashboard
+      </div>
+    );
+  }
+
+  async function markNotificationRead(notificationId: string) {
+    try {
+      await updateDoc(doc(db, 'notifications', notificationId), {
+        read: true,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      toast.error('Failed to update notification');
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    const unread = notifications.filter((notification) => !notification.read);
+    if (!unread.length) {
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      unread.forEach((notification) => {
+        batch.update(doc(db, 'notifications', notification.id), {
+          read: true,
+          updatedAt: new Date(),
+        });
+      });
+      await batch.commit();
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      toast.error('Failed to update notifications');
+    }
   }
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'orders', label: 'My Orders', icon: ShoppingBag },
+    { id: 'messages', label: 'Order Messages', icon: MessageSquare },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
   return (
-    <main className="min-h-screen pt-24 pb-32 md:pb-12 px-4 bg-brand-bg">
+    <main className="min-h-screen pt-24 pb-40 md:pb-12 px-4 bg-brand-bg">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
         <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
           <div className="glass rounded-[2rem] p-6 border border-white/5 sticky top-28 bg-brand-soft/10 backdrop-blur-3xl overflow-hidden">
-            <div className="flex items-center gap-4 mb-10 pb-10 border-b border-white/5">
-              <div className="w-12 h-12 rounded-xl overflow-hidden border border-primary/20 relative">
-                <Image
-                  src={profile?.photoURL || `https://ui-avatars.com/api/?name=${profile?.displayName}`}
-                  alt="User"
-                  fill
-                  className="object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div>
-                <div className="font-black text-base truncate text-brand-text uppercase">{profile?.displayName || 'User'}</div>
-                <div className="text-[9px] font-black uppercase tracking-widest text-primary/60">Verified Member</div>
-              </div>
+            <div className="mb-8 pb-8 border-b border-white/5">
+              <div className="font-black text-lg text-brand-text uppercase">{profile?.displayName || 'Member'}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest text-primary/70 mt-1">Realtime Dashboard</div>
             </div>
 
             <nav className="space-y-2">
@@ -269,91 +316,83 @@ export default function DashboardPage() {
         </aside>
 
         <div className="flex-1 space-y-8">
+          <div className="lg:hidden h-1" />
+
           <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
               <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div>
-                    <h2 className="text-4xl font-black text-brand-text">
-                      Welcome, <span className="text-primary">{profile?.displayName?.split(' ')[0] || 'User'}</span>
-                    </h2>
-                    <p className="text-brand-text/40 text-xs uppercase tracking-[0.2em] font-black mt-2">Realtime access and order lifecycle</p>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Link href="/tools" className="bg-primary text-black px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary">
-                      Buy Tools
-                    </Link>
-                    <Link href="/services" className="bg-white/5 text-brand-text px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border border-white/10 hover:border-primary/40">
-                      Services
-                    </Link>
-                    <Link href="/giveaway" className="bg-white/5 text-brand-text px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] border border-white/10 hover:border-primary/40">
-                      Giveaway
-                    </Link>
-                  </div>
+                <div>
+                  <h2 className="text-4xl font-black text-brand-text">
+                    Welcome, <span className="text-primary">{profile?.displayName?.split(' ')[0] || 'User'}</span>
+                  </h2>
+                  <p className="text-brand-text/40 text-xs uppercase tracking-[0.2em] font-black mt-2">
+                    Realtime orders, messages, and notifications
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    { label: 'Active', value: activeEntitlements.length, icon: Zap },
-                    { label: 'Pending', value: pendingOrders.length, icon: Clock },
-                    { label: 'Expired', value: expiredEntitlements.length, icon: AlertCircle },
-                    { label: 'Completed', value: completedOrders.length, icon: PackageCheck },
+                    { label: 'Pending', value: pendingOrders, icon: Clock },
+                    { label: 'Approved', value: approvedOrders, icon: CheckCircle2 },
+                    { label: 'Rejected', value: rejectedOrders, icon: XCircle },
+                    { label: 'Unread Alerts', value: unreadNotifications.length, icon: Bell },
                   ].map((stat) => (
-                    <div key={stat.label} className="glass p-6 rounded-2xl border border-white/5">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary mb-4">
-                        <stat.icon className="w-5 h-5" />
+                    <div key={stat.label} className="glass p-3 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-primary shrink-0">
+                          <stat.icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xl font-black text-brand-text leading-none">{stat.value}</div>
+                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">
+                            {stat.label}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-3xl font-black text-brand-text">{stat.value}</div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">{stat.label}</div>
                     </div>
                   ))}
                 </div>
 
                 <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                    <h3 className="text-lg font-black uppercase text-brand-text">My Giveaways</h3>
-                    <Link href="/giveaway" className="text-[9px] font-black uppercase tracking-widest text-primary">View all</Link>
+                  <div className="p-6 border-b border-white/5">
+                    <h3 className="text-lg font-black uppercase text-brand-text">Recent Orders</h3>
                   </div>
-                  <div className="divide-y divide-white/5">
-                    {joinedGiveaways.length === 0 ? (
-                      <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">No giveaways joined yet.</div>
-                    ) : (
-                      joinedGiveaways.slice(0, 3).map((entry) => (
-                        <div key={entry.id} className="p-6 flex items-center justify-between gap-4">
-                          <div>
-                            <div className="text-base font-black uppercase text-brand-text">{entry.giveawayTitle}</div>
-                            <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">Joined: {formatDate(entry.createdAt)}</div>
-                          </div>
-                          <Gift className="w-5 h-5 text-primary" />
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                    <h3 className="text-lg font-black uppercase text-brand-text">Active Mainframe</h3>
-                    <button onClick={() => setActiveTab('orders')} className="text-[9px] font-black uppercase tracking-widest text-primary">View all</button>
-                  </div>
-
                   <div className="divide-y divide-white/5">
                     {loadingData ? (
-                      <div className="p-10 text-center"><Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" /></div>
-                    ) : activeEntitlements.length === 0 ? (
-                      <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">No active subscriptions.</div>
+                      <div className="p-10 text-center">
+                        <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" />
+                      </div>
+                    ) : orders.length === 0 ? (
+                      <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                        No orders yet.
+                      </div>
                     ) : (
-                      activeEntitlements.map((entitlement) => (
-                        <div key={entitlement.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                            <div className="text-base font-black uppercase text-brand-text">{entitlement.productTitle}</div>
-                            <div className="text-[9px] uppercase tracking-widest text-brand-text/40 font-black mt-1">Activated: {formatDate(entitlement.activatedAt)}</div>
-                            <div className="text-[9px] uppercase tracking-widest text-brand-text/40 font-black mt-1">Expires: {entitlement.expiresAt ? formatDate(entitlement.expiresAt) : 'Lifetime'}</div>
+                      orders.slice(0, 5).map((order) => (
+                        <button
+                          key={order.id}
+                          onClick={() => {
+                            setManualSelectedOrderId(order.id);
+                            setActiveTab('messages');
+                          }}
+                          className="w-full text-left p-6 hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm font-black text-brand-text break-words">{getOrderProductName(order)}</div>
+                              <div className="text-[10px] font-semibold text-brand-text/45 mt-1 break-words">
+                                {getOrderDisplayId(order)} • {getOrderPlan(order)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-black uppercase tracking-widest text-primary">
+                                Rs {Number(order.totalAmount || 0).toFixed(2)}
+                              </div>
+                              <div className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${statusClass(order.status)}`}>
+                                {formatOrderStatusLabel(order.status)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                            Remaining: <CountdownTimer expiresAt={entitlement.expiresAt} />
-                          </div>
-                        </div>
+                        </button>
                       ))
                     )}
                   </div>
@@ -362,152 +401,240 @@ export default function DashboardPage() {
             )}
 
             {activeTab === 'orders' && (
-              <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+              <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <h2 className="text-3xl font-black uppercase text-brand-text">My Orders</h2>
 
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-5 border-b border-white/5 flex items-center gap-2 text-brand-text font-black uppercase tracking-widest text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-primary" /> Active Access Items
-                  </div>
-                  <div className="divide-y divide-white/5">
-                    {activeEntitlements.length === 0 ? (
-                      <div className="p-6 text-[10px] uppercase tracking-widest font-black text-brand-text/30">No active items.</div>
-                    ) : activeEntitlements.map((entry) => (
-                      <div key={entry.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <div className="text-base font-black uppercase text-brand-text">{entry.productTitle}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">Plan: {entry.planName || 'Standard'}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">Activated: {formatDate(entry.activatedAt)}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">Expires: {entry.expiresAt ? formatDate(entry.expiresAt) : 'Lifetime'}</div>
-                        </div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                          Remaining: <CountdownTimer expiresAt={entry.expiresAt} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {[{
-                  title: 'Completed / Delivered',
-                  icon: PackageCheck,
-                  data: completedOrders,
-                }, {
-                  title: 'Pending',
-                  icon: Clock,
-                  data: pendingOrders,
-                }, {
-                  title: 'Rejected',
-                  icon: XCircle,
-                  data: rejectedOrders,
-                }].map((section) => (
-                  <div key={section.title} className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                    <div className="p-5 border-b border-white/5 flex items-center gap-2 text-brand-text font-black uppercase tracking-widest text-sm">
-                      <section.icon className="w-4 h-4 text-primary" /> {section.title}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                  <div className="xl:col-span-4 glass rounded-2xl border border-white/5 overflow-hidden">
+                    <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+                      Orders
                     </div>
-
-                    <div className="divide-y divide-white/5">
-                      {(section.data as OrderRecord[]).length === 0 ? (
-                        <div className="p-6 text-[10px] uppercase tracking-widest font-black text-brand-text/30">No records.</div>
+                    <div className="divide-y divide-white/5 max-h-[660px] overflow-y-auto">
+                      {orders.length === 0 ? (
+                        <div className="p-8 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                          No orders found.
+                        </div>
                       ) : (
-                        (section.data as OrderRecord[]).map((order) => (
-                          <div key={order.id} className="p-6 space-y-3">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                              <div>
-                                <div className="text-base font-black uppercase text-brand-text">{order.orderNumber}</div>
-                                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">
-                                  {(order.items || []).map((item) => item.productTitle).join(', ')}
-                                </div>
+                        orders.map((order) => (
+                          <div
+                            key={order.id}
+                            className={`p-4 space-y-2 ${
+                              selectedOrderId === order.id ? 'bg-white/5 border-l-2 border-primary' : ''
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-brand-text break-words">{getOrderProductName(order)}</div>
+                            <div className="text-[10px] text-brand-text/45">{formatDateTime(order.createdAt)}</div>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${statusClass(order.status)}`}>
+                                {formatOrderStatusLabel(order.status)}
                               </div>
-                              <div className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${statusClass(order.status)}`}>
-                                {order.status.replace('_', ' ')}
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] font-black uppercase tracking-widest text-brand-text/40">
-                              <div>Total: Rs {Number(order.totalAmount || 0).toFixed(2)}</div>
-                              <div>TXID: {order.paymentProof?.transactionId || 'N/A'}</div>
-                              <div>Placed: {formatDate(order.createdAt)}</div>
-                            </div>
-
-                            {order.adminMessage ? (
-                              <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                                Admin Message: {order.adminMessage}
-                              </div>
-                            ) : null}
-
-                            {order.deliveryDetails ? (
-                              <div className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 break-all">
-                                Delivery Details: {order.deliveryDetails}
-                              </div>
-                            ) : null}
-
-                            {order.paymentProof?.screenshotUrl ? (
-                              <a
-                                href={order.paymentProof.screenshotUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-[9px] uppercase tracking-widest font-black text-brand-text/50 hover:text-primary"
+                              <button
+                                onClick={() => setManualSelectedOrderId(order.id)}
+                                className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary text-black text-[10px] font-black uppercase tracking-widest"
                               >
-                                <Copy className="w-3.5 h-3.5" /> View Proof Screenshot
-                              </a>
-                            ) : null}
+                                View
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}
                     </div>
                   </div>
-                ))}
 
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-5 border-b border-white/5 flex items-center gap-2 text-brand-text font-black uppercase tracking-widest text-sm">
-                    <AlertCircle className="w-4 h-4 text-primary" /> Expired Access
-                  </div>
-                  <div className="divide-y divide-white/5">
-                    {expiredEntitlements.length === 0 ? (
-                      <div className="p-6 text-[10px] uppercase tracking-widest font-black text-brand-text/30">No expired items.</div>
-                    ) : expiredEntitlements.map((entry) => (
-                      <div key={entry.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <div className="text-base font-black uppercase text-brand-text">{entry.productTitle}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">Expired: {formatDate(entry.expiresAt)}</div>
-                        </div>
-                        <Link href="/tools" className="px-4 py-2 rounded-lg bg-primary text-black text-[9px] font-black uppercase tracking-widest border-b-4 border-secondary">
-                          Renew / Buy Again
-                        </Link>
+                  <div className="xl:col-span-8 glass rounded-2xl border border-white/5 p-4 md:p-5 space-y-4">
+                    {!selectedOrder ? (
+                      <div className="h-full min-h-[220px] grid place-items-center text-sm text-brand-text/40">
+                        Select an order to view full details.
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-5 border-b border-white/5 flex items-center gap-2 text-brand-text font-black uppercase tracking-widest text-sm">
-                    <ShoppingBag className="w-4 h-4 text-primary" /> Order History
-                  </div>
-                  <div className="divide-y divide-white/5">
-                    {orders.length === 0 ? (
-                      <div className="p-6 text-[10px] uppercase tracking-widest font-black text-brand-text/30">No orders yet.</div>
-                    ) : orders.map((order) => (
-                      <div key={order.id} className="p-6 space-y-3">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                          <div>
-                            <div className="text-base font-black uppercase text-brand-text">{order.orderNumber}</div>
-                            <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30 mt-1">
-                              {(order.items || []).map((item) => item.productTitle).join(', ')}
+                    ) : (
+                      <>
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                          <div className="text-xl md:text-2xl font-semibold text-primary break-words">
+                            {getOrderProductName(selectedOrder)}
+                          </div>
+                          <div className="text-sm text-brand-text/65 break-words">
+                            Plan: {getOrderPlan(selectedOrder)} • Qty: {getOrderQuantity(selectedOrder)}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="text-sm font-semibold text-primary">
+                              Rs {Number(selectedOrder.totalAmount || 0).toFixed(2)}
+                            </div>
+                            <div className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${statusClass(selectedOrder.status)}`}>
+                              {formatOrderStatusLabel(selectedOrder.status)}
                             </div>
                           </div>
-                          <div className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${statusClass(order.status)}`}>
-                            {order.status.replace('_', ' ')}
+                          <div className="text-[11px] text-brand-text/45">
+                            Order ID: {getOrderDisplayId(selectedOrder)} • {formatDateTime(selectedOrder.createdAt)}
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] font-black uppercase tracking-widest text-brand-text/40">
-                          <div>Total: Rs {Number(order.totalAmount || 0).toFixed(2)}</div>
-                          <div>TXID: {order.paymentProof?.transactionId || 'N/A'}</div>
-                          <div>Placed: {formatDate(order.createdAt)}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Delivery Email</div>
+                            <div className="text-brand-text break-all mt-1">{getOrderDeliveryEmail(selectedOrder)}</div>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Phone</div>
+                            <div className="text-brand-text break-words mt-1">{getOrderPhone(selectedOrder)}</div>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Payment Method</div>
+                            <div className="text-brand-text break-words mt-1">{getPaymentMethod(selectedOrder)}</div>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Sender Account</div>
+                            <div className="text-brand-text break-words mt-1">{getSenderAccount(selectedOrder)}</div>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 md:col-span-2">
+                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Transaction ID</div>
+                            <div className="text-brand-text break-words mt-1">{getTransactionId(selectedOrder)}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+
+                        {getScreenshotUrl(selectedOrder) ? (
+                          <button
+                            onClick={() => setReceiptViewerUrl(getScreenshotUrl(selectedOrder))}
+                            className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left"
+                          >
+                            <img
+                              src={getScreenshotUrl(selectedOrder)}
+                              alt="Payment proof"
+                              className="w-full max-h-[280px] object-cover rounded-lg"
+                            />
+                            <div className="mt-2 text-[11px] text-brand-text/55">Tap to view fullscreen receipt</div>
+                          </button>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-sm text-brand-text/45">
+                            Image not uploaded
+                          </div>
+                        )}
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                          <div className="text-[10px] uppercase tracking-widest text-brand-text/35 mb-3">Message Thread</div>
+                          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                            {messages.length === 0 ? (
+                              <div className="text-sm text-brand-text/40">No messages yet.</div>
+                            ) : (
+                              messages.map((entry, index) => {
+                                const isAdmin = entry.senderRole === 'admin';
+                                return (
+                                  <div
+                                    key={`${entry.senderId}-${index}`}
+                                    className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
+                                  >
+                                    <div
+                                      className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                                        isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
+                                      }`}
+                                    >
+                                      {entry.message}
+                                      {(entry as any).attachmentUrl ? (
+                                        <a
+                                          href={(entry as any).attachmentUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                                            isAdmin ? 'text-black/80' : 'text-brand-text/85'
+                                          }`}
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5" />
+                                          {(entry as any).attachmentName || 'Attachment'}
+                                        </a>
+                                      ) : null}
+                                      <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
+                                        {formatDateTime(entry.createdAt)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'messages' && (
+              <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <h2 className="text-3xl font-black uppercase text-brand-text">Order Messages</h2>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-1 glass rounded-2xl border border-white/5 overflow-hidden">
+                    <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+                      Orders
+                    </div>
+                    <div className="divide-y divide-white/5 max-h-[460px] overflow-y-auto">
+                      {orders.length === 0 ? (
+                        <div className="p-6 text-[10px] font-black uppercase tracking-widest text-brand-text/30">No orders yet.</div>
+                      ) : (
+                        orders.map((order) => (
+                          <button
+                            key={order.id}
+                            onClick={() => setManualSelectedOrderId(order.id)}
+                            className={`w-full text-left p-4 hover:bg-white/5 transition-colors ${
+                              selectedOrderId === order.id ? 'bg-white/5' : ''
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-brand-text break-words">{getOrderProductName(order)}</div>
+                            <div className="text-[10px] text-brand-text/45 mt-1">
+                              {getOrderDisplayId(order)} • {formatOrderStatusLabel(order.status)}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 glass rounded-2xl border border-white/5 overflow-hidden">
+                    <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+                      {selectedOrder ? `Message Thread - ${getOrderDisplayId(selectedOrder)}` : 'Select an order'}
+                    </div>
+                    <div className="p-5 space-y-3 max-h-[460px] overflow-y-auto">
+                      {!selectedOrder ? (
+                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                          Select an order to view messages.
+                        </div>
+                      ) : messages.length === 0 ? (
+                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                          No admin messages yet.
+                        </div>
+                      ) : (
+                        messages.map((entry, index) => {
+                          const isAdmin = entry.senderRole === 'admin';
+                          return (
+                            <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                                  isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
+                                }`}
+                              >
+                                {entry.message}
+                                {(entry as any).attachmentUrl ? (
+                                  <a
+                                    href={(entry as any).attachmentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                                      isAdmin ? 'text-black/80' : 'text-brand-text/85'
+                                    }`}
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    {(entry as any).attachmentName || 'Attachment'}
+                                  </a>
+                                ) : null}
+                                <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
+                                  {formatDateTime(entry.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -515,91 +642,70 @@ export default function DashboardPage() {
 
             {activeTab === 'notifications' && (
               <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <h2 className="text-3xl font-black uppercase text-brand-text">Notifications</h2>
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-5 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                    In-app Notifications
-                  </div>
-                  <div className="divide-y divide-white/5">
-                    {notifications.length === 0 ? (
-                      <div className="p-10 text-center text-[10px] uppercase tracking-widest font-black text-brand-text/30">No notifications.</div>
-                    ) : notifications.map((notification) => (
-                      <button
-                        key={notification.id}
-                        onClick={async () => {
-                          try {
-                            await updateDoc(doc(db, 'notifications', notification.id), {
-                              read: true,
-                              updatedAt: new Date(),
-                            });
-                          } catch (error) {
-                            console.error('Failed to mark notification read:', error);
-                            toast.error('Failed to update notification');
-                          }
-                        }}
-                        className="w-full text-left p-6 hover:bg-white/5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-black uppercase text-brand-text">{notification.title}</div>
-                            <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/50 mt-1">{notification.body}</div>
-                            <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/30 mt-2">{formatDate(notification.createdAt)}</div>
-                          </div>
-                          {!notification.read ? <span className="w-2 h-2 rounded-full bg-primary mt-2" /> : null}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h2 className="text-3xl font-black uppercase text-brand-text">Notifications</h2>
+                  <button
+                    onClick={() => {
+                      void markAllNotificationsRead();
+                    }}
+                    className="px-5 py-3 rounded-xl bg-primary text-black text-[10px] font-black uppercase tracking-widest border-b-2 border-secondary"
+                  >
+                    Mark All Read
+                  </button>
                 </div>
 
-                <div className="glass rounded-[2rem] border border-white/5 overflow-hidden">
-                  <div className="p-5 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/50">
-                    Order Updates & Admin Messages
-                  </div>
+                <div className="glass rounded-2xl border border-white/5 overflow-hidden">
                   <div className="divide-y divide-white/5">
-                    {orderUpdates.length === 0 ? (
-                      <div className="p-10 text-center text-[10px] uppercase tracking-widest font-black text-brand-text/30">No order updates yet.</div>
-                    ) : orderUpdates.map((update) => (
-                      <div key={update.id} className="p-6 space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-black uppercase text-brand-text">{update.orderNumber}</div>
-                          <div className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${statusClass(update.status)}`}>
-                            {update.status.replace('_', ' ')}
-                          </div>
-                        </div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">{update.items}</div>
-                        {update.adminMessage ? (
-                          <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-                            Admin Message: {update.adminMessage}
-                          </div>
-                        ) : null}
-                        {update.deliveryDetails ? (
-                          <div className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 break-all">
-                            Delivery Details: {update.deliveryDetails}
-                          </div>
-                        ) : null}
-                        {update.rejectionReason ? (
-                          <div className="text-[10px] font-black uppercase tracking-widest text-accent bg-accent/10 border border-accent/20 rounded-xl px-4 py-3">
-                            Rejection Reason: {update.rejectionReason}
-                          </div>
-                        ) : null}
-                        <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/30">{formatDate(update.createdAt)}</div>
+                    {notifications.length === 0 ? (
+                      <div className="p-10 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                        No notifications yet.
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((notification) => (
+                        <button
+                          key={notification.id}
+                          onClick={() => {
+                            void markNotificationRead(notification.id);
+                            if (notification.orderId) {
+                              setManualSelectedOrderId(notification.orderId);
+                              setActiveTab('messages');
+                            }
+                          }}
+                          className="w-full text-left p-6 hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="text-sm font-black text-brand-text whitespace-pre-wrap break-words">
+                                {notification.title}
+                              </div>
+                              <div className="text-[11px] font-medium text-brand-text/55 mt-1 leading-relaxed whitespace-pre-wrap break-words">
+                                {notification.body}
+                              </div>
+                              <div className="text-[9px] font-black tracking-widest text-brand-text/30 mt-2">
+                                {formatDateTime(notification.createdAt)}
+                              </div>
+                            </div>
+                            {!notification.read ? <span className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5" /> : null}
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               </motion.div>
             )}
 
             {activeTab === 'settings' && (
-              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-xl">
-                <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-6">
-                  <h2 className="text-2xl font-black uppercase text-brand-text">Account</h2>
-                  <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/40">Email: {user.email}</div>
-                  <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/40">UID: {user.uid}</div>
+              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <h2 className="text-3xl font-black uppercase text-brand-text">Settings</h2>
+                <div className="glass rounded-2xl border border-white/5 p-8 space-y-4">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Account Email</div>
+                  <div className="text-sm font-semibold text-brand-text break-all">{user.email || 'N/A'}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Display Name</div>
+                  <div className="text-sm font-semibold text-brand-text">{profile?.displayName || 'N/A'}</div>
                   <button
                     onClick={logout}
-                    className="w-full bg-accent/10 text-accent border border-accent/20 py-4 rounded-xl font-black uppercase tracking-widest text-[10px]"
+                    className="lg:hidden mt-4 w-full py-3 rounded-xl border border-accent/30 bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest"
                   >
                     Sign Out
                   </button>
@@ -609,7 +715,55 @@ export default function DashboardPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {receiptViewerUrl ? (
+        <div className="fixed inset-0 z-[95] bg-black/90 p-4 md:p-8">
+          <button
+            onClick={() => setReceiptViewerUrl('')}
+            className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-black/55 border border-white/20 text-white"
+          >
+            <XCircle className="w-5 h-5" />
+          </button>
+          <div className="w-full h-full grid place-items-center">
+            <img
+              src={receiptViewerUrl}
+              alt="Payment receipt"
+              className="max-w-full max-h-full object-contain rounded-xl border border-white/20"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="lg:hidden fixed bottom-0 left-0 w-full z-[85] bg-[#0A0A0A]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-3 pb-safe">
+        <div className="grid grid-cols-5 gap-1">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 ${
+                activeTab === item.id ? 'text-primary bg-primary/15' : 'text-brand-text/40'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[9px] font-black uppercase tracking-wider">{item.label.replace('Order ', '')}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }
 
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        </div>
+      }
+    >
+      <DashboardPageContent />
+    </Suspense>
+  );
+}

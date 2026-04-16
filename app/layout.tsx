@@ -10,6 +10,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import CartDrawer from '@/components/CartDrawer';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { ToastProvider } from '@/components/ToastProvider';
+import UserOrderTicker from '@/components/UserOrderTicker';
 
 const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
 const displayFont = Oswald({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-display' });
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SettingsProvider>
                 <ToastProvider>
                   <Navbar />
+                  <UserOrderTicker />
                   <CartDrawer />
                   <main className="flex-grow">
                     {children}

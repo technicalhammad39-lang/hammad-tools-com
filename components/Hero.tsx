@@ -8,19 +8,32 @@ import Image from 'next/image';
 import Typewriter from 'typewriter-effect';
 
 const Hero = () => {
+  const [showDesktopVideo, setShowDesktopVideo] = React.useState(false);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setShowDesktopVideo(mediaQuery.matches);
+    sync();
+
+    mediaQuery.addEventListener('change', sync);
+    return () => mediaQuery.removeEventListener('change', sync);
+  }, []);
+
   return (
-    <section className="relative min-h-[100dvh] md:min-h-[60dvh] md:max-h-[700px] lg:min-h-[100dvh] lg:max-h-none flex flex-col items-center justify-center pt-20 lg:pt-28 overflow-hidden w-full">
+    <section className="relative min-h-[76svh] sm:min-h-[82svh] lg:min-h-[100dvh] flex flex-col items-center justify-center pt-16 sm:pt-20 lg:pt-28 pb-6 sm:pb-10 md:pb-8 lg:pb-0 overflow-hidden w-full">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-25"
-        >
-          <source src="/web-background.mp4" type="video/mp4" />
-        </video>
+        {showDesktopVideo ? (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-25"
+          >
+            <source src="/web-background.mp4" type="video/mp4" />
+          </video>
+        ) : null}
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 cyber-grid opacity-[0.1]" />
         
@@ -30,16 +43,16 @@ const Hero = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 md:gap-12 lg:gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="md:w-full md:max-w-4xl md:mx-auto md:flex md:flex-col md:items-center md:text-center lg:items-start lg:text-left lg:mx-0"
           >
-            <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-8xl font-black leading-[1.1] md:leading-[1] mb-4 md:mb-6 text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
-              <span className="text-5xl sm:text-6xl md:text-8xl lg:text-8xl font-serif italic text-white leading-tight whitespace-nowrap">Unlock The</span>
-              <span style={{ fontFamily: 'var(--font-display)' }} className="text-5xl sm:text-7xl md:text-8xl lg:text-8xl font-bold bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
+            <h1 className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.08] md:leading-[1] mb-4 md:mb-6 text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
+              <span className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-serif italic text-white leading-tight">Unlock The</span>
+              <span style={{ fontFamily: 'var(--font-display)' }} className="text-[2.45rem] sm:text-7xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0">
                 <Typewriter
                   options={{
                     strings: ['PRO COURSES', 'PREMIUM TOOLS', 'DIGITAL ASSETS'],
@@ -57,19 +70,19 @@ const Hero = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="text-base md:text-2xl text-gray-400 md:text-brand-text/60 mt-2 md:mt-3 mb-4 md:mb-6 max-w-lg md:max-w-3xl leading-relaxed font-medium relative z-20 text-left md:text-center lg:text-left mx-0 md:mx-auto lg:mx-0"
+              className="text-[15px] md:text-2xl text-gray-300 md:text-brand-text/60 mt-2 md:mt-3 mb-5 md:mb-6 max-w-lg md:max-w-3xl leading-relaxed font-medium relative z-20 text-left md:text-center lg:text-left mx-0 md:mx-auto lg:mx-0"
             >
               Access Netflix, ChatGPT Plus, Canva Pro, and 50+ other premium content access at unbeatable prices. Fast, secure, and reliable.
             </motion.p>
 
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
               <Link href="/tools" className="w-full md:w-auto">
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full md:w-auto bg-primary text-brand-bg px-8 md:px-12 py-4 md:py-6 rounded-xl font-black flex items-center justify-center space-x-3 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
+                  className="w-full md:w-auto bg-primary text-brand-bg px-8 md:px-12 py-3.5 md:py-6 rounded-xl font-black flex items-center justify-center space-x-3 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
                 >
-                  <span className="text-sm md:text-xl whitespace-nowrap">Explore Tools</span>
+                  <span className="text-sm md:text-xl">Explore Tools</span>
                   <ArrowRight className="w-5 h-5 md:w-7 md:h-7" />
                 </motion.button>
               </Link>
@@ -77,10 +90,10 @@ const Hero = () => {
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full md:w-auto glass hover:bg-white/10 text-white px-8 md:px-12 py-4 md:py-6 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all border border-white/20"
+                  className="w-full md:w-auto glass hover:bg-white/10 text-white px-8 md:px-12 py-3.5 md:py-6 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all border border-white/20"
                 >
                   <Play className="w-5 h-5 md:w-7 md:h-7 fill-current" />
-                  <span className="text-sm md:text-xl whitespace-nowrap">How it Works</span>
+                  <span className="text-sm md:text-xl">How it Works</span>
                 </motion.button>
               </Link>
             </div>

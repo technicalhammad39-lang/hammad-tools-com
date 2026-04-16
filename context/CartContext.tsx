@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export interface CartItem {
   id: string;
@@ -72,7 +72,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       const syncCart = async () => {
         try {
-          await setDoc(doc(db, 'users', user.uid), { cart }, { merge: true });
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            // AuthContext seeds the profile doc. If it's not there yet, skip this cycle.
+            return;
+          }
+          await updateDoc(userRef, { cart });
         } catch (e) {
           console.error('Failed to sync cart to Firebase', e);
         }

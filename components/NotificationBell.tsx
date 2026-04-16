@@ -42,7 +42,6 @@ export default function NotificationBell({
 
   useEffect(() => {
     if (!user) {
-      setNotifications([]);
       return;
     }
 

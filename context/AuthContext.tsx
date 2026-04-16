@@ -1,26 +1,30 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  signOut, 
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
   User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
 } from 'firebase/auth';
-import { doc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
-import { auth, db, googleProvider, testConnection } from '@/firebase';
-import { safeGetDoc, safeSetDoc, OperationType, handleFirestoreError } from '@/lib/firebase-utils';
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
+import { auth, db, googleProvider } from '@/firebase';
+
+const ADMIN_EMAIL = 'technicalhammad39@gmail.com';
+
+type UserRole = 'user' | 'admin' | 'manager';
 
 interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
   photoURL: string;
-  role: 'user' | 'admin' | 'manager';
-  createdAt: any;
+  role: UserRole;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 interface AuthContextType {
@@ -38,71 +42,105 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getRoleForEmail(email: string | null | undefined): UserRole {
+  if (email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    return 'admin';
+  }
+  return 'user';
+}
+
+function profileFallback(user: FirebaseUser): UserProfile {
+  return {
+    uid: user.uid,
+    email: user.email || '',
+    displayName: user.displayName || '',
+    photoURL: user.photoURL || '',
+    role: getRoleForEmail(user.email),
+  };
+}
+
+function normalizeRole(value: unknown): UserRole | null {
+  if (value === 'admin' || value === 'manager' || value === 'user') {
+    return value;
+  }
+  return null;
+}
+
+async function ensureUserProfile(user: FirebaseUser, forcedDisplayName?: string) {
+  const ref = doc(db, 'users', user.uid);
+  const snap = await getDoc(ref);
+  const existingRole = normalizeRole(snap.data()?.role);
+  const role = existingRole || getRoleForEmail(user.email);
+
+  const payload: Record<string, unknown> = {
+    uid: user.uid,
+    email: user.email || '',
+    displayName: forcedDisplayName || user.displayName || '',
+    photoURL: user.photoURL || '',
+    role,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (!snap.exists()) {
+    payload.createdAt = serverTimestamp();
+  }
+
+  await setDoc(ref, payload, { merge: true });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Run connection test on client
-    testConnection();
-
     let unsubscribeProfile: (() => void) | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      // Cleanup previous profile listener if any
+    const unsubscribeAuth = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+
       if (unsubscribeProfile) {
         unsubscribeProfile();
         unsubscribeProfile = null;
       }
 
-      if (user) {
-        // Initial check and creation if needed
-        const userDocRef = doc(db, 'users', user.uid);
-        try {
-          const userDoc = await safeGetDoc(userDocRef, `users/${user.uid}`);
-          
-          if (userDoc && !userDoc.exists()) {
-            const newProfile: UserProfile = {
-              uid: user.uid,
-              email: user.email || '',
-              displayName: user.displayName || '',
-              photoURL: user.photoURL || '',
-              role: user.email === 'technicalhammad39@gmail.com' ? 'admin' : 'user',
-              createdAt: serverTimestamp(),
-            };
-            await safeSetDoc(userDocRef, newProfile, `users/${user.uid}`);
-          } else if (userDoc && userDoc.exists()) {
-            const data = userDoc.data() as UserProfile;
-            if (user.email === 'technicalhammad39@gmail.com' && data.role !== 'admin') {
-              await updateDoc(userDocRef, { role: 'admin' });
-            }
-          }
-        } catch (error) {
-          console.error('Error during user profile initialization:', error);
-        }
-
-        // Real-time listener for profile changes
-        unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
-          if (doc.exists()) {
-            setProfile(doc.data() as UserProfile);
-          }
-          setLoading(false);
-        }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
-          setLoading(false);
-        });
-      } else {
+      if (!nextUser) {
         setProfile(null);
         setLoading(false);
+        return;
       }
+
+      setLoading(true);
+      setProfile(profileFallback(nextUser));
+
+      void ensureUserProfile(nextUser).catch((error) => {
+        console.error('Failed to ensure user profile:', error);
+      });
+
+      const profileRef = doc(db, 'users', nextUser.uid);
+      unsubscribeProfile = onSnapshot(
+        profileRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            setProfile(snapshot.data() as UserProfile);
+          } else {
+            setProfile(profileFallback(nextUser));
+          }
+          setLoading(false);
+        },
+        (error) => {
+          console.error('Profile listener failed:', error);
+          setProfile(profileFallback(nextUser));
+          setLoading(false);
+        }
+      );
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
     };
   }, []);
 
@@ -127,7 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signupWithEmail = async (email: string, pass: string, name: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      await updateProfile(userCredential.user, { displayName: name });
+      await updateProfile(userCredential.user, { displayName: name.trim() });
+      await ensureUserProfile(userCredential.user, name.trim());
+      await userCredential.user.reload();
     } catch (error) {
       console.error('Email signup failed:', error);
       throw error;
@@ -139,22 +179,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
     } catch (error) {
       console.error('Logout failed:', error);
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      profile, 
-      loading, 
-      login, 
-      loginWithEmail,
-      signupWithEmail,
-      logout, 
-      isAdmin: profile?.role === 'admin',
-      isManager: profile?.role === 'manager',
-      isStaff: profile?.role === 'admin' || profile?.role === 'manager',
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        login,
+        loginWithEmail,
+        signupWithEmail,
+        logout,
+        isAdmin: profile?.role === 'admin' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+        isManager: profile?.role === 'manager',
+        isStaff:
+          profile?.role === 'admin' ||
+          profile?.role === 'manager' ||
+          user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

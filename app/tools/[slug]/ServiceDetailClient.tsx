@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
+import { createOrderPublicId } from '@/lib/order-system';
 
 interface Plan {
   planName: string;
@@ -36,6 +37,7 @@ interface Service {
   name: string;
   description: string;
   price: number;
+  salePrice?: number;
   image: string;
   category: string;
   features?: string[];
@@ -115,7 +117,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     if (service.plans && service.plans.length > 0) {
       return service.plans.map((p: any) => {
         const ourPrice = Number(p.ourPrice ?? p.salePrice ?? p.price ?? 0);
-        const officialPrice = Number(p.officialPrice ?? p.originalPrice ?? (ourPrice ? ourPrice * 1.5 : 0));
+        const officialPrice = Number(p.officialPrice ?? p.originalPrice ?? 0);
         const benefits = Array.isArray(p.benefits)
           ? p.benefits
           : typeof p.benefits === 'string'
@@ -135,7 +137,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       {
         planName: 'Standard Plan',
         ourPrice: service.price,
-        officialPrice: service.price * 1.5,
+        officialPrice: Number(service.salePrice || 0),
         benefits: service.features || ['Premium Access', 'Instant Delivery'],
       },
     ];
@@ -177,11 +179,13 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
   const currentPrice = selectedPlan ? selectedPlan.ourPrice : service.price;
   const currentOfficialPrice = selectedPlan
-    ? (selectedPlan.officialPrice && selectedPlan.officialPrice > 0 ? selectedPlan.officialPrice : selectedPlan.ourPrice * 1.5)
-    : service.price * 1.5;
+    ? (selectedPlan.officialPrice && selectedPlan.officialPrice > currentPrice ? selectedPlan.officialPrice : 0)
+    : (Number(service.salePrice || 0) > currentPrice ? Number(service.salePrice) : 0);
   const totalPrice = (currentPrice * quantity * (1 - discount / 100)).toFixed(2);
   const totalOfficialPrice = (currentOfficialPrice * quantity).toFixed(2);
-  const savingsPercent = Math.round(((currentOfficialPrice - currentPrice) / currentOfficialPrice) * 100);
+  const savingsPercent = currentOfficialPrice > currentPrice
+    ? Math.round(((currentOfficialPrice - currentPrice) / currentOfficialPrice) * 100)
+    : 0;
 
   const handleOrder = () => {
     const planName = selectedPlan?.planName || 'Standard';
@@ -189,6 +193,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       productId: service.id,
       quantity: String(quantity),
       plan: planName,
+      orderId: createOrderPublicId(),
     });
     router.push(`/checkout?${params.toString()}`);
   };
@@ -227,12 +232,12 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6 flex flex-col items-start gap-2">
-                <span className="bg-primary/20 backdrop-blur-md text-primary px-4 py-1.5 rounded-lg font-black uppercase tracking-widest text-[8px] border border-primary/20">
+                <span className="bg-primary/20 backdrop-blur-md text-primary px-4 py-1.5 rounded-lg font-black tracking-widest text-[8px] border border-primary/20 whitespace-pre-wrap break-words">
                   {service.category}
                 </span>
                 <div className="bg-black/40 backdrop-blur-md text-brand-text/80 px-4 py-1.5 rounded-lg border border-white/5 flex items-center gap-2">
                   <Clock className="w-3 h-3 text-secondary" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">{service.duration || '1 Month'}</span>
+                  <span className="text-[8px] font-black tracking-widest whitespace-pre-wrap break-words">{service.duration || '1 Month'}</span>
                 </div>
               </div>
             </motion.div>
@@ -245,7 +250,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 </div>
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Delivery</div>
-                  <div className="text-[10px] md:text-xs font-black uppercase text-brand-text leading-tight">{service.deliveryStatus || 'Instant'}</div>
+                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.deliveryStatus || 'Instant'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
@@ -254,7 +259,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 </div>
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Access</div>
-                  <div className="text-[10px] md:text-xs font-black uppercase text-brand-text leading-tight">{service.accessLabel || service.accessType || 'Shared'}</div>
+                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.accessLabel || service.accessType || 'Shared'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
@@ -263,7 +268,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 </div>
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Warranty</div>
-                  <div className="text-[10px] md:text-xs font-black uppercase text-brand-text leading-tight">{service.warranty || 'Full'}</div>
+                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.warranty || 'Full'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
@@ -272,7 +277,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 </div>
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Plan Type</div>
-                  <div className="text-[10px] md:text-xs font-black uppercase text-brand-text leading-tight">{service.planType || 'Individual'}</div>
+                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.planType || 'Individual'}</div>
                 </div>
               </div>
             </div>
@@ -285,7 +290,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-6xl md:text-8xl font-black mb-6 text-brand-text uppercase leading-[0.9]"
+                className="text-6xl md:text-8xl font-black mb-6 text-brand-text leading-[0.9] whitespace-pre-wrap break-words"
               >
                 {service.name}
               </motion.h1>
@@ -318,7 +323,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                         : 'glass text-brand-text font-bold border-white/5 hover:border-white/20'
                     }`}
                   >
-                    <div className="text-xs uppercase tracking-widest whitespace-nowrap flex items-center justify-center gap-2">
+                    <div className="text-xs tracking-widest whitespace-nowrap flex items-center justify-center gap-2">
                        {selectedPlan?.planName === plan.planName && <CheckCircle2 className="w-4 h-4 text-black" />}
                       {plan.planName}
                     </div>
@@ -353,7 +358,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                       </div>
                       
                       <div className="flex items-center gap-3">
-                        {totalOfficialPrice !== totalPrice && (
+                        {currentOfficialPrice > currentPrice && (
                           <span className="text-sm md:text-base font-black text-red-500/60 line-through decoration-red-500/40">Rs {totalOfficialPrice}</span>
                         )}
                         {savingsPercent > 0 && (
@@ -469,14 +474,16 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                             <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-brand-text/10'}`} />
                           ))}
                         </div>
-                        <p className="text-sm md:text-base font-medium text-brand-text/80 leading-relaxed mb-6 italic">"{review.text}"</p>
+                        <p className="text-sm md:text-base font-medium text-brand-text/80 leading-relaxed mb-6 italic">
+                          &quot;{review.text}&quot;
+                        </p>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
                           <User className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <div className="text-xs font-black uppercase tracking-widest text-brand-text">{review.userName}</div>
+                          <div className="text-xs font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">{review.userName}</div>
                           <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Verified Customer</div>
                         </div>
                       </div>

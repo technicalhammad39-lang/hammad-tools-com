@@ -2,12 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Users, ShoppingBag, TrendingUp, DollarSign, Package, Activity } from 'lucide-react';
+import { Users, ShoppingBag, TrendingUp, DollarSign, Package, ExternalLink } from 'lucide-react';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { db } from '@/firebase';
 import type { EntitlementRecord, OrderRecord } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { useAuth } from '@/context/AuthContext';
+import { formatDateTime, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 
 interface UserRecord {
   id: string;
@@ -30,11 +32,13 @@ function formatTime(value: any) {
 }
 
 const AdminDashboard = () => {
+  const router = useRouter();
   const toast = useToast();
   const { isStaff } = useAuth();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [entitlements, setEntitlements] = useState<EntitlementRecord[]>([]);
+  const [ordersFilter, setOrdersFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   useEffect(() => {
     if (!isStaff) {
@@ -82,7 +86,7 @@ const AdminDashboard = () => {
 
   const totalRevenue = useMemo(() => {
     return orders
-      .filter((order) => ['approved', 'completed'].includes(order.status))
+      .filter((order) => normalizeOrderStatus(order.status) === 'approved')
       .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
   }, [orders]);
 
@@ -124,7 +128,7 @@ const AdminDashboard = () => {
     orders.slice(0, 5).forEach((order) => {
       events.push({
         id: `order-${order.id}`,
-        text: `${order.orderNumber || 'Order'} submitted by ${order.userName || 'customer'}.`,
+        text: `${getOrderDisplayId(order)} submitted by ${order.userName || 'customer'}.`,
         time: order.createdAt,
         icon: ShoppingBag,
       });
@@ -148,6 +152,32 @@ const AdminDashboard = () => {
       })
       .slice(0, 6);
   }, [orders, users, entitlements]);
+
+  const dashboardOrders = useMemo(() => {
+    const statusWeight = (status: string) => {
+      const normalized = normalizeOrderStatus(status);
+      if (normalized === 'pending') {
+        return 0;
+      }
+      if (normalized === 'approved') {
+        return 1;
+      }
+      return 2;
+    };
+
+    return [...orders]
+      .filter((order) => ordersFilter === 'all' || normalizeOrderStatus(order.status) === ordersFilter)
+      .sort((a, b) => {
+        const byStatus = statusWeight(a.status) - statusWeight(b.status);
+        if (byStatus !== 0) {
+          return byStatus;
+        }
+        const aTime = toDate(a.createdAt)?.getTime?.() || 0;
+        const bTime = toDate(b.createdAt)?.getTime?.() || 0;
+        return bTime - aTime;
+      })
+      .slice(0, 12);
+  }, [orders, ordersFilter]);
 
   if (!isStaff) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;
@@ -184,13 +214,92 @@ const AdminDashboard = () => {
           <div className="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
             <div className="flex items-center gap-4">
               <div className="w-1.5 h-6 bg-primary rounded-full" />
-              <h2 className="text-2xl font-black uppercase text-brand-text">Platform Overview</h2>
+              <h2 className="text-2xl font-black uppercase text-brand-text">Live Orders</h2>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Realtime Firestore</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+              Realtime Firestore
+            </span>
           </div>
-          <div className="p-10">
-            <div className="h-80 w-full bg-white/5 rounded-3xl border border-dashed border-white/10 flex items-center justify-center">
-              <span className="text-brand-text/30 font-black uppercase tracking-widest text-xs italic">Analytics module not configured.</span>
+
+          <div className="px-10 pt-8 flex flex-wrap gap-2">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'pending', label: 'Pending' },
+              { id: 'approved', label: 'Approved' },
+              { id: 'rejected', label: 'Rejected' },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setOrdersFilter(filter.id as typeof ordersFilter)}
+                className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  ordersFilter === filter.id
+                    ? 'bg-primary text-black border-primary'
+                    : 'bg-white/5 border-white/10 text-brand-text/50 hover:text-brand-text'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-10 pt-6">
+            <div className="rounded-3xl border border-white/10 overflow-hidden">
+              {dashboardOrders.length === 0 ? (
+                <div className="h-64 w-full bg-white/5 flex items-center justify-center">
+                  <span className="text-brand-text/30 font-black uppercase tracking-widest text-xs">
+                    No orders found for this filter.
+                  </span>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {dashboardOrders.map((order) => {
+                    const firstItem = order.itemSummary?.[0] || order.items?.[0];
+                    const orderedItemName =
+                      firstItem?.productTitle ||
+                      order.primaryItemName ||
+                      (order.items || []).map((item) => item.productTitle).filter(Boolean).join(', ') ||
+                      'Unknown item';
+                    const customerText = order.userName || order.userEmail || order.email || 'Customer';
+                    const normalizedStatus = normalizeOrderStatus(order.status);
+                    return (
+                      <div key={order.id} className="p-5 md:p-6 bg-white/[0.02]">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm md:text-base font-semibold text-brand-text break-words">
+                              {orderedItemName}
+                            </div>
+                            <div className="text-[11px] text-brand-text/60 mt-1 break-words">{customerText}</div>
+                            <div className="text-[10px] text-brand-text/40 mt-1">{formatDateTime(order.createdAt)}</div>
+                          </div>
+
+                          <div className="flex items-center gap-3 md:gap-4">
+                            <div className="text-sm font-semibold text-primary">
+                              Rs {Number(order.totalAmount || 0).toFixed(2)}
+                            </div>
+                            <div
+                              className={`px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${
+                                normalizedStatus === 'pending'
+                                  ? 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+                                  : normalizedStatus === 'approved'
+                                  ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10'
+                                  : 'text-accent border-accent/30 bg-accent/10'
+                              }`}
+                            >
+                              {normalizedStatus}
+                            </div>
+                            <button
+                              onClick={() => router.push(`/admin/orders?order=${encodeURIComponent(order.id)}`)}
+                              className="px-3 py-2 rounded-lg border border-primary/30 bg-primary text-black text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" /> View
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

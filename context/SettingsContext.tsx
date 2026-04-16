@@ -38,10 +38,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let generalLoaded = false;
+    let socialsLoaded = false;
+
+    const markLoaded = () => {
+      if (generalLoaded && socialsLoaded) {
+        setLoading(false);
+      }
+    };
+
     // 1. Listen to General Settings
     const unsubscribeGeneral = onSnapshot(
       doc(db, 'settings', 'general'), 
       (docSnap) => {
+        generalLoaded = true;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setSettings(prev => ({
@@ -50,10 +60,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             supportPhone: data.contactPhone || prev.supportPhone,
           }));
         }
+        markLoaded();
       },
       (error) => {
         // Silently catch permission errors for unauthenticated users
         // defaultSettings will be used instead.
+        generalLoaded = true;
+        markLoaded();
       }
     );
 
@@ -61,6 +74,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const unsubscribeSocials = onSnapshot(
       doc(db, 'settings', 'socials'), 
       (docSnap) => {
+        socialsLoaded = true;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setSettings(prev => ({
@@ -73,13 +87,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             googleBusinessUrl: data.googleBusiness || prev.googleBusinessUrl,
           }));
         }
+        markLoaded();
       },
       (error) => {
         // Silently catch permission errors for unauthenticated users
+        socialsLoaded = true;
+        markLoaded();
       }
     );
-
-    setLoading(false);
 
     return () => {
       unsubscribeGeneral();

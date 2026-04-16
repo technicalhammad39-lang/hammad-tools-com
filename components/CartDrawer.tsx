@@ -6,6 +6,7 @@ import { X, ShoppingBag, Trash2, ArrowRight, CreditCard } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { createOrderPublicId } from '@/lib/order-system';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, totalPrice, isCartOpen, setIsCartOpen, totalItems } = useCart();
@@ -78,7 +79,7 @@ const CartDrawer = () => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-brand-text font-black text-sm uppercase tracking-widest truncate">{item.name}</h4>
+                      <h4 className="text-brand-text font-black text-sm tracking-widest truncate">{item.name}</h4>
                       <p className="text-primary font-black mt-1 text-sm">Rs {item.price}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[10px] text-brand-text/40 font-black uppercase tracking-widest">Qty: {item.quantity}</span>
@@ -106,7 +107,11 @@ const CartDrawer = () => {
                 </p>
                 <button
                   onClick={() => {
-                    router.push('/checkout?mode=cart');
+                    const params = new URLSearchParams({
+                      mode: 'cart',
+                      orderId: createOrderPublicId(),
+                    });
+                    router.push(`/checkout?${params.toString()}`);
                     setIsCartOpen(false);
                   }}
                   className="w-full bg-primary text-black py-4 rounded-xl font-black flex items-center justify-center space-x-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform text-xs uppercase tracking-widest border-b-4 border-secondary"

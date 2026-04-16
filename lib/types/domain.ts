@@ -1,4 +1,4 @@
-﻿export type CategoryType = 'tools' | 'services' | 'both';
+export type CategoryType = 'tools' | 'services' | 'both';
 
 export interface Category {
   id: string;
@@ -69,54 +69,112 @@ export interface PaymentMethod {
 }
 
 export type OrderStatus =
-  | 'pending_verification'
+  | 'pending'
   | 'approved'
   | 'rejected'
+  | 'pending_verification'
   | 'needs_info'
   | 'completed';
 
+export interface OrderLineItem {
+  productId: string;
+  productTitle: string;
+  productType: 'tools' | 'services';
+  quantity: number;
+  selectedPlanName?: string | null;
+  durationLabel?: string | null;
+  planType?: string | null;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface OrderMessageRecord {
+  id: string;
+  orderId: string;
+  senderRole: 'admin' | 'user' | 'system';
+  senderId: string;
+  senderName?: string;
+  message: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  messageType?: 'status' | 'message' | 'rejection' | 'approval';
+  createdAt?: any;
+}
+
 export interface OrderRecord {
   id: string;
-  orderNumber: string;
+  orderId: string;
+  order_id?: string;
+  orderNumber?: string;
   userId: string;
-  userEmail?: string;
+  user_id?: string;
+  userEmail: string;
+  email?: string;
+  deliveryEmail?: string;
+  targetEmail?: string;
+  userPhone: string;
+  phone?: string;
   userName?: string;
-  items: Array<{
+  items: OrderLineItem[];
+  subtotal: number;
+  totalAmount: number;
+  quantityTotal?: number;
+  primaryItemName?: string;
+  primaryPlanName?: string | null;
+  primaryDuration?: string;
+  primaryPlanType?: string;
+  primaryQuantity?: number;
+  primaryUnitPrice?: number;
+  couponCode?: string;
+  appliedCouponCode?: string;
+  itemSummary?: Array<{
     productId: string;
     productTitle: string;
-    productType: 'tools' | 'services';
-    categoryId?: string | null;
-    categoryName?: string | null;
-    quantity: number;
-    selectedPlanId?: string | null;
     selectedPlanName?: string | null;
+    durationLabel?: string | null;
+    planType?: string | null;
     unitPrice: number;
+    quantity: number;
     totalPrice: number;
-    durationType?: string;
-    durationValue?: number | null;
-    customExpiryAt?: any;
-    accessType?: string;
-    renewable?: boolean;
-    activationBehavior?: string;
-    productSnapshot?: Record<string, unknown>;
+    productType: 'tools' | 'services';
   }>;
-  paymentMethodId: string;
-  paymentMethodSnapshot: {
-    name: string;
+  currency?: string;
+  selectedPlanName?: string | null;
+  status: OrderStatus;
+  adminMessage?: string;
+  latestMessagePreview?: string;
+  latestMessageAt?: any;
+  rejectionReason?: string;
+  tickerState?: 'new' | 'opened' | 'dismissed';
+  tickerOpenedAt?: any;
+  tickerDismissedAt?: any;
+  openedByAdminId?: string;
+  createdAt?: any;
+  created_at?: any;
+  updatedAt?: any;
+  updated_at?: any;
+  statusUpdatedAt?: any;
+  status_updated_at?: any;
+
+  // Legacy optional fields for backward compatibility with existing docs.
+  paymentMethodId?: string;
+  paymentMethodName?: string;
+  paymentMethodSnapshot?: {
+    name?: string;
     accountTitle?: string;
     accountNumber?: string;
     instructions?: string;
   };
-  paymentProof: {
-    senderName: string;
-    senderNumber: string;
-    transactionId: string;
+  paymentProof?: {
+    senderAccount?: string;
+    senderName?: string;
+    senderNumber?: string;
+    transactionId?: string;
     screenshotUrl?: string;
     note?: string;
   };
-  subtotal: number;
-  totalAmount: number;
-  status: OrderStatus;
   statusHistory?: Array<{
     status: string;
     message: string;
@@ -124,19 +182,19 @@ export interface OrderRecord {
     actorId: string;
     createdAt: any;
   }>;
-  adminMessage?: string;
-  rejectionReason?: string;
-  deliveryDetails?: string;
-  internalNote?: string;
   messages?: Array<{
     senderRole: 'admin' | 'user';
     senderId: string;
     message: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachmentType?: string;
+    attachmentSize?: number;
     createdAt: any;
   }>;
+  deliveryDetails?: string;
+  internalNote?: string;
   entitlementIds?: string[];
-  createdAt?: any;
-  updatedAt?: any;
   approvedAt?: any;
   completedAt?: any;
 }
@@ -172,7 +230,33 @@ export interface NotificationRecord {
   type: string;
   link?: string;
   imageUrl?: string;
+  orderId?: string;
+  metadata?: Record<string, unknown>;
   read: boolean;
   createdAt?: any;
+  updatedAt?: any;
 }
 
+export interface MediaFileRecord {
+  id: string;
+  ownerId: string;
+  ownerEmail?: string;
+  folder: 'products' | 'users' | 'banners' | 'payments';
+  source: 'local-hosting';
+  fileName: string;
+  originalFileName: string;
+  extension: string;
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  publicPath: string;
+  publicUrl: string;
+  relatedType?: string;
+  relatedId?: string;
+  relatedUserId?: string;
+  relatedOrderId?: string;
+  relatedProductId?: string;
+  note?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}

@@ -47,7 +47,7 @@ const PartnerSection = () => {
           <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-6xl mx-auto">
           {partners.map((partner, index) => (
             <motion.div
               key={partner.name}
@@ -61,12 +61,12 @@ const PartnerSection = () => {
                 href={partner.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="block h-full p-8 md:p-10 rounded-[3rem] border border-white/60 transition-all duration-500 overflow-hidden bg-[linear-gradient(135deg,#FFFFFF_0%,#FFF9E6_55%,#FFFFFF_100%)] group-hover:bg-[linear-gradient(135deg,#FFF7D6_0%,#FFE27A_55%,#FFF7D6_100%)] shadow-[0_20px_50px_rgba(255,214,0,0.18)] group-hover:shadow-[0_28px_70px_rgba(255,214,0,0.25)] flex flex-col"
+                className="block h-full p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/60 transition-all duration-500 overflow-hidden bg-[linear-gradient(135deg,#FFFFFF_0%,#FFF9E6_55%,#FFFFFF_100%)] group-hover:bg-[linear-gradient(135deg,#FFF7D6_0%,#FFE27A_55%,#FFF7D6_100%)] shadow-[0_20px_50px_rgba(255,214,0,0.18)] group-hover:shadow-[0_28px_70px_rgba(255,214,0,0.25)] flex flex-col"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 
                 <div className="flex items-start justify-between gap-4">
-                  <div className="w-[88px] h-[88px] rounded-2xl bg-white/80 flex items-center justify-center border border-black/10 group-hover:scale-105 transition-transform overflow-hidden relative">
+                  <div className="w-[68px] h-[68px] md:w-[88px] md:h-[88px] rounded-2xl bg-white/80 flex items-center justify-center border border-black/10 group-hover:scale-105 transition-transform overflow-hidden relative">
                     {partner.name === 'Khaksar Agency' ? (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white to-[#FFF3C4]">
                         <Crown className="w-10 h-10 text-[#1A1A1A] drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)]" />

@@ -14,16 +14,23 @@ service cloud.firestore {
         request.auth.token.email == "technicalhammad39@gmail.com";
     }
 
+    function roleFromDoc() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
     function isAdminByDoc() {
       return isAuthenticated() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+        (roleFromDoc() == "admin" || roleFromDoc() == "Admin");
     }
 
     function isManagerByDoc() {
       return isAuthenticated() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "manager";
+        (roleFromDoc() == "manager" ||
+         roleFromDoc() == "Manager" ||
+         roleFromDoc() == "staff" ||
+         roleFromDoc() == "Staff");
     }
 
     function isAdmin() {
@@ -45,7 +52,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
       allow create: if isOwner(userId) &&
-        hasOnlyAllowedFields(["uid", "email", "displayName", "photoURL", "role", "createdAt"]) &&
+        hasOnlyAllowedFields(["uid", "email", "displayName", "photoURL", "role", "createdAt", "updatedAt"]) &&
         (request.resource.data.role == "user" || isAdmin());
       allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
@@ -106,6 +113,16 @@ service cloud.firestore {
       allow read: if isStaff() || (isAuthenticated() && request.auth.uid == resource.data.userId);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isStaff();
+
+      match /messages/{messageId} {
+        allow read: if isStaff() || (
+          isAuthenticated() &&
+          exists(/databases/$(database)/documents/orders/$(orderId)) &&
+          request.auth.uid == get(/databases/$(database)/documents/orders/$(orderId)).data.userId
+        );
+        allow create: if isStaff();
+        allow update, delete: if false;
+      }
     }
 
     match /entitlements/{entitlementId} {

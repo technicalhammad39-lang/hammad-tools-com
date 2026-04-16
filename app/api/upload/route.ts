@@ -1,31 +1,89 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { adminDb, adminFieldValue } from '@/lib/server/firebase-admin';
+import { requireAuth } from '@/lib/server/auth';
+import { ApiError, jsonError } from '@/lib/server/http';
+import {
+  ensureUploadFolder,
+  generateUniqueFileName,
+  getPublicFilePath,
+  getRelativeStoragePath,
+  normalizeOptionalText,
+  normalizeUploadFolder,
+  toPublicUrl,
+  validateUploadFile,
+} from '@/lib/server/local-upload';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const decoded = await requireAuth(request);
     const formData = await request.formData();
-    const file = formData.get('file') as File;
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    const incomingFile = formData.get('file');
+    if (!(incomingFile instanceof File)) {
+      throw new ApiError(400, 'No file uploaded.');
     }
 
-    const bytes = await file.arrayBuffer();
+    const folder = normalizeUploadFolder(normalizeOptionalText(formData.get('folder')));
+    const extension = validateUploadFile(incomingFile);
+    const fileName = generateUniqueFileName(incomingFile.name, extension);
+    const folderPath = await ensureUploadFolder(folder);
+
+    const bytes = await incomingFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create unique filename without uuid dependency
-    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${uniqueId}.${fileExtension}`;
-    const path = join(process.cwd(), 'public/uploads', fileName);
+    const absoluteFilePath = join(folderPath, fileName);
+    await writeFile(absoluteFilePath, buffer, { flag: 'wx' });
 
-    await writeFile(path, buffer);
-    const publicUrl = `/uploads/${fileName}`;
+    const storagePath = getRelativeStoragePath(folder, fileName);
+    const publicPath = getPublicFilePath(folder, fileName);
+    const publicUrl = toPublicUrl(request, publicPath);
 
-    return NextResponse.json({ url: publicUrl });
+    const mediaRef = adminDb.collection('media_files').doc();
+    const mediaRecord = {
+      id: mediaRef.id,
+      ownerId: decoded.uid,
+      ownerEmail: decoded.email || '',
+      folder,
+      source: 'local-hosting',
+      fileName,
+      originalFileName: incomingFile.name,
+      extension,
+      mimeType: incomingFile.type || 'application/octet-stream',
+      sizeBytes: incomingFile.size,
+      storagePath,
+      publicPath,
+      publicUrl,
+      relatedType: normalizeOptionalText(formData.get('relatedType')) || '',
+      relatedId: normalizeOptionalText(formData.get('relatedId')) || '',
+      relatedUserId: normalizeOptionalText(formData.get('relatedUserId')) || '',
+      relatedOrderId: normalizeOptionalText(formData.get('relatedOrderId')) || '',
+      relatedProductId: normalizeOptionalText(formData.get('relatedProductId')) || '',
+      note: normalizeOptionalText(formData.get('note')) || '',
+      createdAt: adminFieldValue.serverTimestamp(),
+      updatedAt: adminFieldValue.serverTimestamp(),
+    };
+
+    await mediaRef.set(mediaRecord);
+
+    return NextResponse.json({
+      success: true,
+      media: {
+        id: mediaRef.id,
+        url: publicUrl,
+        publicPath,
+        storagePath,
+        fileName,
+        mimeType: mediaRecord.mimeType,
+        sizeBytes: incomingFile.size,
+        folder,
+      },
+    });
   } catch (error) {
-    console.error('Upload Error:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return jsonError(error);
   }
 }
