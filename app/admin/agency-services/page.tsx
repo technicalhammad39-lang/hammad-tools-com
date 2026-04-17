@@ -32,6 +32,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
@@ -97,26 +98,39 @@ const ManageAgencyServices = () => {
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
-    
+
+    let rawPayloadForDebug: Record<string, unknown> | null = null;
+    let finalPayloadForDebug: Record<string, unknown> | null = null;
+
     try {
       const serviceData = {
         ...form,
         updatedAt: serverTimestamp()
       };
+      rawPayloadForDebug = serviceData as Record<string, unknown>;
+      const sanitizedServiceData = sanitizeForFirestore(serviceData);
+      finalPayloadForDebug = sanitizedServiceData as Record<string, unknown>;
 
       if (editingId) {
-        await updateDoc(doc(db, 'agency_services', editingId), serviceData);
+        await updateDoc(doc(db, 'agency_services', editingId), sanitizedServiceData);
         toast.success('Service updated');
       } else {
-        await addDoc(collection(db, 'agency_services'), {
-          ...serviceData,
+        await addDoc(collection(db, 'agency_services'), sanitizeForFirestore({
+          ...sanitizedServiceData,
           createdAt: serverTimestamp()
-        });
+        }));
         toast.success('Service created');
       }
       
       resetForm();
     } catch (error) {
+      logFirestoreSaveFailure({
+        scope: 'admin-agency-services-save',
+        collection: 'agency_services',
+        payload: finalPayloadForDebug || rawPayloadForDebug,
+        sanitized: Boolean(finalPayloadForDebug),
+        error,
+      });
       console.error('Error saving agency service:', error);
       toast.error('Failed to save service', error instanceof Error ? error.message : 'Please try again.');
     }

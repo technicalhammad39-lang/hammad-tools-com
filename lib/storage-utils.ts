@@ -266,7 +266,7 @@ export function toStorageMetadata(
   access: 'public' | 'protected';
   uploadedBy?: string;
 } {
-  return {
+  const metadata = {
     mediaId: media.id,
     fileUrl: media.url,
     storagePath: media.storagePath,
@@ -275,8 +275,16 @@ export function toStorageMetadata(
     sizeBytes: media.sizeBytes,
     folder: media.folder,
     access: media.access,
-    uploadedBy,
   };
+
+  if (typeof uploadedBy === 'string' && uploadedBy.trim()) {
+    return {
+      ...metadata,
+      uploadedBy: uploadedBy.trim(),
+    };
+  }
+
+  return metadata;
 }
 
 export function withProtectedFileToken(url: string, token: string) {

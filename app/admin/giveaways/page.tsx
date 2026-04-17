@@ -9,6 +9,7 @@ import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Upload, Lo
 import Link from 'next/link';
 import Image from 'next/image';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
@@ -66,7 +67,10 @@ const AdminGiveaways = () => {
 
   const handleSave = async () => {
     if (!form.title || !form.prize) return;
-    
+
+    let rawPayloadForDebug: Record<string, unknown> | null = null;
+    let finalPayloadForDebug: Record<string, unknown> | null = null;
+
     try {
       const data = {
         ...form,
@@ -76,16 +80,19 @@ const AdminGiveaways = () => {
         adminAvatar: user?.photoURL || '',
         adminName: user?.displayName || 'Admin'
       };
+      rawPayloadForDebug = data as Record<string, unknown>;
+      const sanitizedData = sanitizeForFirestore(data);
+      finalPayloadForDebug = sanitizedData as Record<string, unknown>;
 
       if (editingId) {
-        await updateDoc(doc(db, 'giveaways', editingId), data);
+        await updateDoc(doc(db, 'giveaways', editingId), sanitizedData);
         toast.success('Giveaway updated');
       } else {
-        await addDoc(collection(db, 'giveaways'), {
-          ...data,
+        await addDoc(collection(db, 'giveaways'), sanitizeForFirestore({
+          ...sanitizedData,
           createdAt: serverTimestamp(),
           likedBy: []
-        });
+        }));
         toast.success('Giveaway created');
       }
       
@@ -101,6 +108,13 @@ const AdminGiveaways = () => {
         imageMedia: null,
       });
     } catch (error) {
+      logFirestoreSaveFailure({
+        scope: 'admin-giveaways-save',
+        collection: 'giveaways',
+        payload: finalPayloadForDebug || rawPayloadForDebug,
+        sanitized: Boolean(finalPayloadForDebug),
+        error,
+      });
       console.error('Error saving giveaway:', error);
       toast.error('Failed to save giveaway', error instanceof Error ? error.message : 'Please try again.');
     }

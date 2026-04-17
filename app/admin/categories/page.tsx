@@ -19,6 +19,7 @@ import { Loader2, Plus, Edit2, Trash2, Save, X, ArrowLeft } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Category, CategoryType } from '@/lib/types/domain';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
 
@@ -93,6 +94,8 @@ export default function AdminCategoriesPage() {
     }
 
     setSaving(true);
+    let rawPayloadForDebug: Record<string, unknown> | null = null;
+    let finalPayloadForDebug: Record<string, unknown> | null = null;
     try {
       const payload = {
         name: form.name.trim(),
@@ -105,15 +108,18 @@ export default function AdminCategoriesPage() {
         sortOrder: Number(form.sortOrder || 0),
         updatedAt: serverTimestamp(),
       };
+      rawPayloadForDebug = payload as Record<string, unknown>;
+      const sanitizedPayload = sanitizeForFirestore(payload);
+      finalPayloadForDebug = sanitizedPayload as Record<string, unknown>;
 
       if (editingId) {
-        await updateDoc(doc(db, 'categories', editingId), payload);
+        await updateDoc(doc(db, 'categories', editingId), sanitizedPayload);
         toast.success('Category updated');
       } else {
-        await addDoc(collection(db, 'categories'), {
-          ...payload,
+        await addDoc(collection(db, 'categories'), sanitizeForFirestore({
+          ...sanitizedPayload,
           createdAt: serverTimestamp(),
-        });
+        }));
         toast.success('Category created');
       }
 
@@ -130,6 +136,13 @@ export default function AdminCategoriesPage() {
         sortOrder: 0,
       });
     } catch (error) {
+      logFirestoreSaveFailure({
+        scope: 'admin-categories-save',
+        collection: 'categories',
+        payload: finalPayloadForDebug || rawPayloadForDebug,
+        sanitized: Boolean(finalPayloadForDebug),
+        error,
+      });
       console.error('Failed to save category:', error);
       toast.error('Failed to save category', error instanceof Error ? error.message : 'Please try again.');
     } finally {

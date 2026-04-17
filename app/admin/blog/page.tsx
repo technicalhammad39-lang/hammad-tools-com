@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -53,7 +54,10 @@ const BlogCMS = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const sanitizedSlug = formData.slug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    
+
+    let rawPayloadForDebug: Record<string, unknown> | null = null;
+    let finalPayloadForDebug: Record<string, unknown> | null = null;
+
     const postData = {
       ...formData,
       slug: sanitizedSlug,
@@ -63,16 +67,20 @@ const BlogCMS = () => {
       thumbnailMedia: formData.thumbnailMedia || null,
       updatedAt: serverTimestamp(),
     };
+    rawPayloadForDebug = postData as Record<string, unknown>;
 
     try {
+      const sanitizedPostData = sanitizeForFirestore(postData);
+      finalPayloadForDebug = sanitizedPostData as Record<string, unknown>;
+
       if (editingPost) {
-        await updateDoc(doc(db, 'blogPosts', editingPost.id), postData);
+        await updateDoc(doc(db, 'blogPosts', editingPost.id), sanitizedPostData);
         toast.success('Post updated');
       } else {
-        await addDoc(collection(db, 'blogPosts'), {
-          ...postData,
+        await addDoc(collection(db, 'blogPosts'), sanitizeForFirestore({
+          ...sanitizedPostData,
           createdAt: serverTimestamp(),
-        });
+        }));
         toast.success('Post created');
       }
       setIsAdding(false);
@@ -89,6 +97,13 @@ const BlogCMS = () => {
         tags: '',
       });
     } catch (error) {
+      logFirestoreSaveFailure({
+        scope: 'admin-blog-save',
+        collection: 'blogPosts',
+        payload: finalPayloadForDebug || rawPayloadForDebug,
+        sanitized: Boolean(finalPayloadForDebug),
+        error,
+      });
       console.error('Error saving post:', error);
       toast.error('Failed to save post', error instanceof Error ? error.message : 'Please try again.');
     }

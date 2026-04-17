@@ -27,6 +27,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { Category, ProductItem, ProductPlan, StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
@@ -314,6 +315,9 @@ const AdminProductsPage = () => {
       return;
     }
 
+    let rawPayloadForDebug: Record<string, unknown> | null = null;
+    let finalPayloadForDebug: Record<string, unknown> | null = null;
+
     try {
       let selectedCategoryId = form.categoryId;
       let selectedCategoryName = form.categoryName || '';
@@ -333,7 +337,7 @@ const AdminProductsPage = () => {
           selectedCategoryId = existingCategory.id;
           selectedCategoryName = existingCategory.name;
         } else {
-          const newCategoryRef = await addDoc(collection(db, 'categories'), {
+          const newCategoryPayload = sanitizeForFirestore({
             name: customName,
             slug: slugify(customName),
             type: 'tools',
@@ -342,6 +346,7 @@ const AdminProductsPage = () => {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
+          const newCategoryRef = await addDoc(collection(db, 'categories'), newCategoryPayload);
           selectedCategoryId = newCategoryRef.id;
           selectedCategoryName = customName;
         }
@@ -395,19 +400,29 @@ const AdminProductsPage = () => {
         })),
         updatedAt: serverTimestamp(),
       };
+      rawPayloadForDebug = payload as Record<string, unknown>;
+      const sanitizedPayload = sanitizeForFirestore(payload);
+      finalPayloadForDebug = sanitizedPayload as Record<string, unknown>;
 
       if (editingId) {
-        await updateDoc(doc(db, 'services', editingId), payload);
+        await updateDoc(doc(db, 'services', editingId), sanitizedPayload);
         toast.success('Tool updated');
       } else {
-        await addDoc(collection(db, 'services'), {
-          ...payload,
+        await addDoc(collection(db, 'services'), sanitizeForFirestore({
+          ...sanitizedPayload,
           createdAt: serverTimestamp(),
-        });
+        }));
         toast.success('Tool created');
       }
       closeForm();
     } catch (error) {
+      logFirestoreSaveFailure({
+        scope: 'admin-tools-save',
+        collection: 'services',
+        payload: finalPayloadForDebug || rawPayloadForDebug,
+        sanitized: Boolean(finalPayloadForDebug),
+        error,
+      });
       console.error('Failed to save tool:', error);
       toast.error('Failed to save tool', error instanceof Error ? error.message : 'Please try again.');
     }
