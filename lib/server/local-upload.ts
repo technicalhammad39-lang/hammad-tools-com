@@ -1,6 +1,7 @@
 ﻿import { randomUUID } from 'crypto';
-import { mkdir } from 'fs/promises';
-import { extname, isAbsolute, join, normalize, resolve } from 'path';
+import { constants as fsConstants } from 'fs';
+import { access, mkdir, stat, unlink, writeFile } from 'fs/promises';
+import { extname, isAbsolute, join, normalize, relative, resolve } from 'path';
 import { ApiError } from './http';
 
 export const ALLOWED_UPLOAD_FOLDERS = [
@@ -79,10 +80,7 @@ function megabytesToBytes(value: number) {
 }
 
 function getDefaultUploadMaxBytes() {
-  const value = toPositiveNumber(
-    process.env.HOSTINGER_UPLOAD_MAX_MB || process.env.LOCAL_UPLOAD_MAX_MB,
-    8
-  );
+  const value = toPositiveNumber(process.env.HOSTINGER_UPLOAD_MAX_MB, 8);
   return megabytesToBytes(value);
 }
 
@@ -154,6 +152,26 @@ export const UPLOAD_FOLDER_CONFIG: Record<UploadFolder, FolderConfig> = {
   },
 };
 
+function parseBooleanEnv(rawValue: string | undefined, fallback = false) {
+  if (rawValue == null || rawValue.trim() === '') {
+    return fallback;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') {
+    return true;
+  }
+  if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') {
+    return false;
+  }
+
+  return fallback;
+}
+
+export function isUploadDebugEnabled() {
+  return parseBooleanEnv(process.env.HOSTINGER_UPLOAD_DEBUG, true);
+}
+
 function getPathWithinWorkspace(configuredPath: string) {
   if (isAbsolute(configuredPath)) {
     return resolve(configuredPath);
@@ -161,9 +179,15 @@ function getPathWithinWorkspace(configuredPath: string) {
   return resolve(join(process.cwd(), configuredPath));
 }
 
+function isPathWithinRoot(rootPath: string, targetPath: string) {
+  const normalizedRoot = resolve(rootPath);
+  const normalizedTarget = resolve(targetPath);
+  const relativePath = relative(normalizedRoot, normalizedTarget);
+  return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath));
+}
+
 export function getPublicUploadRootDirectory() {
-  const configuredRoot =
-    process.env.HOSTINGER_PUBLIC_UPLOAD_ROOT?.trim() || process.env.LOCAL_UPLOAD_ROOT?.trim();
+  const configuredRoot = process.env.HOSTINGER_PUBLIC_UPLOAD_ROOT?.trim();
   if (!configuredRoot) {
     return resolve(join(process.cwd(), 'public', 'uploads'));
   }
@@ -179,14 +203,172 @@ export function getPrivateUploadRootDirectory() {
 }
 
 export function getUploadPublicBasePath() {
-  const configured =
-    process.env.HOSTINGER_UPLOAD_PUBLIC_BASE?.trim() ||
-    process.env.LOCAL_UPLOAD_PUBLIC_BASE?.trim();
+  const configured = process.env.HOSTINGER_UPLOAD_PUBLIC_BASE?.trim();
   if (!configured) {
     return '/uploads';
   }
   const withSlash = configured.startsWith('/') ? configured : `/${configured}`;
   return withSlash.replace(/\/+$/, '') || '/uploads';
+}
+
+function asEnvValue(value: string | undefined) {
+  const normalized = (value || '').trim();
+  return normalized || null;
+}
+
+function formatFsError(error: unknown) {
+  const code =
+    typeof error === 'object' && error && 'code' in error ? String((error as any).code || '') : '';
+  const message =
+    typeof error === 'object' && error && 'message' in error
+      ? String((error as any).message || '')
+      : String(error || '');
+  return [code, message].filter(Boolean).join(': ') || 'Unknown filesystem error';
+}
+
+export function getUploadEnvironmentSummary() {
+  const publicRoot = asEnvValue(process.env.HOSTINGER_PUBLIC_UPLOAD_ROOT);
+  const privateRoot = asEnvValue(process.env.HOSTINGER_PRIVATE_UPLOAD_ROOT);
+  const publicBase = asEnvValue(process.env.HOSTINGER_UPLOAD_PUBLIC_BASE);
+  const appUrl = asEnvValue(process.env.NEXT_PUBLIC_APP_URL);
+
+  return {
+    HOSTINGER_PUBLIC_UPLOAD_ROOT: { present: Boolean(publicRoot), value: publicRoot },
+    HOSTINGER_PRIVATE_UPLOAD_ROOT: { present: Boolean(privateRoot), value: privateRoot },
+    HOSTINGER_UPLOAD_PUBLIC_BASE: { present: Boolean(publicBase), value: publicBase },
+    HOSTINGER_UPLOAD_MAX_MB: {
+      present: Boolean(asEnvValue(process.env.HOSTINGER_UPLOAD_MAX_MB)),
+      value: asEnvValue(process.env.HOSTINGER_UPLOAD_MAX_MB),
+    },
+    HOSTINGER_PAYMENT_PROOF_MAX_MB: {
+      present: Boolean(asEnvValue(process.env.HOSTINGER_PAYMENT_PROOF_MAX_MB)),
+      value: asEnvValue(process.env.HOSTINGER_PAYMENT_PROOF_MAX_MB),
+    },
+    HOSTINGER_CHAT_ATTACHMENT_MAX_MB: {
+      present: Boolean(asEnvValue(process.env.HOSTINGER_CHAT_ATTACHMENT_MAX_MB)),
+      value: asEnvValue(process.env.HOSTINGER_CHAT_ATTACHMENT_MAX_MB),
+    },
+    NEXT_PUBLIC_APP_URL: { present: Boolean(appUrl), value: appUrl },
+  };
+}
+
+type UploadPathDiagnostics = {
+  absolutePath: string;
+  exists: boolean;
+  writable: boolean;
+  ensuredDirectory: boolean;
+  writeTest: {
+    success: boolean;
+    error: string | null;
+  };
+  error: string | null;
+};
+
+type UploadRuntimeDiagnosticsOptions = {
+  ensureDirectories?: boolean;
+  attemptWriteTest?: boolean;
+};
+
+async function probeUploadPath(
+  absolutePath: string,
+  options?: UploadRuntimeDiagnosticsOptions
+): Promise<UploadPathDiagnostics> {
+  const ensureDirectories = options?.ensureDirectories === true;
+  const attemptWriteTest = options?.attemptWriteTest === true;
+
+  let exists = false;
+  let writable = false;
+  let ensuredDirectory = false;
+  let error: string | null = null;
+  let writeTestError: string | null = null;
+  let writeTestSuccess = false;
+
+  try {
+    const stats = await stat(absolutePath);
+    exists = stats.isDirectory();
+    if (!stats.isDirectory()) {
+      error = 'Path exists but is not a directory.';
+    }
+  } catch (statError: any) {
+    if (statError?.code === 'ENOENT') {
+      if (ensureDirectories) {
+        try {
+          await mkdir(absolutePath, { recursive: true });
+          ensuredDirectory = true;
+          exists = true;
+        } catch (mkdirError) {
+          error = `mkdir failed: ${formatFsError(mkdirError)}`;
+        }
+      }
+    } else {
+      error = `stat failed: ${formatFsError(statError)}`;
+    }
+  }
+
+  if (exists) {
+    try {
+      await access(absolutePath, fsConstants.W_OK);
+      writable = true;
+    } catch (accessError) {
+      writable = false;
+      if (!error) {
+        error = `write access failed: ${formatFsError(accessError)}`;
+      }
+    }
+  }
+
+  if (exists && writable && attemptWriteTest) {
+    const testFile = join(
+      absolutePath,
+      `.upload-diagnostic-${Date.now()}-${randomUUID().replace(/-/g, '').slice(0, 10)}.tmp`
+    );
+    try {
+      await writeFile(testFile, 'upload-diagnostic-ok', { flag: 'wx' });
+      await unlink(testFile);
+      writeTestSuccess = true;
+    } catch (writeError) {
+      writeTestSuccess = false;
+      writeTestError = formatFsError(writeError);
+      if (!error) {
+        error = `write test failed: ${writeTestError}`;
+      }
+    }
+  }
+
+  return {
+    absolutePath,
+    exists,
+    writable,
+    ensuredDirectory,
+    writeTest: {
+      success: writeTestSuccess,
+      error: writeTestError,
+    },
+    error,
+  };
+}
+
+export async function getUploadRuntimeDiagnostics(options?: UploadRuntimeDiagnosticsOptions) {
+  const processCwd = process.cwd();
+  const publicRoot = getPublicUploadRootDirectory();
+  const privateRoot = getPrivateUploadRootDirectory();
+  const publicBasePath = getUploadPublicBasePath();
+
+  const [publicRootState, privateRootState] = await Promise.all([
+    probeUploadPath(publicRoot, options),
+    probeUploadPath(privateRoot, options),
+  ]);
+
+  return {
+    timestamp: new Date().toISOString(),
+    processCwd,
+    uploadPublicBasePath: publicBasePath,
+    environment: getUploadEnvironmentSummary(),
+    resolved: {
+      publicRoot: publicRootState,
+      privateRoot: privateRootState,
+    },
+  };
 }
 
 export function normalizeUploadFolder(input: string | null | undefined): UploadFolder {
@@ -287,7 +469,7 @@ export async function ensureUploadFolder(folder: UploadFolder, access: UploadAcc
   const uploadRoot = getRootByAccess(access);
   const folderPath = resolve(join(uploadRoot, folder));
 
-  if (!folderPath.startsWith(uploadRoot)) {
+  if (!isPathWithinRoot(uploadRoot, folderPath)) {
     throw new ApiError(500, 'Unsafe upload folder path.');
   }
 
@@ -328,7 +510,7 @@ export function getAbsoluteFilePathFromStoragePath(storagePath: string, access: 
   }
 
   const absolute = resolve(join(uploadRoot, folder, fileName));
-  if (!absolute.startsWith(uploadRoot)) {
+  if (!isPathWithinRoot(uploadRoot, absolute)) {
     throw new ApiError(400, 'Unsafe storage path.');
   }
 

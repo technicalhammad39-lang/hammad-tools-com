@@ -652,7 +652,9 @@ const AdminProductsPage = () => {
                             }));
                           } catch (error) {
                             console.error('Failed to upload tool image:', error);
-                            toast.error('Image upload failed');
+                            const message =
+                              error instanceof Error ? error.message : 'Unable to upload image.';
+                            toast.error('Image upload failed', message);
                           } finally {
                             setUploading(false);
                           }

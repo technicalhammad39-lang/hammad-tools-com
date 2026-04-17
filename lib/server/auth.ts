@@ -62,8 +62,31 @@ export async function requireAuth(
   const token = extractAuthToken(request, options?.allowQueryToken === true);
   try {
     return await adminAuth.verifyIdToken(token);
-  } catch {
-    throw new ApiError(401, 'Invalid or expired authentication token');
+  } catch (error: any) {
+    const code = String(error?.code || 'unknown');
+    const message = String(error?.message || '');
+    const adminProjectId =
+      adminAuth.app.options.projectId ||
+      process.env.FIREBASE_ADMIN_PROJECT_ID ||
+      null;
+
+    console.error('[auth] Firebase token verification failed', {
+      code,
+      message,
+      adminProjectId,
+      hasServiceAccountJson: Boolean(process.env.FIREBASE_ADMIN_SDK_JSON),
+      allowQueryToken: options?.allowQueryToken === true,
+    });
+
+    const hint =
+      code === 'auth/id-token-expired'
+        ? 'Please refresh your session and try again.'
+        : 'Verify Firebase Admin credentials/project configuration on the server.';
+
+    throw new ApiError(
+      401,
+      `Authentication token verification failed (${code}). ${hint}${message ? ` Details: ${message}` : ''}`
+    );
   }
 }
 

@@ -1,4 +1,5 @@
 ﻿import { auth } from '@/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export type UploadFolder =
   | 'tools'
@@ -74,15 +75,91 @@ function extractRelatedId(path: string) {
   return segments[1] || '';
 }
 
-async function getAuthHeader() {
-  const token = await auth.currentUser?.getIdToken();
+async function waitForAuthenticatedUser(timeoutMs = 7000): Promise<User | null> {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  const authStateReady = (auth as any).authStateReady;
+  if (typeof authStateReady === 'function') {
+    try {
+      await authStateReady.call(auth);
+    } catch {
+      // Ignore and fallback to a state listener.
+    }
+
+    if (auth.currentUser) {
+      return auth.currentUser;
+    }
+  }
+
+  return new Promise<User | null>((resolve) => {
+    let settled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const timer = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      resolve(auth.currentUser);
+    }, timeoutMs);
+
+    unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        if (unsubscribe) {
+          unsubscribe();
+        }
+        resolve(user);
+      },
+      () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        if (unsubscribe) {
+          unsubscribe();
+        }
+        resolve(auth.currentUser);
+      }
+    );
+  });
+}
+
+async function getAuthHeader(forceRefresh = false) {
+  const user = await waitForAuthenticatedUser();
+  const token = await user?.getIdToken(forceRefresh);
+
   if (!token) {
-    throw new Error('Authentication required for file upload.');
+    throw new Error('Authentication required for file upload. Please login again.');
   }
 
   return {
     Authorization: `Bearer ${token}`,
   };
+}
+
+async function parseApiPayload<T>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function toApiErrorMessage(payload: { error?: string } | null, fallback: string) {
+  const message = (payload?.error || '').trim();
+  return message || fallback;
 }
 
 export interface UploadMediaOptions {
@@ -124,15 +201,25 @@ export async function uploadMediaFile(options: UploadMediaOptions) {
     formData.append('replaceMediaId', options.replaceMediaId);
   }
 
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    headers: await getAuthHeader(),
-    body: formData,
-  });
+  const runUploadRequest = async (forceRefreshToken = false) => {
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      headers: await getAuthHeader(forceRefreshToken),
+      body: formData,
+    });
+    const payload = await parseApiPayload<UploadApiResponse>(response);
+    return { response, payload };
+  };
 
-  const payload = (await response.json()) as UploadApiResponse;
-  if (!response.ok || !payload.success || !payload.media) {
-    throw new Error(payload.error || 'File upload failed.');
+  let { response, payload } = await runUploadRequest(false);
+
+  if (response.status === 401) {
+    ({ response, payload } = await runUploadRequest(true));
+  }
+
+  if (!response.ok || !payload?.success || !payload.media) {
+    const fallback = `File upload failed (HTTP ${response.status || 500}).`;
+    throw new Error(toApiErrorMessage(payload, fallback));
   }
 
   return payload.media;
@@ -214,15 +301,30 @@ export function withProtectedFileToken(url: string, token: string) {
 }
 
 export async function deleteUploadedMedia(mediaId: string) {
-  const response = await fetch(`/api/upload/${encodeURIComponent(mediaId)}`, {
-    method: 'DELETE',
-    headers: await getAuthHeader(),
-  });
+  const sendDeleteRequest = async (forceRefreshToken = false) => {
+    const response = await fetch(`/api/upload/${encodeURIComponent(mediaId)}`, {
+      method: 'DELETE',
+      headers: await getAuthHeader(forceRefreshToken),
+    });
+    const payload = await parseApiPayload<{
+      success?: boolean;
+      error?: string;
+      deleted?: { id: string; fileDeleted: boolean };
+    }>(response);
+    return { response, payload };
+  };
 
-  const payload = await response.json();
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || 'Failed to delete uploaded media.');
+  let { response, payload } = await sendDeleteRequest(false);
+
+  if (response.status === 401) {
+    ({ response, payload } = await sendDeleteRequest(true));
+  }
+
+  if (!response.ok || !payload?.success) {
+    const fallback = `Failed to delete uploaded media (HTTP ${response.status || 500}).`;
+    throw new Error(toApiErrorMessage(payload, fallback));
   }
 
   return payload.deleted as { id: string; fileDeleted: boolean };
 }
+

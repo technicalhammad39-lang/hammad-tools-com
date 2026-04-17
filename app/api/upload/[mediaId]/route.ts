@@ -6,6 +6,7 @@ import { canManageUploads, requireAuth } from '@/lib/server/auth';
 import { ApiError, jsonError } from '@/lib/server/http';
 import {
   getAbsoluteFilePathFromStoragePath,
+  isUploadDebugEnabled,
   normalizeUploadFolder,
   resolveAccessForMedia,
 } from '@/lib/server/local-upload';
@@ -117,6 +118,9 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (isUploadDebugEnabled()) {
+      console.error('[upload:file:get] failed', error);
+    }
     return jsonError(error);
   }
 }
@@ -172,6 +176,9 @@ export async function DELETE(
       },
     });
   } catch (error) {
+    if (isUploadDebugEnabled()) {
+      console.error('[upload:file:delete] failed', error);
+    }
     return jsonError(error);
   }
 }

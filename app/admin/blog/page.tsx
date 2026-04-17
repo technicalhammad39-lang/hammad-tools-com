@@ -224,7 +224,9 @@ const BlogCMS = () => {
                               }));
                               setUploadProgress(100);
                             } catch (error) {
-                              toast.error('Upload failed', 'Unable to upload image.');
+                              const message =
+                                error instanceof Error ? error.message : 'Unable to upload image.';
+                              toast.error('Upload failed', message);
                             } finally {
                               setUploading(false);
                               setUploadProgress(0);

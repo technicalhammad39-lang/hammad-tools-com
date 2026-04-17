@@ -299,7 +299,9 @@ const ManageAgencyServices = () => {
                               }));
                               setUploadProgress(100);
                             } catch (error) {
-                              toast.error('Upload failed', 'Unable to upload thumbnail.');
+                              const message =
+                                error instanceof Error ? error.message : 'Unable to upload thumbnail.';
+                              toast.error('Upload failed', message);
                             } finally {
                               setUploading(false);
                               setUploadProgress(0);

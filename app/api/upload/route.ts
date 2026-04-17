@@ -13,7 +13,9 @@ import {
   getProtectedMediaPath,
   getPublicFilePath,
   getRelativeStoragePath,
+  getUploadRuntimeDiagnostics,
   isUploadFolderStaffOnly,
+  isUploadDebugEnabled,
   normalizeOptionalText,
   normalizeUploadFolder,
   resolveAccessForMedia,
@@ -99,10 +101,31 @@ async function deleteMediaFileAndRecord(candidate: ExistingMediaCandidate) {
 }
 
 export async function POST(request: Request) {
+  const debugEnabled = isUploadDebugEnabled();
+  let runtimeDiagnostics: Awaited<ReturnType<typeof getUploadRuntimeDiagnostics>> | null = null;
+
   try {
+    runtimeDiagnostics = await getUploadRuntimeDiagnostics({
+      ensureDirectories: true,
+      attemptWriteTest: debugEnabled,
+    });
+
+    if (debugEnabled) {
+      console.info('[upload] runtime diagnostics', runtimeDiagnostics);
+    }
+
     const decoded = await requireAuth(request);
     const isStaff = await canManageUploads(decoded.uid, decoded.email);
-    const formData = await request.formData();
+
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (error: any) {
+      throw new ApiError(
+        400,
+        `Unable to parse multipart form-data: ${String(error?.message || 'Unknown parsing error')}`
+      );
+    }
 
     const incomingFile = formData.get('file');
     if (!(incomingFile instanceof File)) {
@@ -111,6 +134,27 @@ export async function POST(request: Request) {
 
     const folder = normalizeUploadFolder(normalizeOptionalText(formData.get('folder')));
     const folderAccess = getFolderAccess(folder);
+    if (!runtimeDiagnostics) {
+      throw new ApiError(500, 'Upload diagnostics unavailable on server.');
+    }
+    const rootDiagnostics =
+      folderAccess === 'public'
+        ? runtimeDiagnostics.resolved.publicRoot
+        : runtimeDiagnostics.resolved.privateRoot;
+
+    if (!rootDiagnostics.exists) {
+      throw new ApiError(
+        500,
+        `Upload root does not exist for "${folder}" (${folderAccess}): ${rootDiagnostics.absolutePath}. ${rootDiagnostics.error || ''}`.trim()
+      );
+    }
+
+    if (!rootDiagnostics.writable) {
+      throw new ApiError(
+        500,
+        `Upload root is not writable for "${folder}" (${folderAccess}): ${rootDiagnostics.absolutePath}. ${rootDiagnostics.error || ''}`.trim()
+      );
+    }
 
     if (isUploadFolderStaffOnly(folder) && !isStaff) {
       throw new ApiError(403, 'You do not have permission to upload this type of file.');
@@ -151,13 +195,37 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     const absoluteFilePath = join(folderPath, fileName);
-    await writeFile(absoluteFilePath, buffer, { flag: 'wx' });
+    try {
+      await writeFile(absoluteFilePath, buffer, { flag: 'wx' });
+    } catch (error: any) {
+      const code = String(error?.code || 'unknown');
+      const message = String(error?.message || '');
+      throw new ApiError(
+        500,
+        `Failed to write upload file at "${absoluteFilePath}" (${code}). ${message || 'No further error details.'}`
+      );
+    }
 
     const storagePath = getRelativeStoragePath(folder, fileName);
     const publicPath = folderAccess === 'public' ? getPublicFilePath(folder, fileName) : '';
     const protectedPath = folderAccess === 'protected' ? getProtectedMediaPath(mediaRef.id) : '';
     const filePath = folderAccess === 'public' ? publicPath : protectedPath;
     const fileUrl = toPublicUrl(request, filePath);
+
+    if (debugEnabled) {
+      console.info('[upload] saving file', {
+        uid: decoded.uid,
+        email: decoded.email || '',
+        folder,
+        folderAccess,
+        originalFileName: incomingFile.name,
+        mimeType: validation.mimeType,
+        sizeBytes: incomingFile.size,
+        absoluteFilePath,
+        storagePath,
+        fileUrl,
+      });
+    }
 
     const mediaRecord = {
       id: mediaRef.id,
@@ -206,6 +274,20 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error('[upload] request failed', {
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+            }
+          : String(error),
+      runtimeDiagnostics,
+    });
+    if (!(error instanceof ApiError)) {
+      const message = error instanceof Error ? error.message : String(error);
+      return jsonError(new ApiError(500, `Unexpected upload server error: ${message}`));
+    }
     return jsonError(error);
   }
 }

@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
-import { db } from '@/firebase';
+import { onIdTokenChanged } from 'firebase/auth';
+import { auth, db } from '@/firebase';
 import type { OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
@@ -232,25 +233,26 @@ export default function AdminOrdersPage() {
   }, [orders, requestedOrder]);
 
   useEffect(() => {
-    let mounted = true;
-
-    async function refreshToken() {
-      if (!user) {
-        if (mounted) {
-          setFileAccessToken('');
-        }
-        return;
-      }
-      const token = await user.getIdToken();
-      if (mounted) {
-        setFileAccessToken(token);
-      }
+    if (!user) {
+      setFileAccessToken('');
+      return;
     }
 
-    void refreshToken();
-    return () => {
-      mounted = false;
-    };
+    const unsubscribe = onIdTokenChanged(auth, async (nextUser) => {
+      if (!nextUser) {
+        setFileAccessToken('');
+        return;
+      }
+
+      try {
+        const token = await nextUser.getIdToken();
+        setFileAccessToken(token);
+      } catch (error) {
+        console.error('Failed to refresh file access token:', error);
+      }
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   const sortedOrders = useMemo(
