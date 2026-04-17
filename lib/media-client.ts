@@ -6,7 +6,7 @@
 export async function uploadPaymentProofExample(file: File, orderId: string) {
   const media = await uploadMediaFile({
     file,
-    folder: 'payments',
+    folder: 'payment-proofs',
     relatedType: 'order',
     relatedId: orderId,
     relatedOrderId: orderId,

@@ -1,5 +1,29 @@
 import type {NextConfig} from 'next';
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+let appPattern:
+  | {
+      protocol: 'http' | 'https';
+      hostname: string;
+      port: string;
+      pathname: string;
+    }
+  | null = null;
+
+if (appUrl) {
+  try {
+    const parsed = new URL(appUrl);
+    appPattern = {
+      protocol: (parsed.protocol.replace(':', '') as 'http' | 'https') || 'https',
+      hostname: parsed.hostname,
+      port: parsed.port || '',
+      pathname: '/**',
+    };
+  } catch {
+    appPattern = null;
+  }
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -35,12 +59,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-        port: '',
-        pathname: '/**',
-      },
+      ...(appPattern ? [appPattern] : []),
     ],
   },
   output: 'standalone',

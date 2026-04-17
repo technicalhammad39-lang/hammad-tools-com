@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
-import { uploadFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
 import Image from 'next/image';
@@ -26,6 +27,7 @@ const BlogCMS = () => {
     excerpt: '',
     content: '',
     thumbnail: '',
+    thumbnailMedia: null as StoredFileMetadata | null,
     category: 'General',
     published: false,
     tags: ''
@@ -58,6 +60,7 @@ const BlogCMS = () => {
       tags: formData.tags.split(',').map(t => t.trim()),
       author: profile?.displayName || 'Admin',
       authorId: profile?.uid,
+      thumbnailMedia: formData.thumbnailMedia || null,
       updatedAt: serverTimestamp(),
     };
 
@@ -74,7 +77,17 @@ const BlogCMS = () => {
       }
       setIsAdding(false);
       setEditingPost(null);
-      setFormData({ title: '', slug: '', excerpt: '', content: '', thumbnail: '', category: 'General', published: false, tags: '' });
+      setFormData({
+        title: '',
+        slug: '',
+        excerpt: '',
+        content: '',
+        thumbnail: '',
+        thumbnailMedia: null,
+        category: 'General',
+        published: false,
+        tags: '',
+      });
     } catch (error) {
       console.error('Error saving post:', error);
       toast.error('Failed to save post', error instanceof Error ? error.message : 'Please try again.');
@@ -84,6 +97,13 @@ const BlogCMS = () => {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this post?')) {
       try {
+        const target = posts.find((entry) => entry.id === id);
+        const mediaId = target?.thumbnailMedia?.mediaId || '';
+        if (mediaId) {
+          await deleteUploadedMedia(mediaId).catch((mediaError) => {
+            console.warn('Blog thumbnail cleanup failed:', mediaError);
+          });
+        }
         await deleteDoc(doc(db, 'blogPosts', id));
         toast.success('Post deleted');
       } catch (error) {
@@ -188,9 +208,21 @@ const BlogCMS = () => {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             setUploading(true);
+                            setUploadProgress(20);
                             try {
-                              const url = await uploadFile(file, `blog/${Date.now()}_${file.name}`, setUploadProgress);
-                              setFormData({ ...formData, thumbnail: url });
+                              const media = await uploadMediaFile({
+                                file,
+                                folder: 'blogs',
+                                relatedType: 'blog',
+                                relatedId: editingPost?.id || '',
+                                replaceMediaId: formData.thumbnailMedia?.mediaId || '',
+                              });
+                              setFormData((prev) => ({
+                                ...prev,
+                                thumbnail: media.url,
+                                thumbnailMedia: toStorageMetadata(media),
+                              }));
+                              setUploadProgress(100);
                             } catch (error) {
                               toast.error('Upload failed', 'Unable to upload image.');
                             } finally {
@@ -319,6 +351,7 @@ const BlogCMS = () => {
                                   excerpt: post.excerpt,
                                   content: post.content,
                                   thumbnail: post.thumbnail || '',
+                                  thumbnailMedia: post.thumbnailMedia || null,
                                   category: post.category,
                                   published: post.published,
                                   tags: post.tags?.join(', ') || ''

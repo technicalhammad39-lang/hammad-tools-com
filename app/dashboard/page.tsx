@@ -31,6 +31,7 @@ import type { NotificationRecord, OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
+import { withProtectedFileToken } from '@/lib/storage-utils';
 
 function statusClass(status: string) {
   const normalized = normalizeOrderStatus(status);
@@ -101,7 +102,7 @@ function getTransactionId(order: OrderRecord) {
 
 function getScreenshotUrl(order: OrderRecord) {
   const proof = order.paymentProof as any;
-  return proof?.screenshotUrl || '';
+  return proof?.screenshotMedia?.fileUrl || proof?.screenshotUrl || '';
 }
 
 function DashboardPageContent() {
@@ -117,6 +118,7 @@ function DashboardPageContent() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [manualSelectedOrderId, setManualSelectedOrderId] = useState<string | null>(null);
+  const [fileAccessToken, setFileAccessToken] = useState('');
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [orderSelectorOpen, setOrderSelectorOpen] = useState(false);
   const [composerMessage, setComposerMessage] = useState('');
@@ -175,6 +177,27 @@ function DashboardPageContent() {
       unsubNotifications();
     };
   }, [user, toast]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function refreshToken() {
+      if (!user) {
+        if (mounted) {
+          setFileAccessToken('');
+        }
+        return;
+      }
+      const token = await user.getIdToken();
+      if (mounted) {
+        setFileAccessToken(token);
+      }
+    }
+
+    void refreshToken();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
 
   const selectedOrderId = useMemo(() => {
     if (requestedOrder && orders.some((order) => order.id === requestedOrder)) {
@@ -548,11 +571,15 @@ function DashboardPageContent() {
 
                         {getScreenshotUrl(selectedOrder) ? (
                           <button
-                            onClick={() => setReceiptViewerUrl(getScreenshotUrl(selectedOrder))}
+                            onClick={() =>
+                              setReceiptViewerUrl(
+                                withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)
+                              )
+                            }
                             className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left"
                           >
                             <img
-                              src={getScreenshotUrl(selectedOrder)}
+                              src={withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)}
                               alt="Payment proof"
                               className="w-full max-h-[280px] object-cover rounded-lg"
                             />
@@ -583,9 +610,14 @@ function DashboardPageContent() {
                                       }`}
                                     >
                                       {entry.message}
-                                      {(entry as any).attachmentUrl ? (
+                                      {(entry as any).attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
                                         <a
-                                          href={(entry as any).attachmentUrl}
+                                          href={withProtectedFileToken(
+                                            (entry as any).attachmentUrl ||
+                                              (entry as any).attachmentMedia?.fileUrl ||
+                                              '',
+                                            fileAccessToken
+                                          )}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className={`mt-2 inline-flex items-center gap-1.5 underline ${
@@ -688,9 +720,14 @@ function DashboardPageContent() {
                                 }`}
                               >
                                 {entry.message}
-                                {(entry as any).attachmentUrl ? (
+                                {(entry as any).attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
                                   <a
-                                    href={(entry as any).attachmentUrl}
+                                    href={withProtectedFileToken(
+                                      (entry as any).attachmentUrl ||
+                                        (entry as any).attachmentMedia?.fileUrl ||
+                                        '',
+                                      fileAccessToken
+                                    )}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={`mt-2 inline-flex items-center gap-1.5 underline ${

@@ -18,7 +18,7 @@ import {
 import { Loader2, Plus, Edit2, Trash2, Save, X, ArrowLeft } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Category, CategoryType } from '@/lib/types/domain';
-import { uploadFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
 
@@ -52,6 +52,7 @@ export default function AdminCategoriesPage() {
     type: 'tools',
     iconUrl: '',
     imageUrl: '',
+    imageMedia: null,
     active: true,
     sortOrder: 0,
   });
@@ -99,6 +100,7 @@ export default function AdminCategoriesPage() {
         type: (form.type || 'tools') as CategoryType,
         iconUrl: form.iconUrl?.trim() || '',
         imageUrl: form.imageUrl?.trim() || '',
+        imageMedia: form.imageMedia || null,
         active: Boolean(form.active),
         sortOrder: Number(form.sortOrder || 0),
         updatedAt: serverTimestamp(),
@@ -123,6 +125,7 @@ export default function AdminCategoriesPage() {
         type: 'tools',
         iconUrl: '',
         imageUrl: '',
+        imageMedia: null,
         active: true,
         sortOrder: 0,
       });
@@ -139,6 +142,13 @@ export default function AdminCategoriesPage() {
       return;
     }
     try {
+      const target = categories.find((entry) => entry.id === id);
+      const mediaId = target?.imageMedia?.mediaId || '';
+      if (mediaId) {
+        await deleteUploadedMedia(mediaId).catch((mediaError) => {
+          console.warn('Category image cleanup failed:', mediaError);
+        });
+      }
       await deleteDoc(doc(db, 'categories', id));
       toast.success('Category deleted');
     } catch (error) {
@@ -163,6 +173,7 @@ export default function AdminCategoriesPage() {
               type: 'tools',
               iconUrl: '',
               imageUrl: '',
+              imageMedia: null,
               active: true,
               sortOrder: categories.length,
             });
@@ -263,7 +274,9 @@ export default function AdminCategoriesPage() {
                     <input
                       type="text"
                       value={form.imageUrl || ''}
-                      onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, imageUrl: event.target.value, imageMedia: null }))
+                      }
                       placeholder="Image URL (optional)"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
                     />
@@ -281,8 +294,18 @@ export default function AdminCategoriesPage() {
                           }
                           setUploading(true);
                         try {
-                          const url = await uploadFile(file, `categories/${Date.now()}-${file.name}`);
-                          setForm((prev) => ({ ...prev, imageUrl: url }));
+                          const media = await uploadMediaFile({
+                            file,
+                            folder: 'services',
+                            relatedType: 'category',
+                            relatedId: editingId || '',
+                            replaceMediaId: form.imageMedia?.mediaId || '',
+                          });
+                          setForm((prev) => ({
+                            ...prev,
+                            imageUrl: media.url,
+                            imageMedia: toStorageMetadata(media),
+                          }));
                         } catch (error) {
                           console.error('Failed to upload category image:', error);
                           toast.error('Image upload failed');

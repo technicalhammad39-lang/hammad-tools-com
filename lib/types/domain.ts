@@ -1,4 +1,25 @@
-export type CategoryType = 'tools' | 'services' | 'both';
+﻿export type CategoryType = 'tools' | 'services' | 'both';
+export type UploadFolderType =
+  | 'tools'
+  | 'services'
+  | 'blogs'
+  | 'partners'
+  | 'payment-proofs'
+  | 'chat-attachments'
+  | 'profiles';
+
+export interface StoredFileMetadata {
+  mediaId: string;
+  fileUrl: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  folder: UploadFolderType;
+  access: 'public' | 'protected';
+  uploadedBy?: string;
+  createdAt?: any;
+}
 
 export interface Category {
   id: string;
@@ -7,6 +28,7 @@ export interface Category {
   type: CategoryType;
   iconUrl?: string;
   imageUrl?: string;
+  imageMedia?: StoredFileMetadata | null;
   active: boolean;
   sortOrder: number;
   createdAt?: any;
@@ -55,6 +77,7 @@ export interface ProductItem {
   planType?: string;
   checkoutInstructions?: string;
   plans?: ProductPlan[];
+  imageMedia?: StoredFileMetadata | null;
 }
 
 export interface PaymentMethod {
@@ -99,6 +122,7 @@ export interface OrderMessageRecord {
   attachmentName?: string;
   attachmentType?: string;
   attachmentSize?: number;
+  attachmentMedia?: StoredFileMetadata;
   messageType?: 'status' | 'message' | 'rejection' | 'approval';
   createdAt?: any;
 }
@@ -173,6 +197,7 @@ export interface OrderRecord {
     senderNumber?: string;
     transactionId?: string;
     screenshotUrl?: string;
+    screenshotMedia?: StoredFileMetadata;
     note?: string;
   };
   statusHistory?: Array<{
@@ -190,6 +215,7 @@ export interface OrderRecord {
     attachmentName?: string;
     attachmentType?: string;
     attachmentSize?: number;
+    attachmentMedia?: StoredFileMetadata;
     createdAt: any;
   }>;
   deliveryDetails?: string;
@@ -241,16 +267,18 @@ export interface MediaFileRecord {
   id: string;
   ownerId: string;
   ownerEmail?: string;
-  folder: 'products' | 'users' | 'banners' | 'payments';
-  source: 'local-hosting';
+  folder: UploadFolderType;
+  access: 'public' | 'protected';
+  source: 'hostinger-filesystem' | 'local-hosting';
   fileName: string;
   originalFileName: string;
   extension: string;
   mimeType: string;
   sizeBytes: number;
   storagePath: string;
-  publicPath: string;
-  publicUrl: string;
+  publicPath?: string;
+  protectedPath?: string;
+  fileUrl: string;
   relatedType?: string;
   relatedId?: string;
   relatedUserId?: string;

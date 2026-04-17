@@ -3,16 +3,68 @@ import { mkdir } from 'fs/promises';
 import { extname, isAbsolute, join, normalize, resolve } from 'path';
 import { ApiError } from './http';
 
-export const ALLOWED_UPLOAD_FOLDERS = ['products', 'users', 'banners', 'payments'] as const;
+export const ALLOWED_UPLOAD_FOLDERS = [
+  'tools',
+  'services',
+  'blogs',
+  'partners',
+  'payment-proofs',
+  'chat-attachments',
+  'profiles',
+] as const;
 export type UploadFolder = (typeof ALLOWED_UPLOAD_FOLDERS)[number];
+export type UploadAccess = 'public' | 'protected';
 
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
-const ALLOWED_MIME_TYPES = new Set([
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'avif'] as const;
+const IMAGE_MIME_TYPES = [
   'image/jpeg',
   'image/png',
   'image/webp',
-  'application/pdf',
-]);
+  'image/avif',
+] as const;
+
+const FOLDER_ALIASES: Record<string, UploadFolder> = {
+  tools: 'tools',
+  tool: 'tools',
+  products: 'tools',
+  product: 'tools',
+  services: 'services',
+  service: 'services',
+  categories: 'services',
+  category: 'services',
+  giveaways: 'services',
+  giveaway: 'services',
+  'agency-services': 'services',
+  agency: 'services',
+  blogs: 'blogs',
+  blog: 'blogs',
+  partners: 'partners',
+  partner: 'partners',
+  logos: 'partners',
+  logo: 'partners',
+  banners: 'partners',
+  banner: 'partners',
+  payments: 'payment-proofs',
+  payment: 'payment-proofs',
+  'payment-proofs': 'payment-proofs',
+  proofs: 'payment-proofs',
+  chat: 'chat-attachments',
+  chats: 'chat-attachments',
+  'order-messages': 'chat-attachments',
+  'chat-attachments': 'chat-attachments',
+  users: 'profiles',
+  user: 'profiles',
+  profile: 'profiles',
+  profiles: 'profiles',
+};
+
+type FolderConfig = {
+  access: UploadAccess;
+  allowedExtensions: readonly string[];
+  allowedMimeTypes: readonly string[];
+  maxBytes: () => number;
+  staffOnly: boolean;
+};
 
 function toPositiveNumber(value: string | undefined, fallback: number) {
   if (!value) {
@@ -22,42 +74,130 @@ function toPositiveNumber(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-export function getUploadRootDirectory() {
-  const configuredRoot = process.env.LOCAL_UPLOAD_ROOT?.trim();
+function megabytesToBytes(value: number) {
+  return Math.floor(value * 1024 * 1024);
+}
+
+function getDefaultUploadMaxBytes() {
+  const value = toPositiveNumber(
+    process.env.HOSTINGER_UPLOAD_MAX_MB || process.env.LOCAL_UPLOAD_MAX_MB,
+    8
+  );
+  return megabytesToBytes(value);
+}
+
+function getPaymentProofMaxBytes() {
+  const value = toPositiveNumber(process.env.HOSTINGER_PAYMENT_PROOF_MAX_MB, 5);
+  return megabytesToBytes(value);
+}
+
+function getChatAttachmentMaxBytes() {
+  const value = toPositiveNumber(process.env.HOSTINGER_CHAT_ATTACHMENT_MAX_MB, 10);
+  return megabytesToBytes(value);
+}
+
+export const UPLOAD_FOLDER_CONFIG: Record<UploadFolder, FolderConfig> = {
+  tools: {
+    access: 'public',
+    allowedExtensions: IMAGE_EXTENSIONS,
+    allowedMimeTypes: IMAGE_MIME_TYPES,
+    maxBytes: getDefaultUploadMaxBytes,
+    staffOnly: true,
+  },
+  services: {
+    access: 'public',
+    allowedExtensions: IMAGE_EXTENSIONS,
+    allowedMimeTypes: IMAGE_MIME_TYPES,
+    maxBytes: getDefaultUploadMaxBytes,
+    staffOnly: true,
+  },
+  blogs: {
+    access: 'public',
+    allowedExtensions: IMAGE_EXTENSIONS,
+    allowedMimeTypes: IMAGE_MIME_TYPES,
+    maxBytes: getDefaultUploadMaxBytes,
+    staffOnly: true,
+  },
+  partners: {
+    access: 'public',
+    allowedExtensions: IMAGE_EXTENSIONS,
+    allowedMimeTypes: IMAGE_MIME_TYPES,
+    maxBytes: getDefaultUploadMaxBytes,
+    staffOnly: true,
+  },
+  'payment-proofs': {
+    access: 'protected',
+    allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    allowedMimeTypes: [...IMAGE_MIME_TYPES, 'application/pdf'],
+    maxBytes: getPaymentProofMaxBytes,
+    staffOnly: false,
+  },
+  'chat-attachments': {
+    access: 'protected',
+    allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'txt', 'doc', 'docx'],
+    allowedMimeTypes: [
+      ...IMAGE_MIME_TYPES,
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
+    maxBytes: getChatAttachmentMaxBytes,
+    staffOnly: false,
+  },
+  profiles: {
+    access: 'public',
+    allowedExtensions: IMAGE_EXTENSIONS,
+    allowedMimeTypes: IMAGE_MIME_TYPES,
+    maxBytes: getDefaultUploadMaxBytes,
+    staffOnly: false,
+  },
+};
+
+function getPathWithinWorkspace(configuredPath: string) {
+  if (isAbsolute(configuredPath)) {
+    return resolve(configuredPath);
+  }
+  return resolve(join(process.cwd(), configuredPath));
+}
+
+export function getPublicUploadRootDirectory() {
+  const configuredRoot =
+    process.env.HOSTINGER_PUBLIC_UPLOAD_ROOT?.trim() || process.env.LOCAL_UPLOAD_ROOT?.trim();
   if (!configuredRoot) {
     return resolve(join(process.cwd(), 'public', 'uploads'));
   }
+  return getPathWithinWorkspace(configuredRoot);
+}
 
-  if (isAbsolute(configuredRoot)) {
-    return resolve(configuredRoot);
+export function getPrivateUploadRootDirectory() {
+  const configuredRoot = process.env.HOSTINGER_PRIVATE_UPLOAD_ROOT?.trim();
+  if (!configuredRoot) {
+    return resolve(join(process.cwd(), 'storage', 'uploads'));
   }
-
-  return resolve(join(process.cwd(), configuredRoot));
+  return getPathWithinWorkspace(configuredRoot);
 }
 
 export function getUploadPublicBasePath() {
-  const configured = process.env.LOCAL_UPLOAD_PUBLIC_BASE?.trim();
+  const configured =
+    process.env.HOSTINGER_UPLOAD_PUBLIC_BASE?.trim() ||
+    process.env.LOCAL_UPLOAD_PUBLIC_BASE?.trim();
   if (!configured) {
     return '/uploads';
   }
-
   const withSlash = configured.startsWith('/') ? configured : `/${configured}`;
   return withSlash.replace(/\/+$/, '') || '/uploads';
-}
-
-export function getMaxUploadBytes() {
-  const maxMegabytes = toPositiveNumber(process.env.LOCAL_UPLOAD_MAX_MB, 8);
-  return Math.floor(maxMegabytes * 1024 * 1024);
 }
 
 export function normalizeUploadFolder(input: string | null | undefined): UploadFolder {
   const candidate = (input || '').trim().toLowerCase();
   if (!candidate) {
-    return 'products';
+    return 'tools';
   }
 
-  if ((ALLOWED_UPLOAD_FOLDERS as readonly string[]).includes(candidate)) {
-    return candidate as UploadFolder;
+  const mapped = FOLDER_ALIASES[candidate];
+  if (mapped) {
+    return mapped;
   }
 
   throw new ApiError(
@@ -81,10 +221,25 @@ function sanitizeBaseName(name: string) {
   return safe || 'file';
 }
 
-export function validateUploadFile(file: File, maxBytes = getMaxUploadBytes()) {
+export function getFolderAccess(folder: UploadFolder): UploadAccess {
+  return UPLOAD_FOLDER_CONFIG[folder].access;
+}
+
+export function isUploadFolderProtected(folder: UploadFolder) {
+  return getFolderAccess(folder) === 'protected';
+}
+
+export function isUploadFolderStaffOnly(folder: UploadFolder) {
+  return UPLOAD_FOLDER_CONFIG[folder].staffOnly;
+}
+
+export function validateUploadFile(file: File, folder: UploadFolder) {
   if (!(file instanceof File)) {
     throw new ApiError(400, 'File is required.');
   }
+
+  const config = UPLOAD_FOLDER_CONFIG[folder];
+  const maxBytes = config.maxBytes();
 
   if (file.size <= 0) {
     throw new ApiError(400, 'Uploaded file is empty.');
@@ -95,26 +250,41 @@ export function validateUploadFile(file: File, maxBytes = getMaxUploadBytes()) {
   }
 
   const extension = normalizeExtension(file.name);
-  if (!ALLOWED_EXTENSIONS.has(extension)) {
-    throw new ApiError(400, 'Invalid file extension. Allowed: jpg, jpeg, png, webp, pdf.');
+  if (!extension || !config.allowedExtensions.includes(extension)) {
+    throw new ApiError(
+      400,
+      `Invalid file extension for ${folder}. Allowed: ${config.allowedExtensions.join(', ')}.`
+    );
   }
 
-  if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
-    throw new ApiError(400, 'Invalid file type. Allowed: jpg, jpeg, png, webp, pdf.');
+  const mimeType = (file.type || '').trim().toLowerCase();
+  if (!mimeType || !config.allowedMimeTypes.includes(mimeType)) {
+    throw new ApiError(
+      400,
+      `Invalid file type for ${folder}. Allowed: ${config.allowedMimeTypes.join(', ')}.`
+    );
   }
 
-  return extension;
+  return {
+    extension,
+    mimeType,
+    maxBytes,
+  };
 }
 
 export function generateUniqueFileName(originalName: string, extension: string) {
   const safeBase = sanitizeBaseName(originalName || 'file');
   const timestamp = Date.now();
-  const token = randomUUID().replace(/-/g, '').slice(0, 12);
+  const token = randomUUID().replace(/-/g, '').slice(0, 16);
   return `${safeBase}-${timestamp}-${token}.${extension}`;
 }
 
-export async function ensureUploadFolder(folder: UploadFolder) {
-  const uploadRoot = getUploadRootDirectory();
+function getRootByAccess(access: UploadAccess) {
+  return access === 'public' ? getPublicUploadRootDirectory() : getPrivateUploadRootDirectory();
+}
+
+export async function ensureUploadFolder(folder: UploadFolder, access: UploadAccess) {
+  const uploadRoot = getRootByAccess(access);
   const folderPath = resolve(join(uploadRoot, folder));
 
   if (!folderPath.startsWith(uploadRoot)) {
@@ -134,17 +304,30 @@ export function getPublicFilePath(folder: UploadFolder, fileName: string) {
   return `${publicBase}/${folder}/${fileName}`.replace(/\/+/g, '/');
 }
 
-export function getAbsoluteFilePathFromStoragePath(storagePath: string) {
-  const uploadRoot = getUploadRootDirectory();
-  const normalized = (storagePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+export function getProtectedMediaPath(mediaId: string) {
+  return `/api/upload/${encodeURIComponent(mediaId)}`;
+}
 
-  if (!normalized.startsWith('uploads/')) {
+export function getAbsoluteFilePathFromStoragePath(storagePath: string, access: UploadAccess) {
+  const uploadRoot = getRootByAccess(access);
+  const normalizedPath = (storagePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+
+  if (!normalizedPath.startsWith('uploads/')) {
     throw new ApiError(400, 'Invalid storage path.');
   }
 
-  const relativeFromRoot = normalized.slice('uploads/'.length);
-  const absolute = resolve(join(uploadRoot, relativeFromRoot));
+  const parts = normalizedPath.split('/').filter(Boolean);
+  if (parts.length < 3) {
+    throw new ApiError(400, 'Invalid storage path.');
+  }
 
+  const folder = normalizeUploadFolder(parts[1]);
+  const fileName = parts.slice(2).join('/');
+  if (!fileName || fileName.includes('..') || fileName.includes('\\')) {
+    throw new ApiError(400, 'Unsafe storage path.');
+  }
+
+  const absolute = resolve(join(uploadRoot, folder, fileName));
   if (!absolute.startsWith(uploadRoot)) {
     throw new ApiError(400, 'Unsafe storage path.');
   }
@@ -152,13 +335,22 @@ export function getAbsoluteFilePathFromStoragePath(storagePath: string) {
   return absolute;
 }
 
-export function toPublicUrl(request: Request, publicPath: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (appUrl) {
-    return new URL(publicPath, appUrl).toString();
+export function resolveAccessForMedia(input: { access?: string; folder?: string }): UploadAccess {
+  const directAccess = (input.access || '').trim().toLowerCase();
+  if (directAccess === 'public' || directAccess === 'protected') {
+    return directAccess;
   }
 
-  return new URL(publicPath, request.url).toString();
+  const folder = normalizeUploadFolder(input.folder || '');
+  return getFolderAccess(folder);
+}
+
+export function toPublicUrl(request: Request, path: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (appUrl) {
+    return new URL(path, appUrl).toString();
+  }
+  return new URL(path, request.url).toString();
 }
 
 export function normalizeOptionalText(input: FormDataEntryValue | null) {

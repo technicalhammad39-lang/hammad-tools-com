@@ -1,10 +1,9 @@
-{
-  "apiKey": "AIzaSyBpGNrt_QY1msTtYBIKyYw8sc-0YSc7qlM",
-  "authDomain": "hammadtools-3243d.firebaseapp.com",
-  "projectId": "hammadtools-3243d",
-  "storageBucket": "hammadtools-3243d.firebasestorage.app",
-  "messagingSenderId": "401018030777",
-  "appId": "1:401018030777:web:c82896d463db5ca69fa968",
-  "measurementId": "G-WREYC53365",
-  "firestoreDatabaseId": "(default)"
+﻿{
+    "apiKey":  "AIzaSyBpGNrt_QY1msTtYBIKyYw8sc-0YSc7qlM",
+    "authDomain":  "hammadtools-3243d.firebaseapp.com",
+    "projectId":  "hammadtools-3243d",
+    "messagingSenderId":  "401018030777",
+    "appId":  "1:401018030777:web:c82896d463db5ca69fa968",
+    "measurementId":  "G-WREYC53365",
+    "firestoreDatabaseId":  "(default)"
 }

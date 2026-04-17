@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { uploadFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
 interface AgencyService {
@@ -39,6 +40,7 @@ interface AgencyService {
   title: string;
   description: string;
   thumbnail: string;
+  thumbnailMedia?: StoredFileMetadata | null;
   tags: string[];
   createdAt: any;
 }
@@ -58,6 +60,7 @@ const ManageAgencyServices = () => {
     title: '',
     description: '',
     thumbnail: '',
+    thumbnailMedia: null as StoredFileMetadata | null,
     tags: [] as string[]
   });
   const [newTag, setNewTag] = useState('');
@@ -86,6 +89,7 @@ const ManageAgencyServices = () => {
       title: service.title,
       description: service.description,
       thumbnail: service.thumbnail,
+      thumbnailMedia: service.thumbnailMedia || null,
       tags: service.tags || []
     });
     setIsAdding(true);
@@ -121,6 +125,13 @@ const ManageAgencyServices = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this agency service?')) return;
     try {
+      const target = services.find((entry) => entry.id === id);
+      const mediaId = target?.thumbnailMedia?.mediaId || '';
+      if (mediaId) {
+        await deleteUploadedMedia(mediaId).catch((mediaError) => {
+          console.warn('Agency thumbnail cleanup failed:', mediaError);
+        });
+      }
       await deleteDoc(doc(db, 'agency_services', id));
       toast.success('Service deleted');
     } catch (error) {
@@ -132,7 +143,7 @@ const ManageAgencyServices = () => {
   const resetForm = () => {
     setIsAdding(false);
     setEditingId(null);
-    setForm({ title: '', description: '', thumbnail: '', tags: [] });
+    setForm({ title: '', description: '', thumbnail: '', thumbnailMedia: null, tags: [] });
     setNewTag('');
   };
 
@@ -272,13 +283,26 @@ const ManageAgencyServices = () => {
                             const file = e.target.files?.[0];
                             if (!file) return;
                             setUploading(true);
+                            setUploadProgress(20);
                             try {
-                              const url = await uploadFile(file, `agency-services/${Date.now()}_${file.name}`, setUploadProgress);
-                              setForm({ ...form, thumbnail: url });
+                              const media = await uploadMediaFile({
+                                file,
+                                folder: 'services',
+                                relatedType: 'agency_service',
+                                relatedId: editingId || '',
+                                replaceMediaId: form.thumbnailMedia?.mediaId || '',
+                              });
+                              setForm((prev) => ({
+                                ...prev,
+                                thumbnail: media.url,
+                                thumbnailMedia: toStorageMetadata(media),
+                              }));
+                              setUploadProgress(100);
                             } catch (error) {
                               toast.error('Upload failed', 'Unable to upload thumbnail.');
                             } finally {
                               setUploading(false);
+                              setUploadProgress(0);
                             }
                           }}
                         />

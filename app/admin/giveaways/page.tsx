@@ -8,7 +8,8 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy,
 import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { uploadFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
 interface Giveaway {
@@ -21,6 +22,7 @@ interface Giveaway {
   status: 'active' | 'ended';
   participantsCount: number;
   image: string;
+  imageMedia?: StoredFileMetadata | null;
   adminAvatar?: string;
   adminName?: string;
 }
@@ -39,7 +41,8 @@ const AdminGiveaways = () => {
     prize: '',
     winnersCount: 1,
     status: 'active',
-    image: ''
+    image: '',
+    imageMedia: null,
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -88,7 +91,15 @@ const AdminGiveaways = () => {
       
       setIsAdding(false);
       setEditingId(null);
-      setForm({ title: '', description: '', prize: '', winnersCount: 1, status: 'active', image: '' });
+      setForm({
+        title: '',
+        description: '',
+        prize: '',
+        winnersCount: 1,
+        status: 'active',
+        image: '',
+        imageMedia: null,
+      });
     } catch (error) {
       console.error('Error saving giveaway:', error);
       toast.error('Failed to save giveaway', error instanceof Error ? error.message : 'Please try again.');
@@ -98,6 +109,13 @@ const AdminGiveaways = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this giveaway?')) return;
     try {
+      const target = giveaways.find((entry) => entry.id === id);
+      const mediaId = target?.imageMedia?.mediaId || '';
+      if (mediaId) {
+        await deleteUploadedMedia(mediaId).catch((mediaError) => {
+          console.warn('Giveaway image cleanup failed:', mediaError);
+        });
+      }
       await deleteDoc(doc(db, 'giveaways', id));
       toast.success('Giveaway deleted');
     } catch (error) {
@@ -182,9 +200,21 @@ const AdminGiveaways = () => {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setUploading(true);
+                        setUploadProgress(20);
                         try {
-                          const url = await uploadFile(file, `giveaways/${Date.now()}_${file.name}`, setUploadProgress);
-                          setForm({ ...form, image: url });
+                          const media = await uploadMediaFile({
+                            file,
+                            folder: 'services',
+                            relatedType: 'giveaway',
+                            relatedId: editingId || '',
+                            replaceMediaId: form.imageMedia?.mediaId || '',
+                          });
+                          setForm((prev) => ({
+                            ...prev,
+                            image: media.url,
+                            imageMedia: toStorageMetadata(media),
+                          }));
+                          setUploadProgress(100);
                         } catch (error) {
                           toast.error('Upload failed', 'Unable to upload image.');
                         } finally {
@@ -250,6 +280,7 @@ const AdminGiveaways = () => {
                       winnersCount: giveaway.winnersCount,
                       status: giveaway.status,
                       image: giveaway.image,
+                      imageMedia: giveaway.imageMedia || null,
                       endDate: giveaway.endDate
                     });
                     setEditingId(giveaway.id);

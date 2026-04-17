@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { uploadFile } from '@/lib/storage-utils';
-import type { Category, ProductItem, ProductPlan } from '@/lib/types/domain';
+import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import type { Category, ProductItem, ProductPlan, StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 
 type DurationUnit = 'fixed_days' | 'fixed_months' | 'fixed_years';
@@ -42,6 +42,7 @@ interface ProductForm {
   categoryName: string;
   customCategoryName: string;
   image: string;
+  imageMedia: StoredFileMetadata | null;
   durationPreset: DurationPreset;
   customDurationValue: string;
   customDurationUnit: DurationUnit;
@@ -59,6 +60,7 @@ const defaultForm: ProductForm = {
   categoryName: '',
   customCategoryName: '',
   image: '',
+  imageMedia: null,
   durationPreset: '1_month',
   customDurationValue: '',
   customDurationUnit: 'fixed_months',
@@ -208,6 +210,7 @@ function mapDocToForm(item: ProductItem): ProductForm {
     categoryName: item.categoryName || item.category || '',
     customCategoryName: '',
     image: item.image || item.thumbnail || '',
+    imageMedia: item.imageMedia || null,
     warranty: item.warranty || '',
     planType: item.planType || '',
     plans: Array.isArray(item.plans)
@@ -370,6 +373,7 @@ const AdminProductsPage = () => {
         category: selectedCategoryName || '',
         image: form.image,
         thumbnail: form.image,
+        imageMedia: form.imageMedia || null,
         featured: false,
         active: true,
         sortOrder: computedSortOrder,
@@ -415,6 +419,13 @@ const AdminProductsPage = () => {
     }
 
     try {
+      const target = products.find((item) => item.id === id);
+      const mediaId = (target as any)?.imageMedia?.mediaId || '';
+      if (mediaId) {
+        await deleteUploadedMedia(mediaId).catch((mediaError) => {
+          console.warn('Tool image cleanup failed:', mediaError);
+        });
+      }
       await deleteDoc(doc(db, 'services', id));
       toast.success('Tool deleted');
     } catch (error) {
@@ -605,7 +616,9 @@ const AdminProductsPage = () => {
                     <input
                       type="text"
                       value={form.image}
-                      onChange={(event) => setForm((prev) => ({ ...prev, image: event.target.value }))}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, image: event.target.value, imageMedia: null }))
+                      }
                       placeholder="Image URL"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-3"
                     />
@@ -625,8 +638,18 @@ const AdminProductsPage = () => {
 
                           setUploading(true);
                           try {
-                            const url = await uploadFile(file, `products/${Date.now()}_${file.name}`);
-                            setForm((prev) => ({ ...prev, image: url }));
+                            const media = await uploadMediaFile({
+                              file,
+                              folder: 'tools',
+                              relatedType: 'tool',
+                              relatedId: editingId || '',
+                              replaceMediaId: form.imageMedia?.mediaId || '',
+                            });
+                            setForm((prev) => ({
+                              ...prev,
+                              image: media.url,
+                              imageMedia: toStorageMetadata(media),
+                            }));
                           } catch (error) {
                             console.error('Failed to upload tool image:', error);
                             toast.error('Image upload failed');

@@ -2,7 +2,6 @@
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { getStorage } from 'firebase-admin/storage';
 
 interface ServiceAccountPayload {
   projectId: string;
@@ -86,21 +85,16 @@ if (!getApps().length) {
   if (serviceAccount) {
     initializeApp({
       credential: cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
   } else {
-    // Fallback initialization so builds don't fail when env vars are not provided.
+    // Fallback initialization so builds do not fail when env vars are not provided.
     // API routes that require admin auth will still fail at runtime until credentials are configured.
-    initializeApp({
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
+    initializeApp();
   }
 }
 
 export const adminAuth = getAuth();
 export const adminDb = getFirestore();
 export const adminMessaging = getMessaging();
-export const adminStorage = getStorage();
 export const adminFieldValue = FieldValue;
 export const adminTimestamp = Timestamp;
-

@@ -4,18 +4,62 @@ import { ApiError } from './http';
 
 const ADMIN_EMAIL = 'technicalhammad39@gmail.com';
 
-function extractBearerToken(request: Request) {
+function extractHeaderBearerToken(request: Request) {
   const header = request.headers.get('authorization') || request.headers.get('Authorization');
 
   if (!header || !header.startsWith('Bearer ')) {
-    throw new ApiError(401, 'Missing Authorization bearer token');
+    return '';
   }
 
   return header.replace('Bearer ', '').trim();
 }
 
-export async function requireAuth(request: Request): Promise<DecodedIdToken> {
-  const token = extractBearerToken(request);
+function extractQueryToken(request: Request) {
+  const url = new URL(request.url);
+  return (url.searchParams.get('token') || '').trim();
+}
+
+function extractAuthToken(request: Request, allowQueryToken = false) {
+  const headerToken = extractHeaderBearerToken(request);
+  if (headerToken) {
+    return headerToken;
+  }
+
+  if (allowQueryToken) {
+    const queryToken = extractQueryToken(request);
+    if (queryToken) {
+      return queryToken;
+    }
+  }
+
+  throw new ApiError(401, 'Missing authentication token');
+}
+
+export function isStaffRole(role: unknown) {
+  const value = typeof role === 'string' ? role.trim().toLowerCase() : '';
+  return value === 'admin' || value === 'manager' || value === 'staff';
+}
+
+export async function getUserRole(uid: string) {
+  const profileDoc = await adminDb.collection('users').doc(uid).get();
+  const role = profileDoc.data()?.role;
+  return typeof role === 'string' ? role.trim().toLowerCase() : '';
+}
+
+export async function canManageUploads(uid: string, email?: string | null) {
+  if ((email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    return true;
+  }
+
+  const role = await getUserRole(uid);
+  return isStaffRole(role);
+}
+
+export async function requireAuth(
+  request: Request,
+  options?: { allowQueryToken?: boolean }
+): Promise<DecodedIdToken> {
+  const token = extractAuthToken(request, options?.allowQueryToken === true);
   try {
     return await adminAuth.verifyIdToken(token);
   } catch {
@@ -47,8 +91,7 @@ export async function requireStaff(request: Request): Promise<DecodedIdToken> {
     return decoded;
   }
 
-  const profileDoc = await adminDb.collection('users').doc(decoded.uid).get();
-  const role = profileDoc.data()?.role;
+  const role = await getUserRole(decoded.uid);
 
   if (role !== 'admin' && role !== 'manager') {
     throw new ApiError(403, 'Staff access required');
@@ -56,4 +99,3 @@ export async function requireStaff(request: Request): Promise<DecodedIdToken> {
 
   return decoded;
 }
-

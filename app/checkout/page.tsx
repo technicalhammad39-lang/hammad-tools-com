@@ -10,7 +10,7 @@ import { db } from '@/firebase';
 import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import type { PaymentMethod, ProductItem } from '@/lib/types/domain';
 import { createOrderPublicId } from '@/lib/order-system';
-import { uploadFile } from '@/lib/storage-utils';
+import { toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import { useToast } from '@/components/ToastProvider';
 
 interface CheckoutItem {
@@ -262,7 +262,7 @@ function CheckoutPageContent() {
 
   async function uploadPaymentProof(uid: string, finalOrderId: string) {
     if (!proofFile) {
-      return '';
+      return null;
     }
 
     if (!proofFile.type.startsWith('image/')) {
@@ -273,11 +273,15 @@ function CheckoutPageContent() {
       throw new Error('Screenshot size must be less than 5MB.');
     }
 
-    const extension = proofFile.name.split('.').pop() || 'png';
-    return uploadFile(
-      proofFile,
-      `payment-proofs/${uid}/${finalOrderId}-${Date.now()}.${extension}`
-    );
+    return uploadMediaFile({
+      file: proofFile,
+      folder: 'payment-proofs',
+      relatedType: 'order',
+      relatedId: finalOrderId,
+      relatedOrderId: finalOrderId,
+      relatedUserId: uid,
+      note: 'checkout-payment-proof',
+    });
   }
 
   async function handleApplyCoupon() {
@@ -397,7 +401,7 @@ function CheckoutPageContent() {
 
     try {
       const finalOrderId = await resolveUniqueOrderId();
-      const proofUrl = await uploadPaymentProof(user.uid, finalOrderId);
+      const proofMedia = await uploadPaymentProof(user.uid, finalOrderId);
       const timestamp = serverTimestamp();
       const roundedSubtotal = Number(subtotal.toFixed(2));
       const roundedDiscount = Number(discountAmount.toFixed(2));
@@ -463,7 +467,13 @@ function CheckoutPageContent() {
           senderAccount: senderValue,
           senderNumber: senderValue,
           transactionId: transactionValue,
-          screenshotUrl: proofUrl || '',
+          screenshotUrl: proofMedia?.url || '',
+          screenshotMedia: proofMedia
+            ? {
+                ...toStorageMetadata(proofMedia, user.uid),
+                createdAt: timestamp,
+              }
+            : null,
         },
 
         adminMessage: '',

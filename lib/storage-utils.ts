@@ -1,36 +1,72 @@
 ﻿import { auth } from '@/firebase';
 
+export type UploadFolder =
+  | 'tools'
+  | 'services'
+  | 'blogs'
+  | 'partners'
+  | 'payment-proofs'
+  | 'chat-attachments'
+  | 'profiles';
+
+export interface UploadedMediaPayload {
+  id: string;
+  url: string;
+  publicPath: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  folder: UploadFolder;
+  access: 'public' | 'protected';
+}
+
 interface UploadApiResponse {
   success: boolean;
-  media?: {
-    id: string;
-    url: string;
-    publicPath: string;
-    storagePath: string;
-    fileName: string;
-    mimeType: string;
-    sizeBytes: number;
-    folder: string;
-  };
+  media?: UploadedMediaPayload;
   error?: string;
 }
 
-const FOLDER_ALIASES: Record<string, 'products' | 'users' | 'banners' | 'payments'> = {
-  products: 'products',
-  product: 'products',
-  users: 'users',
-  user: 'users',
-  banners: 'banners',
-  banner: 'banners',
-  payments: 'payments',
-  payment: 'payments',
-  'payment-proofs': 'payments',
-  'order-messages': 'users',
+const FOLDER_ALIASES: Record<string, UploadFolder> = {
+  tools: 'tools',
+  tool: 'tools',
+  products: 'tools',
+  product: 'tools',
+  services: 'services',
+  service: 'services',
+  categories: 'services',
+  category: 'services',
+  giveaways: 'services',
+  giveaway: 'services',
+  'agency-services': 'services',
+  blogs: 'blogs',
+  blog: 'blogs',
+  partners: 'partners',
+  partner: 'partners',
+  logos: 'partners',
+  logo: 'partners',
+  banners: 'partners',
+  payments: 'payment-proofs',
+  payment: 'payment-proofs',
+  'payment-proofs': 'payment-proofs',
+  chat: 'chat-attachments',
+  'order-messages': 'chat-attachments',
+  'chat-attachments': 'chat-attachments',
+  users: 'profiles',
+  user: 'profiles',
+  profile: 'profiles',
+  profiles: 'profiles',
 };
 
-function extractFolder(path: string) {
-  const firstSegment = (path || '').replace(/\\/g, '/').split('/').filter(Boolean)[0]?.toLowerCase() || 'products';
-  return FOLDER_ALIASES[firstSegment] || 'products';
+function extractFolder(path: string): UploadFolder {
+  const firstSegment =
+    (path || '')
+      .replace(/\\/g, '/')
+      .split('/')
+      .filter(Boolean)[0]
+      ?.toLowerCase() || 'tools';
+
+  return FOLDER_ALIASES[firstSegment] || 'tools';
 }
 
 function extractRelatedId(path: string) {
@@ -51,13 +87,14 @@ async function getAuthHeader() {
 
 export interface UploadMediaOptions {
   file: File;
-  folder: 'products' | 'users' | 'banners' | 'payments';
+  folder: UploadFolder;
   relatedType?: string;
   relatedId?: string;
   relatedUserId?: string;
   relatedOrderId?: string;
   relatedProductId?: string;
   note?: string;
+  replaceMediaId?: string;
 }
 
 export async function uploadMediaFile(options: UploadMediaOptions) {
@@ -82,6 +119,9 @@ export async function uploadMediaFile(options: UploadMediaOptions) {
   }
   if (options.note) {
     formData.append('note', options.note);
+  }
+  if (options.replaceMediaId) {
+    formData.append('replaceMediaId', options.replaceMediaId);
   }
 
   const response = await fetch('/api/upload', {
@@ -113,8 +153,9 @@ export const uploadFile = async (
   const media = await uploadMediaFile({
     file,
     folder,
-    relatedType: folder === 'payments' ? 'order' : 'user',
+    relatedType: folder === 'payment-proofs' ? 'order' : 'asset',
     relatedId,
+    relatedOrderId: folder === 'payment-proofs' || folder === 'chat-attachments' ? relatedId : undefined,
   });
 
   if (onProgress) {
@@ -123,6 +164,54 @@ export const uploadFile = async (
 
   return media.url;
 };
+
+export function toStorageMetadata(
+  media: UploadedMediaPayload,
+  uploadedBy?: string
+): {
+  mediaId: string;
+  fileUrl: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  folder: UploadFolder;
+  access: 'public' | 'protected';
+  uploadedBy?: string;
+} {
+  return {
+    mediaId: media.id,
+    fileUrl: media.url,
+    storagePath: media.storagePath,
+    fileName: media.fileName,
+    mimeType: media.mimeType,
+    sizeBytes: media.sizeBytes,
+    folder: media.folder,
+    access: media.access,
+    uploadedBy,
+  };
+}
+
+export function withProtectedFileToken(url: string, token: string) {
+  if (!url || !token || !url.includes('/api/upload/')) {
+    return url;
+  }
+
+  try {
+    const base =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : 'http://localhost';
+    const parsed = new URL(url, base);
+    parsed.searchParams.set('token', token);
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return parsed.toString();
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
 
 export async function deleteUploadedMedia(mediaId: string) {
   const response = await fetch(`/api/upload/${encodeURIComponent(mediaId)}`, {

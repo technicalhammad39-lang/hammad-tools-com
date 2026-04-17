@@ -21,7 +21,7 @@ import type { OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
-import { uploadFile } from '@/lib/storage-utils';
+import { toStorageMetadata, uploadMediaFile, withProtectedFileToken } from '@/lib/storage-utils';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -60,7 +60,7 @@ function transactionValue(order: OrderRecord) {
 
 function screenshotUrl(order: OrderRecord) {
   const proof = order.paymentProof as any;
-  return proof?.screenshotUrl || '';
+  return proof?.screenshotMedia?.fileUrl || proof?.screenshotUrl || '';
 }
 
 function getPrimaryItem(order: OrderRecord) {
@@ -185,6 +185,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState('');
   const [composerMessage, setComposerMessage] = useState('');
   const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
+  const [fileAccessToken, setFileAccessToken] = useState('');
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [chatFullscreen, setChatFullscreen] = useState(false);
@@ -229,6 +230,28 @@ export default function AdminOrdersPage() {
       setSelectedOrderId(requestedOrder);
     }
   }, [orders, requestedOrder]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshToken() {
+      if (!user) {
+        if (mounted) {
+          setFileAccessToken('');
+        }
+        return;
+      }
+      const token = await user.getIdToken();
+      if (mounted) {
+        setFileAccessToken(token);
+      }
+    }
+
+    void refreshToken();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
 
   const sortedOrders = useMemo(
     () =>
@@ -314,16 +337,21 @@ export default function AdminOrdersPage() {
     if (file.size > MAX_ATTACHMENT_BYTES) {
       throw new Error('Attachment size must be less than 10MB.');
     }
-    const extension = file.name.split('.').pop() || 'file';
-    const uploadedUrl = await uploadFile(
+    const media = await uploadMediaFile({
       file,
-      `order-messages/${orderId}/${user.uid}-${Date.now()}.${extension}`
-    );
+      folder: 'chat-attachments',
+      relatedType: 'order_message',
+      relatedId: orderId,
+      relatedOrderId: orderId,
+      relatedUserId: user.uid,
+      note: 'admin-order-chat-attachment',
+    });
     return {
-      url: uploadedUrl,
+      url: media.url,
       name: file.name,
       type: file.type || 'application/octet-stream',
       size: file.size,
+      media: toStorageMetadata(media, user.uid),
     };
   }
 
@@ -333,7 +361,15 @@ export default function AdminOrdersPage() {
     messageType: 'message' | 'approval' | 'rejection',
     title: string,
     nextStatus?: 'pending' | 'approved' | 'rejected',
-    attachment?: { url: string; name: string; type: string; size: number } | null
+    attachment?:
+      | {
+          url: string;
+          name: string;
+          type: string;
+          size: number;
+          media?: ReturnType<typeof toStorageMetadata>;
+        }
+      | null
   ) {
     if (!user) {
       throw new Error('You must be logged in as admin to update orders.');
@@ -353,6 +389,7 @@ export default function AdminOrdersPage() {
       attachmentName: attachment?.name || '',
       attachmentType: attachment?.type || '',
       attachmentSize: attachment?.size || 0,
+      attachmentMedia: attachment?.media || null,
       createdAt: new Date(),
     };
 
@@ -401,6 +438,7 @@ export default function AdminOrdersPage() {
           status: nextStatus || normalizeOrderStatus(order.status),
           attachmentUrl: attachment?.url || '',
           attachmentName: attachment?.name || '',
+          attachmentMediaId: attachment?.media?.mediaId || '',
         },
         read: false,
         createdAt: serverTimestamp(),
@@ -470,7 +508,15 @@ export default function AdminOrdersPage() {
     setError('');
     setActionLoading(true);
     try {
-      let attachment: { url: string; name: string; type: string; size: number } | null = null;
+      let attachment:
+        | {
+            url: string;
+            name: string;
+            type: string;
+            size: number;
+            media?: ReturnType<typeof toStorageMetadata>;
+          }
+        | null = null;
       if (composerAttachment) {
         setAttachmentUploading(true);
         attachment = await uploadMessageAttachment(selectedOrder.id, composerAttachment);
@@ -516,7 +562,9 @@ export default function AdminOrdersPage() {
   const selectedCoupon = selectedOrder ? getOrderCoupon(selectedOrder) : '';
   const selectedDiscountAmount = selectedOrder ? getOrderDiscountAmount(selectedOrder) : 0;
   const selectedOriginalTotal = selectedOrder ? getOrderOriginalTotal(selectedOrder) : 0;
-  const selectedScreenshotUrl = selectedOrder ? screenshotUrl(selectedOrder) : '';
+  const selectedScreenshotUrl = selectedOrder
+    ? withProtectedFileToken(screenshotUrl(selectedOrder), fileAccessToken)
+    : '';
 
   function renderChatPanel(fullscreen = false) {
     return (
@@ -552,9 +600,12 @@ export default function AdminOrdersPage() {
                     }`}
                   >
                     {entry.message ? <div>{entry.message}</div> : null}
-                    {entry.attachmentUrl ? (
+                    {entry.attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
                       <a
-                        href={entry.attachmentUrl}
+                        href={withProtectedFileToken(
+                          entry.attachmentUrl || (entry as any).attachmentMedia?.fileUrl || '',
+                          fileAccessToken
+                        )}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`mt-2 inline-flex items-center gap-1.5 underline ${
