@@ -207,6 +207,13 @@ export function getUploadPublicBasePath() {
   if (!configured) {
     return '/uploads';
   }
+
+  // Allow absolute URL bases (for example: https://example.com/uploads)
+  // without forcing an extra leading slash.
+  if (/^https?:\/\//i.test(configured)) {
+    return configured.replace(/\/+$/, '');
+  }
+
   const withSlash = configured.startsWith('/') ? configured : `/${configured}`;
   return withSlash.replace(/\/+$/, '') || '/uploads';
 }
@@ -483,6 +490,11 @@ export function getRelativeStoragePath(folder: UploadFolder, fileName: string) {
 
 export function getPublicFilePath(folder: UploadFolder, fileName: string) {
   const publicBase = getUploadPublicBasePath();
+  if (/^https?:\/\//i.test(publicBase)) {
+    const base = publicBase.endsWith('/') ? publicBase : `${publicBase}/`;
+    return new URL(`${folder}/${fileName}`, base).toString();
+  }
+
   return `${publicBase}/${folder}/${fileName}`.replace(/\/+/g, '/');
 }
 
@@ -528,6 +540,10 @@ export function resolveAccessForMedia(input: { access?: string; folder?: string 
 }
 
 export function toPublicUrl(request: Request, path: string) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
   if (appUrl) {
     return new URL(path, appUrl).toString();
