@@ -1,5 +1,5 @@
 ﻿import type { DecodedIdToken } from 'firebase-admin/auth';
-import { adminAuth, adminDb } from './firebase-admin';
+import { adminAuth, adminDb, getFirebaseAdminInitDiagnostics } from './firebase-admin';
 import { ApiError } from './http';
 
 const ADMIN_EMAIL = 'technicalhammad39@gmail.com';
@@ -65,23 +65,21 @@ export async function requireAuth(
   } catch (error: any) {
     const code = String(error?.code || 'unknown');
     const message = String(error?.message || '');
-    const adminProjectId =
-      adminAuth.app.options.projectId ||
-      process.env.FIREBASE_ADMIN_PROJECT_ID ||
-      null;
+    const adminInit = getFirebaseAdminInitDiagnostics();
 
     console.error('[auth] Firebase token verification failed', {
       code,
       message,
-      adminProjectId,
-      hasServiceAccountJson: Boolean(process.env.FIREBASE_ADMIN_SDK_JSON),
+      adminInit,
       allowQueryToken: options?.allowQueryToken === true,
     });
 
     const hint =
       code === 'auth/id-token-expired'
         ? 'Please refresh your session and try again.'
-        : 'Verify Firebase Admin credentials/project configuration on the server.';
+        : !adminInit.initializedWithExplicitCert
+          ? 'Firebase Admin is not initialized with explicit service account credentials.'
+          : 'Verify Firebase Admin credentials/project configuration on the server.';
 
     throw new ApiError(
       401,

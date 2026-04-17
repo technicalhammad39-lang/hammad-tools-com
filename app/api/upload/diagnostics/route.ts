@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireStaff } from '@/lib/server/auth';
 import { jsonError } from '@/lib/server/http';
+import { getFirebaseAdminInitDiagnostics } from '@/lib/server/firebase-admin';
 import {
   getUploadRuntimeDiagnostics,
   isUploadDebugEnabled,
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
+    const firebaseAdmin = getFirebaseAdminInitDiagnostics();
     const decoded = await requireStaff(request);
     const diagnostics = await getUploadRuntimeDiagnostics({
       ensureDirectories: true,
@@ -22,6 +24,7 @@ export async function GET(request: Request) {
       console.info('[upload][diagnostics] requested by staff', {
         uid: decoded.uid,
         email: decoded.email || '',
+        firebaseAdmin,
         diagnostics,
       });
     }
@@ -29,6 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       diagnostics: {
+        firebaseAdmin,
         ...diagnostics,
         publicBaseUrl: toPublicUrl(request, diagnostics.uploadPublicBasePath),
       },

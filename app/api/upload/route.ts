@@ -2,7 +2,7 @@
 import { writeFile, access, unlink } from 'fs/promises';
 import { constants as fsConstants } from 'fs';
 import { join } from 'path';
-import { adminDb, adminFieldValue } from '@/lib/server/firebase-admin';
+import { adminDb, adminFieldValue, getFirebaseAdminInitDiagnostics } from '@/lib/server/firebase-admin';
 import { canManageUploads, requireAuth } from '@/lib/server/auth';
 import { ApiError, jsonError } from '@/lib/server/http';
 import {
@@ -103,6 +103,7 @@ async function deleteMediaFileAndRecord(candidate: ExistingMediaCandidate) {
 export async function POST(request: Request) {
   const debugEnabled = isUploadDebugEnabled();
   let runtimeDiagnostics: Awaited<ReturnType<typeof getUploadRuntimeDiagnostics>> | null = null;
+  const firebaseAdminDiagnostics = getFirebaseAdminInitDiagnostics();
 
   try {
     runtimeDiagnostics = await getUploadRuntimeDiagnostics({
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
 
     if (debugEnabled) {
       console.info('[upload] runtime diagnostics', runtimeDiagnostics);
+      console.info('[upload] firebase-admin diagnostics', firebaseAdminDiagnostics);
     }
 
     const decoded = await requireAuth(request);
@@ -283,6 +285,7 @@ export async function POST(request: Request) {
             }
           : String(error),
       runtimeDiagnostics,
+      firebaseAdminDiagnostics,
     });
     if (!(error instanceof ApiError)) {
       const message = error instanceof Error ? error.message : String(error);
