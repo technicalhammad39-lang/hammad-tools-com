@@ -195,6 +195,9 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       plan: planName,
       orderId: createOrderPublicId(),
     });
+    if (couponStatus === 'valid' && couponCode.trim()) {
+      params.set('coupon', couponCode.trim());
+    }
     router.push(`/checkout?${params.toString()}`);
   };
 

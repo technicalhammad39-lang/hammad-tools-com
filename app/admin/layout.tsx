@@ -221,13 +221,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Admin Sidebar */}
       <aside className="w-80 bg-black/40 border-r border-white/5 hidden lg:flex flex-col sticky top-0 h-screen">
         <div className="p-10 border-b border-white/5">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center border-b-4 border-[#FF8C2A]">
-              <span className="text-brand-bg font-black text-2xl">H</span>
-            </div>
-            <span className="text-2xl font-black text-brand-text uppercase">
-              Admin<span className="internal-gradient">Hub</span>
-            </span>
+          <Link href="/" className="flex items-center justify-between gap-3">
+            <Image
+              src="/logo-header.png"
+              alt="Hammad Tools"
+              width={190}
+              height={42}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">Admin</span>
           </Link>
         </div>
 
@@ -285,8 +288,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Top Header */}
         <header className="h-20 lg:h-24 border-b border-white/5 bg-black/20 backdrop-blur-2xl flex items-center justify-between px-4 lg:px-10 sticky top-0 z-[80]">
           <div className="flex items-center gap-4 lg:hidden">
-            <Link href="/" className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center border-b-[3px] border-[#FF8C2A]">
-               <span className="text-brand-bg font-black text-xl">H</span>
+            <Link href="/" className="inline-flex items-center">
+              <Image
+                src="/logo-header.png"
+                alt="Hammad Tools"
+                width={130}
+                height={28}
+                className="h-7 w-auto object-contain"
+              />
             </Link>
           </div>
 

@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard,
@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Send,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -116,6 +118,10 @@ function DashboardPageContent() {
   const [loadingData, setLoadingData] = useState(true);
   const [manualSelectedOrderId, setManualSelectedOrderId] = useState<string | null>(null);
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
+  const [orderSelectorOpen, setOrderSelectorOpen] = useState(false);
+  const [composerMessage, setComposerMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -199,6 +205,17 @@ function DashboardPageContent() {
     });
   }, [selectedOrder]);
 
+  useEffect(() => {
+    setOrderSelectorOpen(false);
+  }, [selectedOrderId]);
+
+  useEffect(() => {
+    if (!chatScrollRef.current) {
+      return;
+    }
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  }, [messages, selectedOrderId]);
+
   const pendingOrders = useMemo(
     () => orders.filter((order) => normalizeOrderStatus(order.status) === 'pending').length,
     [orders]
@@ -264,6 +281,44 @@ function DashboardPageContent() {
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
       toast.error('Failed to update notifications');
+    }
+  }
+
+  async function handleSendOrderMessage() {
+    if (!selectedOrder || !user) {
+      return;
+    }
+
+    const trimmed = composerMessage.trim();
+    if (!trimmed) {
+      toast.error('Message is required');
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/orders/${encodeURIComponent(selectedOrder.id)}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: trimmed }),
+      });
+
+      const payload = (await response.json()) as { success?: boolean; error?: string };
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Failed to send message');
+      }
+
+      setComposerMessage('');
+      toast.success('Message sent');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send message';
+      toast.error('Message failed', message);
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -559,48 +614,68 @@ function DashboardPageContent() {
             )}
 
             {activeTab === 'messages' && (
-              <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <motion.div key="messages" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
                 <h2 className="text-3xl font-black uppercase text-brand-text">Order Messages</h2>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-1 glass rounded-2xl border border-white/5 overflow-hidden">
-                    <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
-                      Orders
-                    </div>
-                    <div className="divide-y divide-white/5 max-h-[460px] overflow-y-auto">
-                      {orders.length === 0 ? (
-                        <div className="p-6 text-[10px] font-black uppercase tracking-widest text-brand-text/30">No orders yet.</div>
-                      ) : (
-                        orders.map((order) => (
-                          <button
-                            key={order.id}
-                            onClick={() => setManualSelectedOrderId(order.id)}
-                            className={`w-full text-left p-4 hover:bg-white/5 transition-colors ${
-                              selectedOrderId === order.id ? 'bg-white/5' : ''
-                            }`}
-                          >
-                            <div className="text-sm font-semibold text-brand-text break-words">{getOrderProductName(order)}</div>
-                            <div className="text-[10px] text-brand-text/45 mt-1">
-                              {getOrderDisplayId(order)} • {formatOrderStatusLabel(order.status)}
+                <div className="glass rounded-2xl border border-white/5 p-4 md:p-5 min-h-[70vh] flex flex-col gap-4">
+                  <div className="relative">
+                    <button
+                      onClick={() => setOrderSelectorOpen((prev) => !prev)}
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/35">Select Order</div>
+                        <div className="text-sm font-semibold text-brand-text truncate">
+                          {selectedOrder ? `${getOrderProductName(selectedOrder)} (${getOrderDisplayId(selectedOrder)})` : 'Choose an order'}
+                        </div>
+                      </div>
+                      <ChevronsUpDown className="w-4 h-4 text-brand-text/55 shrink-0" />
+                    </button>
+
+                    {orderSelectorOpen ? (
+                      <div className="absolute z-20 mt-2 w-full rounded-2xl border border-white/10 bg-[#111111] shadow-2xl overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
+                          {orders.length === 0 ? (
+                            <div className="px-4 py-5 text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                              No orders found.
                             </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
+                          ) : (
+                            orders.map((order) => (
+                              <button
+                                key={order.id}
+                                onClick={() => {
+                                  setManualSelectedOrderId(order.id);
+                                  setOrderSelectorOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-3 hover:bg-white/5 transition-colors ${
+                                  selectedOrderId === order.id ? 'bg-white/10' : ''
+                                }`}
+                              >
+                                <div className="text-sm font-semibold text-brand-text break-words">{getOrderProductName(order)}</div>
+                                <div className="text-[10px] text-brand-text/45 mt-1 break-words">
+                                  {getOrderDisplayId(order)} - {formatOrderStatusLabel(order.status)}
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="lg:col-span-2 glass rounded-2xl border border-white/5 overflow-hidden">
-                    <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
-                      {selectedOrder ? `Message Thread - ${getOrderDisplayId(selectedOrder)}` : 'Select an order'}
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <div className="px-4 py-3 border-b border-white/10 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+                      {selectedOrder ? `Chat - ${getOrderDisplayId(selectedOrder)}` : 'Select an order to start'}
                     </div>
-                    <div className="p-5 space-y-3 max-h-[460px] overflow-y-auto">
+
+                    <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                       {!selectedOrder ? (
-                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">
-                          Select an order to view messages.
+                        <div className="h-full min-h-[220px] grid place-items-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                          Select an order from top.
                         </div>
                       ) : messages.length === 0 ? (
-                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">
-                          No admin messages yet.
+                        <div className="h-full min-h-[220px] grid place-items-center text-[10px] font-black uppercase tracking-widest text-brand-text/30">
+                          No messages yet. Start the chat below.
                         </div>
                       ) : (
                         messages.map((entry, index) => {
@@ -608,7 +683,7 @@ function DashboardPageContent() {
                           return (
                             <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                               <div
-                                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                                className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
                                   isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
                                 }`}
                               >
@@ -634,6 +709,29 @@ function DashboardPageContent() {
                           );
                         })
                       )}
+                    </div>
+
+                    <div className="border-t border-white/10 p-3">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+                        <textarea
+                          value={composerMessage}
+                          onChange={(event) => setComposerMessage(event.target.value)}
+                          placeholder={selectedOrder ? 'Type your message for admin' : 'Select an order first'}
+                          rows={2}
+                          disabled={!selectedOrder || sendingMessage}
+                          className="min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                        />
+                        <button
+                          onClick={() => {
+                            void handleSendOrderMessage();
+                          }}
+                          disabled={!selectedOrder || sendingMessage}
+                          className="shrink-0 rounded-xl bg-primary px-4 py-3 text-black text-[11px] font-black uppercase tracking-widest border-b-2 border-secondary inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          Send
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -767,3 +865,4 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+

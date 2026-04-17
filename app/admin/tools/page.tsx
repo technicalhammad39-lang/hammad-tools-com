@@ -93,6 +93,28 @@ function parseNumberInput(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeBenefitsForEditor(benefits: unknown) {
+  const values = Array.isArray(benefits)
+    ? benefits.map((benefit) => String(benefit ?? '')).filter((benefit) => benefit.length > 0)
+    : typeof benefits === 'string'
+      ? benefits.split(',').map((benefit) => benefit.trim()).filter(Boolean)
+      : [];
+  if (!values.length || values[values.length - 1].trim() !== '') {
+    values.push('');
+  }
+  return values;
+}
+
+function normalizeBenefitsForSave(benefits: unknown) {
+  if (Array.isArray(benefits)) {
+    return benefits.map((benefit) => String(benefit ?? '').trim()).filter(Boolean);
+  }
+  if (typeof benefits === 'string') {
+    return benefits.split(',').map((benefit) => benefit.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function getDurationPresetFromItem(item: ProductItem): Pick<ProductForm, 'durationPreset' | 'customDurationUnit' | 'customDurationValue'> {
   const durationType = item.durationType;
   const durationValue = Number(item.durationValue || 0);
@@ -188,7 +210,12 @@ function mapDocToForm(item: ProductItem): ProductForm {
     image: item.image || item.thumbnail || '',
     warranty: item.warranty || '',
     planType: item.planType || '',
-    plans: Array.isArray(item.plans) ? item.plans : [],
+    plans: Array.isArray(item.plans)
+      ? item.plans.map((plan) => ({
+          ...plan,
+          benefits: normalizeBenefitsForEditor(plan.benefits),
+        }))
+      : [],
     ...durationPresetValues,
   };
 }
@@ -358,7 +385,10 @@ const AdminProductsPage = () => {
         accessLabel: durationPayload.durationLabel,
         warranty: form.warranty.trim(),
         planType: form.planType.trim(),
-        plans: form.plans,
+        plans: form.plans.map((plan) => ({
+          ...plan,
+          benefits: normalizeBenefitsForSave(plan.benefits),
+        })),
         updatedAt: serverTimestamp(),
       };
 
@@ -628,7 +658,15 @@ const AdminProductsPage = () => {
                       const basePrice = parseNumberInput(form.price, 0);
                       setForm((prev) => ({
                         ...prev,
-                        plans: [...prev.plans, { planName: 'Standard', ourPrice: basePrice, officialPrice: basePrice ? basePrice * 1.5 : 0, benefits: [] }],
+                        plans: [
+                          ...prev.plans,
+                          {
+                            planName: 'Standard',
+                            ourPrice: basePrice,
+                            officialPrice: basePrice ? basePrice * 1.5 : 0,
+                            benefits: [''],
+                          },
+                        ],
                       }));
                     }}
                     className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-lg border border-emerald-500/20"
@@ -696,28 +734,68 @@ const AdminProductsPage = () => {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">Benefits (comma separated)</label>
-                        <input
-                          type="text"
-                          value={(plan.benefits || []).join(', ')}
-                          onChange={(event) => {
-                            const nextPlans = [...form.plans];
-                            nextPlans[planIndex] = {
-                              ...nextPlans[planIndex],
-                              benefits: event.target.value.split(',').map((benefit) => benefit.trim()).filter(Boolean),
-                            };
-                            setForm((prev) => ({ ...prev, plans: nextPlans }));
-                          }}
-                          placeholder="e.g. Premium support, Instant activation"
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm"
-                        />
+                        <label className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">Benefits</label>
+                        <div className="space-y-2">
+                          {normalizeBenefitsForEditor(plan.benefits).map((benefit, benefitIndex) => {
+                            const values = normalizeBenefitsForEditor(plan.benefits);
+                            const isLast = benefitIndex === values.length - 1;
+                            return (
+                              <div key={`benefit-${planIndex}-${benefitIndex}`} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={benefit}
+                                  onChange={(event) => {
+                                    const nextPlans = [...form.plans];
+                                    const nextBenefits = normalizeBenefitsForEditor(nextPlans[planIndex].benefits);
+                                    nextBenefits[benefitIndex] = event.target.value;
+                                    if (nextBenefits[nextBenefits.length - 1].trim() !== '') {
+                                      nextBenefits.push('');
+                                    }
+                                    while (
+                                      nextBenefits.length > 1 &&
+                                      nextBenefits[nextBenefits.length - 1].trim() === '' &&
+                                      nextBenefits[nextBenefits.length - 2].trim() === ''
+                                    ) {
+                                      nextBenefits.pop();
+                                    }
+                                    nextPlans[planIndex] = {
+                                      ...nextPlans[planIndex],
+                                      benefits: nextBenefits,
+                                    };
+                                    setForm((prev) => ({ ...prev, plans: nextPlans }));
+                                  }}
+                                  placeholder={isLast ? 'Add next benefit' : 'Benefit'}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm"
+                                />
+                                {!isLast ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextPlans = [...form.plans];
+                                      const nextBenefits = normalizeBenefitsForEditor(nextPlans[planIndex].benefits);
+                                      nextBenefits.splice(benefitIndex, 1);
+                                      nextPlans[planIndex] = {
+                                        ...nextPlans[planIndex],
+                                        benefits: normalizeBenefitsForEditor(nextBenefits),
+                                      };
+                                      setForm((prev) => ({ ...prev, plans: nextPlans }));
+                                    }}
+                                    className="h-9 px-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest"
+                                  >
+                                    Remove
+                                  </button>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-end gap-4 p-6 border-t border-white/5">
+              <div className="flex flex-col md:flex-row justify-end gap-4 pt-5 border-t border-white/10">
                 <button onClick={closeForm} className="order-2 md:order-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] text-brand-text/40 hover:text-brand-text transition-colors">Cancel</button>
                 <button
                   onClick={handleSave}

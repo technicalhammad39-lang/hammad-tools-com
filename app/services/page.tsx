@@ -129,17 +129,17 @@ export default function AgencyServicesPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.05 }}
-                  className="group relative flex flex-col bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 hover:border-primary/30 transition-all duration-700 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 overflow-hidden"
+                  className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-700 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1"
                 >
-                  <div className="relative h-60 md:h-80 rounded-[2rem] overflow-hidden mb-8 border border-white/5 bg-brand-soft">
+                  <div className="relative h-52 md:h-64 overflow-hidden bg-white/5">
                     <Image
                       src={service.thumbnail || '/services-card.png'}
                       alt={title}
                       fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                      className="object-cover group-hover:scale-110 transition-transform duration-1000 p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75" />
                     <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
                       <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
                         <Star className="w-3 h-3 text-primary fill-primary" />
@@ -148,8 +148,8 @@ export default function AgencyServicesPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col flex-1">
-                    <h3 className="text-2xl md:text-3xl font-black text-brand-text uppercase leading-tight mb-4 group-hover:text-primary transition-colors">
+                  <div className="p-6 md:p-8 flex flex-col flex-1">
+                    <h3 className="text-2xl md:text-3xl font-black text-brand-text leading-tight mb-4 group-hover:text-primary transition-colors break-words">
                       {title}
                     </h3>
 
@@ -160,7 +160,7 @@ export default function AgencyServicesPage() {
                     {Array.isArray(service.tags) && service.tags.length ? (
                       <div className="flex flex-wrap gap-2 mb-6">
                         {service.tags.slice(0, 4).map((tag) => (
-                          <span key={tag} className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 border border-white/10 px-2 py-1 rounded-md flex items-center gap-1">
+                          <span key={tag} className="text-[9px] font-black tracking-widest text-brand-text/40 border border-white/10 px-2 py-1 rounded-md flex items-center gap-1 break-words">
                             <Tag className="w-3 h-3 text-primary" /> {tag}
                           </span>
                         ))}

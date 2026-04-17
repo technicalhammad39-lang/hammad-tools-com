@@ -11,6 +11,8 @@ import {
   Copy,
   Paperclip,
   X,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
@@ -87,6 +89,17 @@ function getOrderPlanType(order: OrderRecord) {
 function getOrderCoupon(order: OrderRecord) {
   const data = order as any;
   return data.couponCode || data.appliedCouponCode || data.coupon?.code || '';
+}
+
+function getOrderDiscountAmount(order: OrderRecord) {
+  const data = order as any;
+  return Number(data.discountAmount || 0);
+}
+
+function getOrderOriginalTotal(order: OrderRecord) {
+  const data = order as any;
+  const value = Number(data.originalTotalAmount ?? order.subtotal ?? order.totalAmount ?? 0);
+  return Number.isFinite(value) ? value : 0;
 }
 
 function getTargetEmail(order: OrderRecord) {
@@ -174,6 +187,7 @@ export default function AdminOrdersPage() {
   const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
+  const [chatFullscreen, setChatFullscreen] = useState(false);
   const [statusModal, setStatusModal] = useState<{
     type: 'approve' | 'reject';
     value: string;
@@ -500,7 +514,129 @@ export default function AdminOrdersPage() {
   const selectedDuration = selectedOrder ? getOrderDuration(selectedOrder) : '';
   const selectedPlanType = selectedOrder ? getOrderPlanType(selectedOrder) : '';
   const selectedCoupon = selectedOrder ? getOrderCoupon(selectedOrder) : '';
+  const selectedDiscountAmount = selectedOrder ? getOrderDiscountAmount(selectedOrder) : 0;
+  const selectedOriginalTotal = selectedOrder ? getOrderOriginalTotal(selectedOrder) : 0;
   const selectedScreenshotUrl = selectedOrder ? screenshotUrl(selectedOrder) : '';
+
+  function renderChatPanel(fullscreen = false) {
+    return (
+      <div
+        className={`rounded-xl border border-white/10 bg-[#3A3C3F] p-3 flex flex-col ${
+          fullscreen ? 'h-[80vh] w-full max-w-4xl' : 'min-h-[240px]'
+        }`}
+      >
+        <div className="flex items-center justify-between pb-2">
+          <div className="text-[10px] font-black uppercase tracking-widest text-white/70">Order Chat</div>
+          <button
+            onClick={() => setChatFullscreen((prev) => !prev)}
+            className="h-8 w-8 rounded-lg border border-white/15 bg-black/20 text-white/80 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors"
+            title={fullscreen ? 'Exit fullscreen chat' : 'Open fullscreen chat'}
+          >
+            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
+          {orderMessages.length === 0 ? (
+            <div className="h-full min-h-[120px] grid place-items-center text-sm text-white/60">
+              No messages yet
+            </div>
+          ) : (
+            orderMessages.map((entry, index) => {
+              const isAdmin = entry.senderRole === 'admin';
+              return (
+                <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-[#E4E4E4] text-[#2A2A2A]'
+                    }`}
+                  >
+                    {entry.message ? <div>{entry.message}</div> : null}
+                    {entry.attachmentUrl ? (
+                      <a
+                        href={entry.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                          isAdmin ? 'text-black/90' : 'text-[#2A2A2A]'
+                        }`}
+                      >
+                        <Paperclip className="w-3.5 h-3.5" />
+                        {entry.attachmentName || 'Attachment'}
+                      </a>
+                    ) : null}
+                    <div className={`mt-2 text-[10px] ${isAdmin ? 'text-black/65' : 'text-[#2A2A2A]/60'}`}>
+                      {formatDateTime(entry.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="pt-2 space-y-2">
+          {composerAttachment ? (
+            <div className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white flex items-center justify-between gap-2">
+              <span className="truncate">{composerAttachment.name}</span>
+              <button
+                onClick={() => {
+                  setComposerAttachment(null);
+                  if (attachmentInputRef.current) {
+                    attachmentInputRef.current.value = '';
+                  }
+                }}
+                className="text-white/70 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-[40px_minmax(0,1fr)_auto] gap-2 items-end">
+            <button
+              type="button"
+              onClick={() => attachmentInputRef.current?.click()}
+              className="h-10 w-10 rounded-xl bg-[#1F2124] border border-white/15 text-white/80 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors"
+              title="Attach file"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] || null;
+                setComposerAttachment(file);
+              }}
+            />
+            <textarea
+              value={composerMessage}
+              onChange={(event) => setComposerMessage(event.target.value)}
+              placeholder="Type a message"
+              rows={2}
+              className="w-full min-w-0 resize-none rounded-xl bg-[#E3C642] text-black placeholder:text-black/70 px-3 py-2.5 text-sm leading-tight focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                void handleSendMessage();
+              }}
+              disabled={actionLoading || attachmentUploading}
+              className="h-10 px-3 sm:px-4 rounded-xl bg-primary text-black border border-primary/70 inline-flex items-center justify-center gap-1.5 disabled:opacity-60 w-full sm:w-auto"
+            >
+              {actionLoading || attachmentUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              <span className="text-sm font-semibold">Send</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -584,6 +720,12 @@ export default function AdminOrdersPage() {
                   <div className="shrink-0 md:text-right">
                     <div className="text-[10px] uppercase tracking-widest text-brand-text/40">Total Price</div>
                     <div className="text-4xl font-black text-primary">Rs {Number(selectedOrder.totalAmount || 0).toFixed(2)}</div>
+                    {selectedDiscountAmount > 0 ? (
+                      <div className="mt-1 text-xs text-brand-text/50 space-y-0.5">
+                        <div className="line-through">Original: Rs {selectedOriginalTotal.toFixed(2)}</div>
+                        <div className="text-emerald-400">Discount: Rs {selectedDiscountAmount.toFixed(2)}</div>
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex md:justify-end items-center gap-2 flex-wrap">
                       <span className="inline-flex items-center rounded-lg bg-[#F6921E] text-black px-3 py-1 text-xs font-semibold">
                         {selectedCoupon ? `Coupon (${selectedCoupon})` : 'No Coupon'}
@@ -598,12 +740,12 @@ export default function AdminOrdersPage() {
 
               <section className="rounded-2xl border border-white/15 bg-[#252525] p-4 md:p-5 space-y-3">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 text-primary">
-                  <div className="text-base md:text-2xl font-medium break-words">
-                    <span className="text-brand-text/65 text-xs mr-2">User Name:</span>
+                  <div className="text-sm md:text-base font-medium break-words">
+                    <span className="text-brand-text/55 text-[10px] mr-2 uppercase tracking-widest">User Name:</span>
                     {getOrderCustomerName(selectedOrder) || 'Unknown user'}
                   </div>
-                  <div className="text-base md:text-2xl font-medium break-all lg:text-right">
-                    <span className="text-brand-text/65 text-xs mr-2">Customer Email:</span>
+                  <div className="text-sm md:text-base font-medium break-all lg:text-right">
+                    <span className="text-brand-text/55 text-[10px] mr-2 uppercase tracking-widest">Customer Email:</span>
                     {selectedOrder.userEmail || selectedOrder.email || '-'}
                   </div>
                 </div>
@@ -668,106 +810,7 @@ export default function AdminOrdersPage() {
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-white/10 bg-[#3A3C3F] p-3 flex flex-col min-h-[240px]">
-                    <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
-                      {orderMessages.length === 0 ? (
-                        <div className="h-full min-h-[120px] grid place-items-center text-sm text-white/60">
-                          No messages yet
-                        </div>
-                      ) : (
-                        orderMessages.map((entry, index) => {
-                          const isAdmin = entry.senderRole === 'admin';
-                          return (
-                            <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                              <div
-                                className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                                  isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-[#E4E4E4] text-[#2A2A2A]'
-                                }`}
-                              >
-                                {entry.message ? <div>{entry.message}</div> : null}
-                                {entry.attachmentUrl ? (
-                                  <a
-                                    href={entry.attachmentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`mt-2 inline-flex items-center gap-1.5 underline ${
-                                      isAdmin ? 'text-black/90' : 'text-[#2A2A2A]'
-                                    }`}
-                                  >
-                                    <Paperclip className="w-3.5 h-3.5" />
-                                    {entry.attachmentName || 'Attachment'}
-                                  </a>
-                                ) : null}
-                                <div className={`mt-2 text-[10px] ${isAdmin ? 'text-black/65' : 'text-[#2A2A2A]/60'}`}>
-                                  {formatDateTime(entry.createdAt)}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div className="pt-1.5 space-y-2">
-                      {composerAttachment ? (
-                        <div className="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-white flex items-center justify-between gap-2">
-                          <span className="truncate">{composerAttachment.name}</span>
-                          <button
-                            onClick={() => {
-                              setComposerAttachment(null);
-                              if (attachmentInputRef.current) {
-                                attachmentInputRef.current.value = '';
-                              }
-                            }}
-                            className="text-white/70 hover:text-white"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : null}
-
-                      <div className="flex items-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => attachmentInputRef.current?.click()}
-                          className="shrink-0 h-[42px] w-[42px] rounded-xl bg-[#1F2124] border border-white/15 text-white/80 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors"
-                          title="Attach file"
-                        >
-                          <Paperclip className="w-4 h-4" />
-                        </button>
-                        <input
-                          ref={attachmentInputRef}
-                          type="file"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0] || null;
-                            setComposerAttachment(file);
-                          }}
-                        />
-                        <textarea
-                          value={composerMessage}
-                          onChange={(event) => setComposerMessage(event.target.value)}
-                          placeholder="Type a message"
-                          rows={2}
-                          className="flex-1 resize-none rounded-xl bg-[#E3C642] text-black placeholder:text-black/70 px-3 py-2.5 text-sm leading-tight focus:outline-none"
-                        />
-                        <button
-                          onClick={() => {
-                            void handleSendMessage();
-                          }}
-                          disabled={actionLoading || attachmentUploading}
-                          className="shrink-0 h-[42px] px-4 rounded-xl bg-primary text-black border border-primary/70 inline-flex items-center gap-1.5 disabled:opacity-60"
-                        >
-                          {actionLoading || attachmentUploading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Send className="w-4 h-4" />
-                          )}
-                          <span className="text-sm font-semibold">Send</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  {renderChatPanel(false)}
                 </div>
               </section>
 
@@ -867,6 +910,12 @@ export default function AdminOrdersPage() {
           )}
         </div>
       </div>
+
+      {chatFullscreen ? (
+        <div className="fixed inset-0 z-[125] bg-black/80 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center">
+          {renderChatPanel(true)}
+        </div>
+      ) : null}
 
       {receiptViewerUrl ? (
         <div className="fixed inset-0 z-[130] bg-black/90 p-4 md:p-8">

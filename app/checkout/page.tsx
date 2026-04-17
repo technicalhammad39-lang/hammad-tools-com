@@ -7,7 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2, ShieldCheck, Upload } from 'lucide-re
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { db } from '@/firebase';
-import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import type { PaymentMethod, ProductItem } from '@/lib/types/domain';
 import { createOrderPublicId } from '@/lib/order-system';
 import { uploadFile } from '@/lib/storage-utils';
@@ -23,6 +23,11 @@ interface CheckoutItem {
   unitPrice: number;
   totalPrice: number;
   productType: 'tools' | 'services';
+}
+
+interface AppliedCoupon {
+  code: string;
+  discountPercentage: number;
 }
 
 const MAX_PROOF_SIZE_BYTES = 5 * 1024 * 1024;
@@ -75,6 +80,10 @@ function CheckoutPageContent() {
   const [proofPreview, setProofPreview] = useState('');
 
   const [note, setNote] = useState('');
+  const [couponCode, setCouponCode] = useState(() => (params.get('coupon') || '').trim());
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [couponFeedback, setCouponFeedback] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -208,6 +217,16 @@ function CheckoutPageContent() {
     };
   }, [proofFile]);
 
+  useEffect(() => {
+    if (!appliedCoupon) {
+      return;
+    }
+    if (couponCode.trim().toUpperCase() !== appliedCoupon.code.toUpperCase()) {
+      setAppliedCoupon(null);
+      setCouponFeedback('');
+    }
+  }, [appliedCoupon, couponCode]);
+
   const selectedPaymentMethod = useMemo(
     () => paymentMethods.find((method) => method.id === selectedPaymentMethodId) || null,
     [paymentMethods, selectedPaymentMethodId]
@@ -215,6 +234,17 @@ function CheckoutPageContent() {
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
   const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) {
+      return 0;
+    }
+    const raw = (subtotal * appliedCoupon.discountPercentage) / 100;
+    return Number(raw.toFixed(2));
+  }, [appliedCoupon, subtotal]);
+  const finalTotal = useMemo(
+    () => Number(Math.max(0, subtotal - discountAmount).toFixed(2)),
+    [discountAmount, subtotal]
+  );
 
   async function resolveUniqueOrderId() {
     let candidate = orderId || createOrderPublicId();
@@ -250,6 +280,67 @@ function CheckoutPageContent() {
     );
   }
 
+  async function handleApplyCoupon() {
+    const rawCode = couponCode.trim();
+    if (!rawCode) {
+      setAppliedCoupon(null);
+      setCouponFeedback('Enter a coupon code first.');
+      return;
+    }
+
+    setCouponApplying(true);
+    setCouponFeedback('');
+    try {
+      const normalizedCode = rawCode.toUpperCase();
+      const couponQuery = query(
+        collection(db, 'coupons'),
+        where('code', '==', normalizedCode),
+        where('active', '==', true)
+      );
+      const snapshot = await getDocs(couponQuery);
+      if (snapshot.empty) {
+        setAppliedCoupon(null);
+        setCouponFeedback('Coupon is invalid or inactive.');
+        return;
+      }
+
+      const couponData = snapshot.docs[0].data() as Record<string, any>;
+      const discountPercentage = Math.max(0, Number(couponData.discountPercentage || 0));
+      if (!discountPercentage) {
+        setAppliedCoupon(null);
+        setCouponFeedback('Coupon discount is not configured.');
+        return;
+      }
+
+      const expiryDateRaw = typeof couponData.expiryDate === 'string' ? couponData.expiryDate : '';
+      if (expiryDateRaw) {
+        const expiryDate = new Date(expiryDateRaw);
+        if (!Number.isNaN(expiryDate.getTime())) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          expiryDate.setHours(0, 0, 0, 0);
+          if (expiryDate < today) {
+            setAppliedCoupon(null);
+            setCouponFeedback('Coupon is expired.');
+            return;
+          }
+        }
+      }
+
+      setAppliedCoupon({
+        code: couponData.code || normalizedCode,
+        discountPercentage,
+      });
+      setCouponFeedback(`Coupon applied: ${discountPercentage}% discount.`);
+    } catch (error) {
+      console.error('Failed to validate coupon:', error);
+      setAppliedCoupon(null);
+      setCouponFeedback('Failed to validate coupon. Try again.');
+    } finally {
+      setCouponApplying(false);
+    }
+  }
+
   async function handleSubmit() {
     setErrorMessage('');
     setSuccessMessage('');
@@ -266,7 +357,7 @@ function CheckoutPageContent() {
       return;
     }
 
-    const emailValue = (deliveryEmail || user.email || '').trim().toLowerCase();
+    const emailValue = (deliveryEmail || user.email || '').trim();
     const phoneValue = phone.trim();
     const senderValue = senderAccount.trim();
     const transactionValue = transactionId.trim();
@@ -308,6 +399,9 @@ function CheckoutPageContent() {
       const finalOrderId = await resolveUniqueOrderId();
       const proofUrl = await uploadPaymentProof(user.uid, finalOrderId);
       const timestamp = serverTimestamp();
+      const roundedSubtotal = Number(subtotal.toFixed(2));
+      const roundedDiscount = Number(discountAmount.toFixed(2));
+      const roundedFinalTotal = Number(finalTotal.toFixed(2));
 
       await setDoc(doc(db, 'orders', finalOrderId), {
         orderId: finalOrderId,
@@ -340,11 +434,21 @@ function CheckoutPageContent() {
         primaryQuantity: items[0]?.quantity || 1,
         primaryUnitPrice: items[0]?.unitPrice || 0,
         selectedPlanName: selectedPlanName || null,
-        subtotal,
-        totalAmount: Number(subtotal.toFixed(2)),
+        subtotal: roundedSubtotal,
+        discountAmount: roundedDiscount,
+        totalAmount: roundedFinalTotal,
+        originalTotalAmount: roundedSubtotal,
         quantityTotal: totalQuantity,
         currency: 'PKR',
         status: 'pending',
+        couponCode: appliedCoupon?.code || '',
+        appliedCouponCode: appliedCoupon?.code || '',
+        coupon: appliedCoupon
+          ? {
+              code: appliedCoupon.code,
+              discountPercentage: appliedCoupon.discountPercentage,
+            }
+          : null,
 
         paymentMethodId: selectedPaymentMethod.id,
         paymentMethodName: selectedPaymentMethod.name,
@@ -388,6 +492,9 @@ function CheckoutPageContent() {
       setTransactionId('');
       setProofFile(null);
       setNote('');
+      setCouponCode('');
+      setAppliedCoupon(null);
+      setCouponFeedback('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to submit order.';
       setErrorMessage(message);
@@ -639,10 +746,57 @@ function CheckoutPageContent() {
                     <span>Payment Method</span>
                     <span className="text-brand-text">{selectedPaymentMethod?.name || 'Select one'}</span>
                   </div>
+                </div>
+
+                <div className="h-px bg-white/10" />
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(event) => setCouponCode(event.target.value)}
+                      placeholder="Coupon code"
+                      className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-semibold text-brand-text focus:outline-none focus:border-primary/50"
+                    />
+                    <button
+                      onClick={() => {
+                        void handleApplyCoupon();
+                      }}
+                      disabled={couponApplying}
+                      className="shrink-0 rounded-xl border border-primary/40 bg-primary/90 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-60"
+                    >
+                      {couponApplying ? 'Checking' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponFeedback ? (
+                    <div
+                      className={`text-[10px] font-black tracking-widest ${
+                        appliedCoupon ? 'text-emerald-400' : 'text-accent'
+                      }`}
+                    >
+                      {couponFeedback}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="h-px bg-white/10" />
+
+                <div className="space-y-2 text-[10px] uppercase tracking-widest font-black">
+                  <div className="flex justify-between text-brand-text/45">
+                    <span>Original Total</span>
+                    <span>{toCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-brand-text/45">
+                    <span>Discount</span>
+                    <span className={appliedCoupon ? 'text-emerald-400' : ''}>
+                      {discountAmount > 0 ? `- ${toCurrency(discountAmount)}` : toCurrency(0)}
+                    </span>
+                  </div>
                   <div className="h-px bg-white/10" />
                   <div className="flex justify-between text-brand-text text-sm">
-                    <span>Total Amount</span>
-                    <span className="text-primary">{toCurrency(subtotal)}</span>
+                    <span>Final Total</span>
+                    <span className="text-primary">{toCurrency(finalTotal)}</span>
                   </div>
                 </div>
 
