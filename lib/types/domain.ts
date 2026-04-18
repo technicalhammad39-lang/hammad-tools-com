@@ -288,3 +288,14 @@ export interface MediaFileRecord {
   createdAt?: any;
   updatedAt?: any;
 }
+
+export interface NewsletterSubscriberRecord {
+  id: string;
+  email: string;
+  source?: string;
+  pagePath?: string;
+  status?: 'active' | 'unsubscribed';
+  subscribedAt?: any;
+  createdAt?: any;
+  updatedAt?: any;
+}

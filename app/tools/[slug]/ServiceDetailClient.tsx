@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import {
-  Zap,
   Shield,
   Award,
   CheckCircle2,
@@ -20,12 +19,13 @@ import {
   Users
 } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { createOrderPublicId } from '@/lib/order-system';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import UploadedImage from '@/components/UploadedImage';
+import { useAuth } from '@/context/AuthContext';
 
 interface Plan {
   planName: string;
@@ -37,6 +37,7 @@ interface Plan {
 interface Service {
   id: string;
   name: string;
+  slug?: string;
   description: string;
   price: number;
   salePrice?: number;
@@ -57,21 +58,65 @@ interface Service {
   plans?: Plan[];
 }
 
+interface ReviewRecord {
+  id: string;
+  serviceSlug: string;
+  serviceId?: string;
+  userName: string;
+  userEmailMasked?: string;
+  userPhotoURL?: string;
+  text: string;
+  rating: number;
+  createdAt?: any;
+}
+
+function buildServiceSlug(service: Service) {
+  const source = (service.slug || service.name || service.id || '').toString();
+  return source.toLowerCase().trim().replace(/\s+/g, '-');
+}
+
+function timestampToMillis(value: any) {
+  if (!value) return 0;
+  if (typeof value?.toMillis === 'function') return Number(value.toMillis() || 0);
+  if (typeof value?.toDate === 'function') {
+    const date = value.toDate();
+    return date instanceof Date ? date.getTime() : 0;
+  }
+  if (value instanceof Date) return value.getTime();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function maskEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !normalized.includes('@')) {
+    return '';
+  }
+
+  const [local, domain] = normalized.split('@');
+  const localStart = local.slice(0, 2);
+  const localMask = '*'.repeat(Math.max(1, Math.min(6, local.length - 2)));
+  return `${localStart}${localMask}@${domain}`;
+}
+
 export default function ServiceDetailClient({ service, loading }: { service: Service | null, loading: boolean }) {
   const router = useRouter();
+  const { user, profile } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponStatus, setCouponStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
-  const [isCopied, setIsCopied] = useState(false);
 
   // Reviews State
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewRecord[]>([]);
   const [reviewName, setReviewName] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewFormMessage, setReviewFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    null
+  );
   const heroImageSrc = resolveImageSource(service, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['thumbnail', 'image'],
@@ -79,19 +124,29 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   });
 
   useEffect(() => {
+    if (!profile?.displayName && !user?.displayName) {
+      return;
+    }
+    setReviewName((current) => current || profile?.displayName || user?.displayName || '');
+  }, [profile?.displayName, user?.displayName]);
+
+  useEffect(() => {
     if (!service) return;
-    const slug = service.name.toLowerCase().replace(/ /g, '-');
+    const slug = buildServiceSlug(service);
     const q = query(
       collection(db, 'service_reviews'),
-      where('serviceSlug', '==', slug),
-      orderBy('createdAt', 'desc')
+      where('serviceSlug', '==', slug)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedReviews = snapshot.docs.map(doc => ({
+      const fetchedReviews = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as Omit<ReviewRecord, 'id'>),
       }));
+      fetchedReviews.sort((a, b) => timestampToMillis(b.createdAt) - timestampToMillis(a.createdAt));
       setReviews(fetchedReviews);
+    }, (error) => {
+      console.error('Failed to load service reviews:', error);
+      setReviews([]);
     });
     return () => unsubscribe();
   }, [service]);
@@ -100,21 +155,32 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     e.preventDefault();
     if (!reviewName.trim() || !reviewText.trim() || !service) return;
     setIsSubmittingReview(true);
-    
+
     try {
-      const slug = service.name.toLowerCase().replace(/ /g, '-');
-      await addDoc(collection(db, 'service_reviews'), {
+      setReviewFormMessage(null);
+      const slug = buildServiceSlug(service);
+      const maskedEmail = maskEmail(profile?.email || user?.email || '');
+      const payload: Record<string, unknown> = {
         serviceSlug: slug,
-        userName: reviewName.trim(),
+        serviceId: service.id,
+        userName: (profile?.displayName || user?.displayName || reviewName).trim(),
+        userEmailMasked: maskedEmail || null,
+        userPhotoURL: (profile?.photoURL || user?.photoURL || '').trim() || null,
         text: reviewText.trim(),
         rating: reviewRating,
-        createdAt: serverTimestamp()
-      });
-      setReviewName('');
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(collection(db, 'service_reviews'), payload);
+      setReviewName(profile?.displayName || user?.displayName || '');
       setReviewText('');
       setReviewRating(5);
+      setReviewFormMessage({ type: 'success', text: 'Review submitted successfully.' });
     } catch (error) {
-      console.error("Error submitting review: ", error);
+      console.error('Error submitting review: ', error);
+      setReviewFormMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to submit review.',
+      });
     } finally {
       setIsSubmittingReview(false);
     }
@@ -194,6 +260,15 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const savingsPercent = currentOfficialPrice > currentPrice
     ? Math.round(((currentOfficialPrice - currentPrice) / currentOfficialPrice) * 100)
     : 0;
+  const averageRating = reviews.length
+    ? Math.max(
+        0,
+        Math.min(
+          5,
+          reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length
+        )
+      )
+    : 0;
 
   const handleOrder = () => {
     const planName = selectedPlan?.planName || 'Standard';
@@ -246,10 +321,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                 <span className="bg-primary/20 backdrop-blur-md text-primary px-4 py-1.5 rounded-lg font-black tracking-widest text-[8px] border border-primary/20 whitespace-pre-wrap break-words">
                   {service.category}
                 </span>
-                <div className="bg-black/40 backdrop-blur-md text-brand-text/80 px-4 py-1.5 rounded-lg border border-white/5 flex items-center gap-2">
-                  <Clock className="w-3 h-3 text-secondary" />
-                  <span className="text-[8px] font-black tracking-widest whitespace-pre-wrap break-words">{service.duration || '1 Month'}</span>
-                </div>
               </div>
             </motion.div>
 
@@ -293,10 +364,58 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               </div>
             </div>
 
+            {/* License Quantity & Coupon */}
+            <div className="grid grid-cols-1 gap-4 pt-1">
+              <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">License Quantity</label>
+                <div className="flex items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-11 h-11 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-xl font-black text-brand-text">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-11 h-11 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">Secure Coupon Code</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="ENTER CODE"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    className={`w-full bg-white/5 border rounded-2xl px-12 py-5 text-sm font-black tracking-widest focus:outline-none transition-all ${couponStatus === 'valid' ? 'border-emerald-500/50 text-emerald-400' :
+                        couponStatus === 'invalid' ? 'border-accent/50 text-accent' :
+                          'border-white/10 text-brand-text'
+                      }`}
+                  />
+                  <Ticket className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20" />
+                  <button
+                    onClick={handleCouponValidation}
+                    disabled={couponStatus === 'validating'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                  >
+                    {couponStatus === 'validating' ? 'Checking...' : 'Apply'}
+                  </button>
+                </div>
+                {couponStatus === 'valid' && <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Success: {discount}% Discount Unlocked!</p>}
+                {couponStatus === 'invalid' && <p className="text-[10px] text-accent font-black uppercase tracking-widest">Error: Tactical Override Failed (Invalid Code)</p>}
+              </div>
+            </div>
+
           </div>
 
           {/* Right Column: Pricing & Purchase (7 cols) */}
-          <div className="lg:col-span-7 space-y-10">
+          <div className="lg:col-span-7 space-y-7 md:space-y-8">
             <div>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
@@ -385,55 +504,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               )}
             </div>
 
-            {/* Modifiers: Quantity & Coupon */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-8 border-y border-white/5">
-              <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">License Quantity</label>
-                <div className="flex items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-11 h-11 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="text-xl font-black text-brand-text">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-11 h-11 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">Secure Coupon Code</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="ENTER CODE"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className={`w-full bg-white/5 border rounded-2xl px-12 py-5 text-sm font-black tracking-widest focus:outline-none transition-all ${couponStatus === 'valid' ? 'border-emerald-500/50 text-emerald-400' :
-                        couponStatus === 'invalid' ? 'border-accent/50 text-accent' :
-                          'border-white/10 text-brand-text'
-                      }`}
-                  />
-                  <Ticket className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20" />
-                  <button
-                    onClick={handleCouponValidation}
-                    disabled={couponStatus === 'validating'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
-                  >
-                    {couponStatus === 'validating' ? 'Checking...' : 'Apply'}
-                  </button>
-                </div>
-                {couponStatus === 'valid' && <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Success: {discount}% Discount Unlocked!</p>}
-                {couponStatus === 'invalid' && <p className="text-[10px] text-accent font-black uppercase tracking-widest">Error: Tactical Override Failed (Invalid Code)</p>}
-              </div>
-            </div>
-
-            <div className="pt-4">
+            <div className="pt-1">
                {/* Mobile Sticky CTA */}
                <div className="fixed bottom-0 left-0 w-full z-[60] p-4 bg-brand-bg/95 backdrop-blur-3xl md:relative md:bg-transparent md:p-0 md:mt-8 md:w-auto border-t border-white/5 md:border-0 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-none">
                  <motion.button
@@ -458,62 +529,102 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
         </div>
 
         {/* Customer Reviews Section */}
-        <div className="mt-20 pt-20 border-t border-white/5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Star className="w-8 h-8 text-primary fill-primary" />
-                <h3 className="text-3xl font-black uppercase text-brand-text">Customer Reviews</h3>
+        <div className="mt-12 pt-12 border-t border-white/5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+            <div className="glass p-7 md:p-8 rounded-[2rem] border border-white/5 shadow-2xl min-h-[520px] flex flex-col">
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Star className="w-7 h-7 text-primary fill-primary" />
+                  <h3 className="text-2xl md:text-3xl font-black uppercase text-brand-text">Customer Reviews</h3>
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">
+                  {reviews.length} total
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Average</div>
+                  <div className="text-2xl font-black text-brand-text">{averageRating.toFixed(1)}</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Live Feed</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-primary">Realtime</div>
+                </div>
               </div>
 
               {reviews.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-10 glass border border-white/5 rounded-[2rem] text-center">
+                <div className="flex-1 flex flex-col items-center justify-center p-10 bg-white/[0.02] border border-white/5 rounded-[1.5rem] text-center">
                   <Star className="w-12 h-12 text-brand-text/10 mb-4" />
                   <p className="text-brand-text/40 font-bold uppercase tracking-widest text-sm">No reviews yet.</p>
                   <p className="text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to review!</p>
                 </div>
               ) : (
-                <div className="space-y-6 max-h-[560px] overflow-y-auto pr-2 no-scrollbar">
-                  {reviews.map((review) => (
-                    <motion.div 
-                      key={review.id}
-                      className="glass p-6 rounded-3xl border border-white/5 flex flex-col justify-between hover:border-primary/20 transition-all shadow-xl"
-                    >
-                      <div>
-                        <div className="flex gap-1 mb-4">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-brand-text/10'}`} />
-                          ))}
+                <div className="flex-1 space-y-4 max-h-[430px] overflow-y-auto pr-1 no-scrollbar">
+                  {reviews.map((review) => {
+                    const maskedIdentity = review.userEmailMasked || '';
+                    const displayName = review.userName || 'Customer';
+                    return (
+                      <motion.div
+                        key={review.id}
+                        className="p-5 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-primary/20 transition-all shadow-xl"
+                      >
+                        <div className="flex items-start gap-3">
+                          {review.userPhotoURL ? (
+                            <UploadedImage
+                              src={review.userPhotoURL}
+                              fallbackSrc="/services-card.png"
+                              alt={displayName}
+                              className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                              <User className="w-5 h-5 text-primary" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1 mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${i < Number(review.rating || 0) ? 'fill-primary text-primary' : 'text-brand-text/20'}`}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-sm font-medium text-brand-text/80 leading-relaxed mb-3 whitespace-pre-wrap break-words">
+                              {review.text}
+                            </p>
+                            <div className="text-[11px] font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">
+                              {displayName}
+                            </div>
+                            {maskedIdentity ? (
+                              <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/35 mt-1">
+                                {maskedIdentity}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
-                        <p className="text-sm md:text-base font-medium text-brand-text/80 leading-relaxed mb-6 italic">
-                          &quot;{review.text}&quot;
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                          <User className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">{review.userName}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Verified Customer</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <div className="glass p-8 rounded-[2rem] border border-white/5 shadow-2xl h-fit">
+            <div className="glass p-7 md:p-8 rounded-[2rem] border border-white/5 shadow-2xl min-h-[520px] flex flex-col">
               <h4 className="text-2xl font-black uppercase tracking-widest text-brand-text mb-2 text-center">Share Your Experience</h4>
-              <p className="text-center text-brand-text/40 text-xs font-black uppercase tracking-widest mb-8">Help others by leaving a review after purchase</p>
-              
-              <form onSubmit={handleReviewSubmit} className="space-y-6">
+              <p className="text-center text-brand-text/40 text-xs font-black uppercase tracking-widest mb-7">
+                Help others by leaving a review after purchase
+              </p>
+
+              <form onSubmit={handleReviewSubmit} className="space-y-6 flex-1 flex flex-col">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Your Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       required
                       placeholder="Enter identity"
                       value={reviewName}
@@ -537,23 +648,31 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                     </div>
                   </div>
                 </div>
-                <div>
+
+                <div className="flex-1 flex flex-col">
                   <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Detailed Feedback</label>
-                  <textarea 
+                  <textarea
                     required
                     placeholder="Tell us what you liked..."
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
-                    rows={4}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text resize-none"
+                    rows={6}
+                    className="w-full flex-1 min-h-[150px] bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text resize-none"
                   ></textarea>
                 </div>
-                <button 
-                  type="submit" 
+
+                {reviewFormMessage ? (
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${reviewFormMessage.type === 'success' ? 'text-emerald-400' : 'text-accent'}`}>
+                    {reviewFormMessage.text}
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
                   disabled={isSubmittingReview}
                   className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm disabled:opacity-50 transition-all hover:bg-primary/90 shadow-2xl shadow-primary/20 flex items-center justify-center gap-3"
                 >
-                  {isSubmittingReview ? 'Transmitting Data...' : 'Submit Final Review'}
+                  {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
                   <MessageCircle className="w-5 h-5" />
                 </button>
               </form>

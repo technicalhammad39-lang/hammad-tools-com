@@ -13,6 +13,7 @@ import {
   Layout,
   Bell,
   CreditCard,
+  Mail,
   Search,
   LogOut,
   Ticket,
@@ -49,6 +50,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { id: 'categories', label: 'Categories', href: '/admin/categories', icon: Layout },
     { id: 'payments', label: 'Payment Methods', href: '/admin/payment-methods', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', href: '/admin/notifications', icon: Bell },
+    { id: 'subscribers', label: 'Subscribers', href: '/admin/subscribers', icon: Mail },
     { id: 'coupons', label: 'Coupons', href: '/admin/coupons', icon: Ticket },
     { id: 'users', label: 'Users', href: '/admin/users', icon: Users },
     { id: 'socials', label: 'Social Links', href: '/admin/socials', icon: Share2 },
@@ -64,6 +66,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     'orders',
     'categories',
     'notifications',
+    'subscribers',
     'coupons',
   ]);
 
@@ -92,6 +95,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           blogSnap,
           giveawaySnap,
           notificationsSnap,
+          subscribersSnap,
         ] = await Promise.all([
           getDocs(query(collection(db, 'users'), limit(30))),
           getDocs(query(collection(db, 'services'), limit(40))),
@@ -102,6 +106,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           getDocs(query(collection(db, 'blogPosts'), limit(20))),
           getDocs(query(collection(db, 'giveaways'), limit(20))),
           getDocs(query(collection(db, 'notification_dispatches'), limit(20))),
+          getDocs(query(collection(db, 'newsletter_subscribers'), limit(30))),
         ]);
 
         const results: Array<{ id: string; label: string; sub: string; href: string }> = [];
@@ -185,6 +190,14 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           const label = data.title || 'Notification';
           if (label.toLowerCase().includes(needle)) {
             results.push({ id: `notif-${doc.id}`, label, sub: 'Notification', href: '/admin/notifications' });
+          }
+        });
+
+        subscribersSnap.forEach((doc) => {
+          const data = doc.data() as any;
+          const email = (data.email || '').toString();
+          if (email.toLowerCase().includes(needle)) {
+            results.push({ id: `subscriber-${doc.id}`, label: email, sub: 'Subscriber', href: '/admin/subscribers' });
           }
         });
 

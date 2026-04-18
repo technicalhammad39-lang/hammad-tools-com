@@ -12,7 +12,63 @@ import { usePathname } from 'next/navigation';
 const Footer = () => {
   const pathname = usePathname();
   const { settings } = useSettings();
+  const [newsletterEmail, setNewsletterEmail] = React.useState('');
+  const [newsletterLoading, setNewsletterLoading] = React.useState(false);
+  const [newsletterMessage, setNewsletterMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   if (pathname.startsWith('/admin')) return null;
+
+  const handleNewsletterSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const email = newsletterEmail.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+    if (!emailRegex.test(email)) {
+      setNewsletterMessage({ type: 'error', text: 'Please enter a valid email address.' });
+      return;
+    }
+
+    setNewsletterLoading(true);
+    setNewsletterMessage(null);
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          source: 'footer-newsletter',
+          pagePath: pathname,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        duplicate?: boolean;
+        message?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || `Subscription failed (HTTP ${response.status}).`);
+      }
+
+      setNewsletterMessage({
+        type: 'success',
+        text: payload.duplicate ? 'Already subscribed. You are on the list.' : 'Subscribed successfully.',
+      });
+      setNewsletterEmail('');
+    } catch (error) {
+      setNewsletterMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to subscribe. Please try again.',
+      });
+    } finally {
+      setNewsletterLoading(false);
+    }
+  };
 
   return (
     <footer className="bg-brand-bg border-t border-white/5 pt-20 pb-10">
@@ -107,15 +163,26 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-text">Newsletter</h4>
             <p className="text-brand-text/60 mb-4 text-xs font-medium">Subscribe to get the latest updates and offers.</p>
-            <form className="space-y-3">
+            <form className="space-y-3" onSubmit={handleNewsletterSubmit}>
               <input
                 type="email"
                 placeholder="Your email address"
+                value={newsletterEmail}
+                onChange={(event) => setNewsletterEmail(event.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary transition-colors text-xs text-brand-text"
               />
-              <button className="w-full bg-primary text-white font-black uppercase tracking-widest py-3 rounded-xl border-b-2 border-accent transition-all text-xs">
-                Subscribe
+              <button
+                type="submit"
+                disabled={newsletterLoading}
+                className="w-full bg-primary text-white font-black uppercase tracking-widest py-3 rounded-xl border-b-2 border-accent transition-all text-xs disabled:opacity-60"
+              >
+                {newsletterLoading ? 'Subscribing...' : 'Subscribe'}
               </button>
+              {newsletterMessage ? (
+                <p className={`text-[10px] font-black uppercase tracking-widest ${newsletterMessage.type === 'success' ? 'text-emerald-400' : 'text-accent'}`}>
+                  {newsletterMessage.text}
+                </p>
+              ) : null}
             </form>
           </div>
         </div>

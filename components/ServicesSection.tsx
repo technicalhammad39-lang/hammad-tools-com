@@ -5,9 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart,
   ChevronRight,
-  Star,
   Search,
-  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -241,18 +239,6 @@ const ServicesSection = () => {
                       </span>
                     </div>
 
-                    <div className="absolute bottom-6 left-6 md:left-10 right-6 md:right-10 flex items-center justify-between z-20">
-                      <div className="flex items-center space-x-1 text-secondary">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className="w-2.5 h-2.5 fill-current" />
-                        ))}
-                        <span className="text-[10px] font-black ml-2 text-white/60">5.0</span>
-                      </div>
-                      <div className="text-[9px] font-black uppercase tracking-widest text-primary/80 flex items-center gap-2">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Verified
-                      </div>
-                    </div>
                   </div>
 
                   <div className="p-6 md:p-10 flex flex-col flex-1 relative z-20">

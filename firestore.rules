@@ -96,12 +96,29 @@ service cloud.firestore {
     match /service_reviews/{reviewId} {
       allow read: if true;
       allow create: if
-        hasOnlyAllowedFields(["serviceSlug", "userName", "text", "rating", "createdAt"]) &&
+        hasOnlyAllowedFields([
+          "serviceSlug",
+          "serviceId",
+          "userName",
+          "userEmailMasked",
+          "userPhotoURL",
+          "text",
+          "rating",
+          "createdAt"
+        ]) &&
         request.resource.data.serviceSlug is string &&
+        (!("serviceId" in request.resource.data) || request.resource.data.serviceId is string) &&
         request.resource.data.userName is string &&
+        (!("userEmailMasked" in request.resource.data) || request.resource.data.userEmailMasked is string || request.resource.data.userEmailMasked == null) &&
+        (!("userPhotoURL" in request.resource.data) || request.resource.data.userPhotoURL is string || request.resource.data.userPhotoURL == null) &&
         request.resource.data.text is string &&
         isValidRating(request.resource.data.rating);
       allow update, delete: if isStaff();
+    }
+
+    match /newsletter_subscribers/{subscriberId} {
+      allow read: if isStaff();
+      allow write: if false;
     }
 
     match /service_activations/{activationId} {
