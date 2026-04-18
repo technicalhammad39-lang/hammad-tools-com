@@ -4,13 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, User, ArrowRight, Search, Tag } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import UploadedImage from '@/components/UploadedImage';
 
 interface BlogPost {
   id: string;
@@ -191,11 +191,11 @@ const BlogPage = () => {
               />
               {/* Image */}
               <div className="relative h-48 md:h-64 overflow-hidden">
-                <Image 
+                <UploadedImage 
                   src={thumbnailSrc} 
+                  fallbackSrc="https://picsum.photos/seed/blog/800/600"
                   alt={post.title}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-transparent to-transparent opacity-80" />

@@ -20,9 +20,9 @@ import { useEffect } from 'react';
 import type { Category, CategoryType } from '@/lib/types/domain';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
-import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 const CATEGORY_TYPES: Array<{ value: CategoryType; label: string }> = [
   { value: 'tools', label: 'Tools' },
@@ -283,7 +283,12 @@ export default function AdminCategoriesPage() {
                 <div className="flex items-center gap-4">
                   <div className="relative w-24 h-24 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
                     {formImageSrc ? (
-                      <Image src={formImageSrc} alt="Category" fill className="object-cover" />
+                      <UploadedImage
+                        src={formImageSrc}
+                        fallbackSrc="/services-card.png"
+                        alt="Category"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-[9px] uppercase text-brand-text/20 font-black tracking-widest">No image</div>
                     )}
@@ -374,7 +379,12 @@ export default function AdminCategoriesPage() {
               <div className="flex items-center gap-4">
                 <div className="relative w-14 h-14 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
                   {categoryImageSrc ? (
-                    <Image src={categoryImageSrc} alt={category.name} fill className="object-cover" />
+                    <UploadedImage
+                      src={categoryImageSrc}
+                      fallbackSrc="/services-card.png"
+                      alt={category.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full grid place-items-center text-[8px] text-brand-text/20 uppercase font-black">CAT</div>
                   )}

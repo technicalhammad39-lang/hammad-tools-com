@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import UploadedImage from '@/components/UploadedImage';
 
 interface BlogPost {
   id: string;
@@ -118,11 +119,11 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
           <div className="relative mb-16 group">
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-secondary/50 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
             <div className="rounded-[3rem] overflow-hidden aspect-video relative border border-white/10 glow-box">
-              <Image 
+              <UploadedImage 
                 src={thumbnailSrc} 
+                fallbackSrc="https://picsum.photos/seed/blog/1200/800"
                 alt={post.title}
-                fill
-                className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 referrerPolicy="no-referrer"
               />
             </div>

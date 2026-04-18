@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import Image from 'next/image';
 import {
   Zap,
   Shield,
@@ -26,6 +25,7 @@ import { db } from '@/firebase';
 import { createOrderPublicId } from '@/lib/order-system';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import UploadedImage from '@/components/UploadedImage';
 
 interface Plan {
   planName: string;
@@ -233,13 +233,13 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               animate={{ opacity: 1, scale: 1 }}
               className="relative aspect-video md:aspect-square rounded-3xl md:rounded-[3.5rem] overflow-hidden border border-white/10 shadow-3xl group max-h-[40vh] md:max-h-none"
             >
-              <Image
+              <UploadedImage
                 src={heroImageSrc}
+                fallbackSrc="/tools-card.png"
                 alt={service.name}
-                fill
-                className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 referrerPolicy="no-referrer"
-                priority
+                fetchPriority="high"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6 flex flex-col items-start gap-2">

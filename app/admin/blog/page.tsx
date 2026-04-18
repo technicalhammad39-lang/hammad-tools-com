@@ -9,9 +9,9 @@ import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-s
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
-import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 const BlogCMS = () => {
   const { isStaff, profile } = useAuth();
@@ -211,7 +211,12 @@ const BlogCMS = () => {
                   <div className="flex items-center space-x-4">
                     <div className="w-20 h-20 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
                       {formThumbnailSrc ? (
-                        <Image src={formThumbnailSrc} alt="Preview" fill className="object-cover" />
+                        <UploadedImage
+                          src={formThumbnailSrc}
+                          fallbackSrc="https://picsum.photos/seed/blog/100/100"
+                          alt="Preview"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
                       ) : (
                         <ImageIcon className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-text/10" />
                       )}
@@ -344,11 +349,11 @@ const BlogCMS = () => {
                         <td className="py-6">
                           <div className="flex items-center space-x-4">
                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 relative">
-                              <Image 
+                              <UploadedImage 
                                 src={postThumbnailSrc} 
-                                className="object-cover" 
+                                fallbackSrc="https://picsum.photos/seed/blog/100/100"
+                                className="absolute inset-0 w-full h-full object-cover" 
                                 alt="" 
-                                fill
                                 referrerPolicy="no-referrer"
                               />
                             </div>

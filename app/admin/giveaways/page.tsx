@@ -7,12 +7,12 @@ import { db } from '@/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, Timestamp, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 interface Giveaway {
   id: string;
@@ -202,7 +202,12 @@ const AdminGiveaways = () => {
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
                   {formImageSrc ? (
-                    <Image src={formImageSrc} alt="Preview" fill className="object-cover" />
+                    <UploadedImage
+                      src={formImageSrc}
+                      fallbackSrc="/services-card.png"
+                      alt="Preview"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   ) : (
                     <ImageIcon className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-text/10" />
                   )}

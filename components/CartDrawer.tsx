@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ShoppingBag, Trash2, ArrowRight, CreditCard } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { createOrderPublicId } from '@/lib/order-system';
 import { normalizeImageUrl } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, totalPrice, isCartOpen, setIsCartOpen, totalItems } = useCart();
@@ -73,11 +73,11 @@ const CartDrawer = () => {
                   return (
                   <div key={item.id} className="flex space-x-4 group">
                     <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 relative">
-                      <Image
+                      <UploadedImage
                         src={itemImageSrc}
+                        fallbackSrc="/services-card.png"
                         alt={item.name}
-                        fill
-                        className="object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     </div>

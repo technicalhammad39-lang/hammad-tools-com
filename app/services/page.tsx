@@ -5,11 +5,11 @@ import { motion } from 'motion/react';
 import { ArrowRight, Layout, Star, Clock, Loader2, Tag } from 'lucide-react';
 import { db } from '@/firebase';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import UploadedImage from '@/components/UploadedImage';
 
 interface AgencyService {
   id: string;
@@ -140,11 +140,11 @@ export default function AgencyServicesPage() {
                   className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-700 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1"
                 >
                   <div className="relative h-52 md:h-64 overflow-hidden bg-white/5">
-                    <Image
+                    <UploadedImage
                       src={thumbnailSrc}
+                      fallbackSrc="/services-card.png"
                       alt={title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-1000 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75" />

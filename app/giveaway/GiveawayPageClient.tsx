@@ -38,6 +38,7 @@ import remarkGfm from 'remark-gfm';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import UploadedImage from '@/components/UploadedImage';
 
 interface Giveaway {
   id: string;
@@ -247,11 +248,11 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
       </div>
 
       <div className="relative aspect-[1.91/1] w-full border-y border-white/5 bg-black/20 overflow-hidden">
-        <Image
+        <UploadedImage
           src={giveawayImageSrc}
+          fallbackSrc="/services-card.png"
           alt={giveaway.title}
-          fill
-          className="object-cover transition-transform duration-1000 group-hover:scale-105"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />

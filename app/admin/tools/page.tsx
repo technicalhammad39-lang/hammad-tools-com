@@ -25,12 +25,12 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { Category, ProductItem, ProductPlan, StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 type DurationUnit = 'fixed_days' | 'fixed_months' | 'fixed_years';
 type DurationPreset = '1_month' | '2_months' | '3_months' | '6_months' | '12_months' | 'lifetime' | 'custom';
@@ -630,7 +630,12 @@ const AdminProductsPage = () => {
                 <div className="flex items-center space-x-6">
                   <div className="w-32 h-32 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group">
                     {formImageSrc ? (
-                      <Image src={formImageSrc} alt="Preview" fill className="object-cover" />
+                      <UploadedImage
+                        src={formImageSrc}
+                        fallbackSrc="/services-card.png"
+                        alt="Preview"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     ) : (
                       <ImageIcon className="w-10 h-10 text-brand-text/10" />
                     )}
@@ -870,7 +875,12 @@ const AdminProductsPage = () => {
           <div key={product.id} className="glass rounded-[2rem] p-8 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/20 transition-all bg-brand-soft/20">
             <div className="flex items-center space-x-6">
               <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
-                <Image src={productImage} alt={product.title || product.name || 'Product'} fill className="object-cover" />
+                <UploadedImage
+                  src={productImage}
+                  fallbackSrc="/services-card.png"
+                  alt={product.title || product.name || 'Product'}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h3 className="font-black text-xl text-brand-text whitespace-pre-wrap break-words">{product.title || product.name}</h3>

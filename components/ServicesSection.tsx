@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import Image from 'next/image';
 import {
   ShoppingCart,
   ChevronRight,
@@ -17,6 +16,7 @@ import { db } from '@/firebase';
 import { usePathname } from 'next/navigation';
 import type { Category, ProductItem } from '@/lib/types/domain';
 import { resolveImageSource } from '@/lib/image-display';
+import UploadedImage from '@/components/UploadedImage';
 
 function getTitle(service: ProductItem) {
   return service.title || service.name || 'Untitled Product';
@@ -226,11 +226,11 @@ const ServicesSection = () => {
                   />
 
                   <div className="relative h-48 md:h-72 overflow-hidden bg-white/5">
-                    <Image
+                    <UploadedImage
                       src={image}
+                      fallbackSrc="/services-card.png"
                       alt={title}
-                      fill
-                      className="object-cover transition-transform duration-1000 group-hover:scale-110 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
