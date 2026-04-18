@@ -7,6 +7,7 @@ import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createOrderPublicId } from '@/lib/order-system';
+import { normalizeImageUrl } from '@/lib/image-display';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, totalPrice, isCartOpen, setIsCartOpen, totalItems } = useCart();
@@ -67,11 +68,13 @@ const CartDrawer = () => {
                   </button>
                 </div>
               ) : (
-                cart.map((item) => (
+                cart.map((item) => {
+                  const itemImageSrc = normalizeImageUrl(item.image) || '/services-card.png';
+                  return (
                   <div key={item.id} className="flex space-x-4 group">
                     <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 relative">
                       <Image
-                        src={item.image}
+                        src={itemImageSrc}
                         alt={item.name}
                         fill
                         className="object-cover"
@@ -92,7 +95,7 @@ const CartDrawer = () => {
                       </div>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
 

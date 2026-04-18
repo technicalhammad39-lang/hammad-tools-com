@@ -16,6 +16,7 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { usePathname } from 'next/navigation';
 import type { Category, ProductItem } from '@/lib/types/domain';
+import { resolveImageSource } from '@/lib/image-display';
 
 function getTitle(service: ProductItem) {
   return service.title || service.name || 'Untitled Product';
@@ -201,7 +202,11 @@ const ServicesSection = () => {
               const title = getTitle(service);
               const price = getPrice(service);
               const originalPrice = getOriginalPrice(service);
-              const image = service.image || service.thumbnail || '/services-card.png';
+              const image = resolveImageSource(service, {
+                mediaPaths: ['imageMedia'],
+                stringPaths: ['image', 'thumbnail'],
+                placeholder: '/services-card.png',
+              });
               const categoryName = service.categoryName || service.category || 'General';
 
               return (

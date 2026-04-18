@@ -24,6 +24,8 @@ import Link from 'next/link';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { createOrderPublicId } from '@/lib/order-system';
+import { resolveImageSource } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface Plan {
   planName: string;
@@ -51,6 +53,7 @@ interface Service {
   duration?: string;
   planType?: string;
   thumbnail?: string;
+  imageMedia?: StoredFileMetadata | null;
   plans?: Plan[];
 }
 
@@ -69,6 +72,11 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const heroImageSrc = resolveImageSource(service, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['thumbnail', 'image'],
+    placeholder: '/tools-card.png',
+  });
 
   useEffect(() => {
     if (!service) return;
@@ -226,7 +234,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               className="relative aspect-video md:aspect-square rounded-3xl md:rounded-[3.5rem] overflow-hidden border border-white/10 shadow-3xl group max-h-[40vh] md:max-h-none"
             >
               <Image
-                src={(service as any).thumbnail || service.image || '/tools-card.png'}
+                src={heroImageSrc}
                 alt={service.name}
                 fill
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
@@ -556,5 +564,3 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     </div>
   );
 }
-
-

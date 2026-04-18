@@ -30,6 +30,7 @@ import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/s
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { Category, ProductItem, ProductPlan, StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
 
 type DurationUnit = 'fixed_days' | 'fixed_months' | 'fixed_years';
 type DurationPreset = '1_month' | '2_months' | '3_months' | '6_months' | '12_months' | 'lifetime' | 'custom';
@@ -210,7 +211,10 @@ function mapDocToForm(item: ProductItem): ProductForm {
     categoryId: item.categoryId || '',
     categoryName: item.categoryName || item.category || '',
     customCategoryName: '',
-    image: item.image || item.thumbnail || '',
+    image: resolveImageSource(item, {
+      mediaPaths: ['imageMedia'],
+      stringPaths: ['image', 'thumbnail'],
+    }),
     imageMedia: item.imageMedia || null,
     warranty: item.warranty || '',
     planType: item.planType || '',
@@ -276,6 +280,10 @@ const AdminProductsPage = () => {
   );
 
   const formModeLabel = editingId ? 'Edit Tool' : 'Add Tool';
+  const formImageSrc = resolveImageSource(form, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['image'],
+  });
 
   if (!isStaff) {
     return (
@@ -621,8 +629,8 @@ const AdminProductsPage = () => {
                 <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-3 text-left">Tool Image</label>
                 <div className="flex items-center space-x-6">
                   <div className="w-32 h-32 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group">
-                    {form.image ? (
-                      <Image src={form.image} alt="Preview" fill className="object-cover" />
+                    {formImageSrc ? (
+                      <Image src={formImageSrc} alt="Preview" fill className="object-cover" />
                     ) : (
                       <ImageIcon className="w-10 h-10 text-brand-text/10" />
                     )}
@@ -852,11 +860,17 @@ const AdminProductsPage = () => {
       <div className="grid grid-cols-1 gap-6">
         {loading ? (
           <div className="text-center py-20 flex justify-center"><Loader2 className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
-        ) : products.map((product) => (
+        ) : products.map((product) => {
+          const productImage = resolveImageSource(product, {
+            mediaPaths: ['imageMedia'],
+            stringPaths: ['image', 'thumbnail'],
+            placeholder: '/services-card.png',
+          });
+          return (
           <div key={product.id} className="glass rounded-[2rem] p-8 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/20 transition-all bg-brand-soft/20">
             <div className="flex items-center space-x-6">
               <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
-                <Image src={product.image || product.thumbnail || '/services-card.png'} alt={product.title || product.name || 'Product'} fill className="object-cover" />
+                <Image src={productImage} alt={product.title || product.name || 'Product'} fill className="object-cover" />
               </div>
               <div>
                 <h3 className="font-black text-xl text-brand-text whitespace-pre-wrap break-words">{product.title || product.name}</h3>
@@ -887,7 +901,7 @@ const AdminProductsPage = () => {
               </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

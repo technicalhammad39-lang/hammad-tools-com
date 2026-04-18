@@ -12,6 +12,7 @@ import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/s
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
 
 interface Giveaway {
   id: string;
@@ -44,6 +45,10 @@ const AdminGiveaways = () => {
     status: 'active',
     image: '',
     imageMedia: null,
+  });
+  const formImageSrc = resolveImageSource(form, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['image'],
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -196,8 +201,8 @@ const AdminGiveaways = () => {
               />
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
-                  {form.image ? (
-                    <Image src={form.image} alt="Preview" fill className="object-cover" />
+                  {formImageSrc ? (
+                    <Image src={formImageSrc} alt="Preview" fill className="object-cover" />
                   ) : (
                     <ImageIcon className="w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-text/10" />
                   )}
@@ -295,7 +300,10 @@ const AdminGiveaways = () => {
                       prize: giveaway.prize,
                       winnersCount: giveaway.winnersCount,
                       status: giveaway.status,
-                      image: giveaway.image,
+                      image: resolveImageSource(giveaway, {
+                        mediaPaths: ['imageMedia'],
+                        stringPaths: ['image'],
+                      }),
                       imageMedia: giveaway.imageMedia || null,
                       endDate: giveaway.endDate
                     });

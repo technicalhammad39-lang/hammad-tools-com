@@ -35,6 +35,7 @@ import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/s
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
 
 interface AgencyService {
   id: string;
@@ -89,7 +90,10 @@ const ManageAgencyServices = () => {
     setForm({
       title: service.title,
       description: service.description,
-      thumbnail: service.thumbnail,
+      thumbnail: resolveImageSource(service, {
+        mediaPaths: ['thumbnailMedia'],
+        stringPaths: ['thumbnail'],
+      }),
       thumbnailMedia: service.thumbnailMedia || null,
       tags: service.tags || []
     });
@@ -171,6 +175,11 @@ const ManageAgencyServices = () => {
   const removeTag = (tagToRemove: string) => {
     setForm({ ...form, tags: form.tags.filter(t => t !== tagToRemove) });
   };
+
+  const formThumbnailSrc = resolveImageSource(form, {
+    mediaPaths: ['thumbnailMedia'],
+    stringPaths: ['thumbnail'],
+  });
 
   if (!isStaff) {
     return (
@@ -272,9 +281,9 @@ const ManageAgencyServices = () => {
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-brand-text/30 mb-4 ml-1">Visual Asset (Thumbnail)</label>
                   <div className="relative aspect-video rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden group">
-                    {form.thumbnail ? (
+                    {formThumbnailSrc ? (
                       <>
-                        <Image src={form.thumbnail} alt="Preview" fill className="object-cover" />
+                        <Image src={formThumbnailSrc} alt="Preview" fill className="object-cover" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <ImageIcon className="w-8 h-8 text-white" />
                         </div>
@@ -366,11 +375,17 @@ const ManageAgencyServices = () => {
              <p className="text-brand-text/40 font-black uppercase tracking-widest text-xs">No Agency Assets Found in Core System.</p>
           </div>
         ) : (
-          services.map(service => (
+          services.map(service => {
+            const serviceThumbnailSrc = resolveImageSource(service, {
+              mediaPaths: ['thumbnailMedia'],
+              stringPaths: ['thumbnail'],
+              placeholder: '/mock-placeholder.jpg',
+            });
+            return (
             <div key={service.id} className="glass rounded-3xl p-6 md:p-8 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8 hover:border-primary/20 transition-all group bg-white/[0.02]">
                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 flex-1">
                   <div className="relative w-full md:w-40 aspect-video rounded-2xl overflow-hidden border border-white/10 flex-shrink-0">
-                    <Image src={service.thumbnail || '/mock-placeholder.jpg'} alt={service.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <Image src={serviceThumbnailSrc} alt={service.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
                   </div>
                   <div className="space-y-3">
                     <h3 className="font-black text-2xl uppercase text-brand-text group-hover:text-primary transition-colors">{service.title}</h3>
@@ -399,7 +414,7 @@ const ManageAgencyServices = () => {
                   </button>
                </div>
             </div>
-          ))
+          )})
         )}
       </div>
     </div>

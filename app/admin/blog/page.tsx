@@ -11,6 +11,7 @@ import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy,
 import { db } from '@/firebase';
 import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
 
 const BlogCMS = () => {
   const { isStaff, profile } = useAuth();
@@ -32,6 +33,10 @@ const BlogCMS = () => {
     category: 'General',
     published: false,
     tags: ''
+  });
+  const formThumbnailSrc = resolveImageSource(formData, {
+    mediaPaths: ['thumbnailMedia'],
+    stringPaths: ['thumbnail'],
   });
 
   useEffect(() => {
@@ -205,8 +210,8 @@ const BlogCMS = () => {
                   <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-3">Feature Image</label>
                   <div className="flex items-center space-x-4">
                     <div className="w-20 h-20 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
-                      {formData.thumbnail ? (
-                        <Image src={formData.thumbnail} alt="Preview" fill className="object-cover" />
+                      {formThumbnailSrc ? (
+                        <Image src={formThumbnailSrc} alt="Preview" fill className="object-cover" />
                       ) : (
                         <ImageIcon className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-text/10" />
                       )}
@@ -328,13 +333,19 @@ const BlogCMS = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {posts.map((post) => (
+                    {posts.map((post) => {
+                      const postThumbnailSrc = resolveImageSource(post, {
+                        mediaPaths: ['thumbnailMedia'],
+                        stringPaths: ['thumbnail'],
+                        placeholder: 'https://picsum.photos/seed/blog/100/100',
+                      });
+                      return (
                       <tr key={post.id} className="border-b border-white/5 group">
                         <td className="py-6">
                           <div className="flex items-center space-x-4">
                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/5 relative">
                               <Image 
-                                src={post.thumbnail || 'https://picsum.photos/seed/blog/100/100'} 
+                                src={postThumbnailSrc} 
                                 className="object-cover" 
                                 alt="" 
                                 fill
@@ -367,7 +378,10 @@ const BlogCMS = () => {
                                   slug: post.slug,
                                   excerpt: post.excerpt,
                                   content: post.content,
-                                  thumbnail: post.thumbnail || '',
+                                  thumbnail: resolveImageSource(post, {
+                                    mediaPaths: ['thumbnailMedia'],
+                                    stringPaths: ['thumbnail'],
+                                  }),
                                   thumbnailMedia: post.thumbnailMedia || null,
                                   category: post.category,
                                   published: post.published,
@@ -387,7 +401,7 @@ const BlogCMS = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>

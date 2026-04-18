@@ -22,6 +22,7 @@ import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/s
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import Image from 'next/image';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
 
 const CATEGORY_TYPES: Array<{ value: CategoryType; label: string }> = [
   { value: 'tools', label: 'Tools' },
@@ -82,6 +83,10 @@ export default function AdminCategoriesPage() {
   }, [isStaff]);
 
   const modeLabel = useMemo(() => (editingId ? 'Edit Category' : 'Create Category'), [editingId]);
+  const formImageSrc = resolveImageSource(form, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['imageUrl'],
+  });
 
   if (!isStaff) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;
@@ -277,8 +282,8 @@ export default function AdminCategoriesPage() {
               <div className="md:col-span-2">
                 <div className="flex items-center gap-4">
                   <div className="relative w-24 h-24 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-                    {form.imageUrl ? (
-                      <Image src={form.imageUrl} alt="Category" fill className="object-cover" />
+                    {formImageSrc ? (
+                      <Image src={formImageSrc} alt="Category" fill className="object-cover" />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-[9px] uppercase text-brand-text/20 font-black tracking-widest">No image</div>
                     )}
@@ -359,12 +364,17 @@ export default function AdminCategoriesPage() {
             No categories found.
           </div>
         ) : (
-          categories.map((category) => (
+          categories.map((category) => {
+            const categoryImageSrc = resolveImageSource(category, {
+              mediaPaths: ['imageMedia'],
+              stringPaths: ['imageUrl'],
+            });
+            return (
             <div key={category.id} className="glass rounded-2xl border border-white/5 p-6 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative w-14 h-14 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-                  {category.imageUrl ? (
-                    <Image src={category.imageUrl} alt={category.name} fill className="object-cover" />
+                  {categoryImageSrc ? (
+                    <Image src={categoryImageSrc} alt={category.name} fill className="object-cover" />
                   ) : (
                     <div className="h-full w-full grid place-items-center text-[8px] text-brand-text/20 uppercase font-black">CAT</div>
                   )}
@@ -382,7 +392,13 @@ export default function AdminCategoriesPage() {
                 <button
                   onClick={() => {
                     setEditingId(category.id);
-                    setForm(category);
+                    setForm({
+                      ...category,
+                      imageUrl: resolveImageSource(category, {
+                        mediaPaths: ['imageMedia'],
+                        stringPaths: ['imageUrl'],
+                      }),
+                    });
                     setIsFormOpen(true);
                   }}
                   className="p-3 rounded-xl bg-white/5 border border-white/10 text-primary hover:bg-white/10"
@@ -397,7 +413,7 @@ export default function AdminCategoriesPage() {
                 </button>
               </div>
             </div>
-          ))
+          )})
         )}
       </div>
     </div>

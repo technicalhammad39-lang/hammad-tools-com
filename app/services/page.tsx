@@ -8,12 +8,15 @@ import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/SettingsContext';
+import { resolveImageSource } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface AgencyService {
   id: string;
   title?: string;
   description?: string;
   thumbnail?: string;
+  thumbnailMedia?: StoredFileMetadata | null;
   tags?: string[];
 }
 
@@ -122,6 +125,11 @@ export default function AgencyServicesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
             {filteredServices.map((service, index) => {
               const title = getTitle(service);
+              const thumbnailSrc = resolveImageSource(service, {
+                mediaPaths: ['thumbnailMedia'],
+                stringPaths: ['thumbnail'],
+                placeholder: '/services-card.png',
+              });
               return (
                 <motion.div
                   key={service.id}
@@ -133,7 +141,7 @@ export default function AgencyServicesPage() {
                 >
                   <div className="relative h-52 md:h-64 overflow-hidden bg-white/5">
                     <Image
-                      src={service.thumbnail || '/services-card.png'}
+                      src={thumbnailSrc}
                       alt={title}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-1000 p-4 rounded-[2.5rem]"

@@ -8,12 +8,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import Image from 'next/image';
+import { resolveImageSource } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface BlogPost {
   id: string;
   title: string;
   content: string;
-  thumbnail: string;
+  thumbnail?: string;
+  thumbnailMedia?: StoredFileMetadata | null;
   author: string;
   createdAt: any;
   category: string;
@@ -21,6 +24,12 @@ interface BlogPost {
 }
 
 export default function BlogDetailClient({ post, loading }: { post: BlogPost | null, loading: boolean }) {
+  const thumbnailSrc = resolveImageSource(post, {
+    mediaPaths: ['thumbnailMedia'],
+    stringPaths: ['thumbnail'],
+    placeholder: 'https://picsum.photos/seed/blog/1200/800',
+  });
+
   if (loading) return (
     <div className="min-h-screen bg-brand-bg flex items-center justify-center">
       <div className="flex flex-col items-center space-y-6">
@@ -110,7 +119,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-secondary/50 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
             <div className="rounded-[3rem] overflow-hidden aspect-video relative border border-white/10 glow-box">
               <Image 
-                src={post.thumbnail || 'https://picsum.photos/seed/blog/1200/800'} 
+                src={thumbnailSrc} 
                 alt={post.title}
                 fill
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"

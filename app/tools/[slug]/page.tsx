@@ -3,6 +3,8 @@ import { Metadata } from 'next';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '@/firebase';
 import ServiceDetailClient from './ServiceDetailClient';
+import { resolveImageSource, toMetadataImageUrl } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface Service {
   id: string;
@@ -12,6 +14,8 @@ interface Service {
   description: string;
   price: number;
   image: string;
+  thumbnail?: string;
+  imageMedia?: StoredFileMetadata | null;
   category: string;
   features?: string[];
   longDescription?: string;
@@ -75,14 +79,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
+  const imageSrc = resolveImageSource(service, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['thumbnail', 'image'],
+  });
+  const metadataImage = toMetadataImageUrl(imageSrc);
+
   return {
     title: service.name,
     description: service.description,
-    openGraph: {
-      title: service.name,
-      description: service.description,
-      images: [service.image],
-    }
+    openGraph: metadataImage
+      ? {
+          title: service.name,
+          description: service.description,
+          images: [metadataImage],
+        }
+      : {
+          title: service.name,
+          description: service.description,
+        },
   };
 }
 

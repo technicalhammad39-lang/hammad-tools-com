@@ -36,6 +36,8 @@ import { useAuth } from '@/context/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '@/components/ToastProvider';
+import { resolveImageSource } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface Giveaway {
   id: string;
@@ -45,7 +47,8 @@ interface Giveaway {
   endDate: any;
   participantsCount: number;
   winnersCount: number;
-  image: string;
+  image?: string;
+  imageMedia?: StoredFileMetadata | null;
   likedBy?: string[];
   commentCount?: number;
   adminAvatar?: string;
@@ -185,6 +188,11 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const remainingDays = endDateMs
     ? Math.ceil((endDateMs - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
+  const giveawayImageSrc = resolveImageSource(giveaway, {
+    mediaPaths: ['imageMedia'],
+    stringPaths: ['image'],
+    placeholder: '/services-card.png',
+  });
 
   return (
     <motion.div
@@ -240,7 +248,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
       <div className="relative aspect-[1.91/1] w-full border-y border-white/5 bg-black/20 overflow-hidden">
         <Image
-          src={giveaway.image}
+          src={giveawayImageSrc}
           alt={giveaway.title}
           fill
           className="object-cover transition-transform duration-1000 group-hover:scale-105"

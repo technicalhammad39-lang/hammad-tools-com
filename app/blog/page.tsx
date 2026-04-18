@@ -9,6 +9,8 @@ import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestor
 import { db } from '@/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
+import { resolveImageSource } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface BlogPost {
   id: string;
@@ -18,7 +20,8 @@ interface BlogPost {
   category: string;
   author: string;
   date: any;
-  thumbnail: string;
+  thumbnail?: string;
+  thumbnailMedia?: StoredFileMetadata | null;
 }
 
 const mockPosts: BlogPost[] = [
@@ -167,7 +170,13 @@ const BlogPage = () => {
 
         {/* Blog Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.map((post, index) => (
+          {filteredPosts.map((post, index) => {
+            const thumbnailSrc = resolveImageSource(post, {
+              mediaPaths: ['thumbnailMedia'],
+              stringPaths: ['thumbnail'],
+              placeholder: 'https://picsum.photos/seed/blog/800/600',
+            });
+            return (
             <motion.article
               key={post.id}
               initial={{ opacity: 0, y: 30 }}
@@ -183,7 +192,7 @@ const BlogPage = () => {
               {/* Image */}
               <div className="relative h-48 md:h-64 overflow-hidden">
                 <Image 
-                  src={post.thumbnail || 'https://picsum.photos/seed/blog/800/600'} 
+                  src={thumbnailSrc} 
                   alt={post.title}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -227,7 +236,7 @@ const BlogPage = () => {
                 </div>
               </div>
             </motion.article>
-          ))}
+          )})}
         </div>
 
         {/* Pagination */}

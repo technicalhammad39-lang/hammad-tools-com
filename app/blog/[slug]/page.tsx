@@ -3,12 +3,15 @@ import { Metadata } from 'next';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/firebase';
 import BlogDetailClient from './BlogDetailClient';
+import { resolveImageSource, toMetadataImageUrl } from '@/lib/image-display';
+import type { StoredFileMetadata } from '@/lib/types/domain';
 
 interface BlogPost {
   id: string;
   title: string;
   content: string;
-  thumbnail: string;
+  thumbnail?: string;
+  thumbnailMedia?: StoredFileMetadata | null;
   author: string;
   createdAt: any;
   category: string;
@@ -64,14 +67,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
+  const thumbnailSrc = resolveImageSource(post, {
+    mediaPaths: ['thumbnailMedia'],
+    stringPaths: ['thumbnail'],
+  });
+  const metadataImage = toMetadataImageUrl(thumbnailSrc);
+
   return {
     title: post.title,
     description: post.content.substring(0, 160),
-    openGraph: {
-      title: post.title,
-      description: post.content.substring(0, 160),
-      images: [post.thumbnail],
-    }
+    openGraph: metadataImage
+      ? {
+          title: post.title,
+          description: post.content.substring(0, 160),
+          images: [metadataImage],
+        }
+      : {
+          title: post.title,
+          description: post.content.substring(0, 160),
+        },
   };
 }
 
