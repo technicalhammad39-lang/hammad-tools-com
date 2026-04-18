@@ -75,7 +75,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const heroImageSrc = resolveImageSource(service, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['thumbnail', 'image'],
-    placeholder: '/tools-card.png',
+    placeholder: '/services-card.png',
   });
 
   useEffect(() => {
@@ -235,7 +235,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             >
               <UploadedImage
                 src={heroImageSrc}
-                fallbackSrc="/tools-card.png"
+                fallbackSrc="/services-card.png"
                 alt={service.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 referrerPolicy="no-referrer"

@@ -39,6 +39,11 @@ function getMediaUrl(media: unknown): string {
   }
 
   const dictionary = media as Dictionary;
+  const mediaId = toTrimmedString(dictionary.mediaId);
+  if (mediaId) {
+    return `/api/upload/${encodeURIComponent(mediaId)}`;
+  }
+
   return (
     toTrimmedString(dictionary.fileUrl) ||
     toTrimmedString(dictionary.url) ||

@@ -206,7 +206,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
           <div className="w-10 h-10 rounded-full border border-primary/20 p-0.5">
             <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
               <Image
-                src={giveaway.adminAvatar || '/logo.png'}
+                src={giveaway.adminAvatar || '/logo-header.png'}
                 alt="Admin"
                 width={40}
                 height={40}
