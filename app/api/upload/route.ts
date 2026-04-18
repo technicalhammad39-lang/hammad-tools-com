@@ -36,19 +36,35 @@ type ExistingMediaCandidate = {
   };
 };
 
-async function assertOrderAccess(orderId: string, uid: string, isStaff: boolean) {
+async function assertOrderAccess(
+  orderId: string,
+  uid: string,
+  isStaff: boolean,
+  options?: {
+    allowMissingOrderForOwner?: boolean;
+    relatedUserId?: string;
+  }
+) {
   const orderRef = adminDb.collection('orders').doc(orderId);
   const orderSnap = await orderRef.get();
 
   if (!orderSnap.exists) {
     if (!isStaff) {
+      const relatedUserId = (options?.relatedUserId || '').trim();
+      if (
+        options?.allowMissingOrderForOwner === true &&
+        relatedUserId &&
+        relatedUserId === uid
+      ) {
+        return;
+      }
       throw new ApiError(400, 'Related order not found for this upload.');
     }
     return;
   }
 
   const orderData = orderSnap.data() as Record<string, unknown>;
-  const orderOwner = String(orderData.userId || '');
+  const orderOwner = String(orderData.userId || orderData.user_id || '');
   if (!isStaff && orderOwner !== uid) {
     throw new ApiError(403, 'You do not have permission to upload files for this order.');
   }
@@ -166,8 +182,14 @@ export async function POST(request: Request) {
     const relatedUserId = normalizeOptionalText(formData.get('relatedUserId'));
 
     if (folder === 'payment-proofs') {
+      if (relatedUserId && relatedUserId !== decoded.uid && !isStaff) {
+        throw new ApiError(403, 'You do not have permission to upload payment proof for another user.');
+      }
       if (relatedOrderId) {
-        await assertOrderAccess(relatedOrderId, decoded.uid, isStaff);
+        await assertOrderAccess(relatedOrderId, decoded.uid, isStaff, {
+          allowMissingOrderForOwner: true,
+          relatedUserId,
+        });
       }
     }
 

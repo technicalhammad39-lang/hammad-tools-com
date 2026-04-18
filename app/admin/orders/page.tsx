@@ -64,6 +64,28 @@ function screenshotUrl(order: OrderRecord) {
   return proof?.screenshotMedia?.fileUrl || proof?.screenshotUrl || '';
 }
 
+function getMessageAttachment(entry: any) {
+  const url = entry?.attachmentUrl || entry?.attachmentMedia?.fileUrl || '';
+  if (!url) {
+    return null;
+  }
+
+  return {
+    url,
+    name: entry?.attachmentName || entry?.attachmentMedia?.fileName || 'Attachment',
+    mimeType: entry?.attachmentType || entry?.attachmentMedia?.mimeType || '',
+  };
+}
+
+function isImageAttachment(attachment: { url: string; mimeType?: string }) {
+  const mime = (attachment.mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.url);
+}
+
 function getPrimaryItem(order: OrderRecord) {
   const explicit = (order as any).itemSummary?.[0];
   if (explicit) {
@@ -425,10 +447,11 @@ export default function AdminOrdersPage() {
 
     batch.update(orderRef, updatePayload);
 
-    if (order.userId) {
+    const orderRecipientId = order.userId || (order as any).user_id || '';
+    if (orderRecipientId) {
       const notificationRef = doc(collection(db, 'notifications'));
       batch.set(notificationRef, {
-        recipientId: order.userId,
+        recipientId: orderRecipientId,
         recipientRole: 'user',
         type: messageType === 'message' ? 'order_message' : 'order_status',
         title,
@@ -594,6 +617,11 @@ export default function AdminOrdersPage() {
           ) : (
             orderMessages.map((entry, index) => {
               const isAdmin = entry.senderRole === 'admin';
+              const attachment = getMessageAttachment(entry);
+              const attachmentUrl = attachment
+                ? withProtectedFileToken(attachment.url, fileAccessToken)
+                : '';
+              const attachmentIsImage = attachment ? isImageAttachment(attachment) : false;
               return (
                 <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                   <div
@@ -602,21 +630,34 @@ export default function AdminOrdersPage() {
                     }`}
                   >
                     {entry.message ? <div>{entry.message}</div> : null}
-                    {entry.attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
-                      <a
-                        href={withProtectedFileToken(
-                          entry.attachmentUrl || (entry as any).attachmentMedia?.fileUrl || '',
-                          fileAccessToken
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`mt-2 inline-flex items-center gap-1.5 underline ${
-                          isAdmin ? 'text-black/90' : 'text-[#2A2A2A]'
-                        }`}
-                      >
-                        <Paperclip className="w-3.5 h-3.5" />
-                        {entry.attachmentName || 'Attachment'}
-                      </a>
+                    {attachment ? (
+                      attachmentIsImage ? (
+                        <button
+                          onClick={() => setReceiptViewerUrl(attachmentUrl)}
+                          className="mt-2 block w-full text-left"
+                        >
+                          <img
+                            src={attachmentUrl}
+                            alt={attachment.name}
+                            className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
+                          />
+                          <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/70' : 'text-[#2A2A2A]/70'}`}>
+                            {attachment.name}
+                          </div>
+                        </button>
+                      ) : (
+                        <a
+                          href={attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                            isAdmin ? 'text-black/90' : 'text-[#2A2A2A]'
+                          }`}
+                        >
+                          <Paperclip className="w-3.5 h-3.5" />
+                          {attachment.name}
+                        </a>
+                      )
                     ) : null}
                     <div className={`mt-2 text-[10px] ${isAdmin ? 'text-black/65' : 'text-[#2A2A2A]/60'}`}>
                       {formatDateTime(entry.createdAt)}

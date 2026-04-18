@@ -39,7 +39,7 @@ async function canAccessOrderMedia(orderId: string, uid: string, isStaff: boolea
   }
 
   const order = orderSnap.data() as Record<string, unknown>;
-  return String(order.userId || '') === uid;
+  return String(order.userId || order.user_id || '') === uid;
 }
 
 async function resolveMedia(mediaId: string) {

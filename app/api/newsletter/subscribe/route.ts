@@ -36,12 +36,19 @@ function validateOrigin(request: Request) {
 
   const host = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').trim();
   if (!host) {
-    return false;
+    return true;
   }
 
   try {
     const originUrl = new URL(origin);
-    return originUrl.host.toLowerCase() === host.toLowerCase();
+    const normalizedOriginHost = originUrl.host.toLowerCase();
+    const normalizedHost = host.toLowerCase();
+    if (normalizedOriginHost === normalizedHost) {
+      return true;
+    }
+    const originHostname = originUrl.hostname.toLowerCase();
+    const hostWithoutPort = normalizedHost.split(':')[0] || normalizedHost;
+    return originHostname === hostWithoutPort;
   } catch {
     return false;
   }

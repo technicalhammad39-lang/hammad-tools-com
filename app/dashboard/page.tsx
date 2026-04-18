@@ -15,6 +15,8 @@ import {
   XCircle,
   Send,
   ChevronsUpDown,
+  Paperclip,
+  X,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -31,7 +33,9 @@ import type { NotificationRecord, OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
-import { withProtectedFileToken } from '@/lib/storage-utils';
+import { toStorageMetadata, uploadMediaFile, withProtectedFileToken } from '@/lib/storage-utils';
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function statusClass(status: string) {
   const normalized = normalizeOrderStatus(status);
@@ -105,6 +109,26 @@ function getScreenshotUrl(order: OrderRecord) {
   return proof?.screenshotMedia?.fileUrl || proof?.screenshotUrl || '';
 }
 
+function getMessageAttachment(entry: any) {
+  const url = entry?.attachmentUrl || entry?.attachmentMedia?.fileUrl || '';
+  if (!url) {
+    return null;
+  }
+
+  const name = entry?.attachmentName || entry?.attachmentMedia?.fileName || 'Attachment';
+  const mimeType = entry?.attachmentType || entry?.attachmentMedia?.mimeType || '';
+  return { url, name, mimeType };
+}
+
+function isImageAttachment(attachment: { url: string; mimeType?: string }) {
+  const mime = (attachment.mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.url);
+}
+
 function DashboardPageContent() {
   const params = useSearchParams();
   const requestedOrder = params.get('order');
@@ -122,34 +146,65 @@ function DashboardPageContent() {
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [orderSelectorOpen, setOrderSelectorOpen] = useState(false);
   const [composerMessage, setComposerMessage] = useState('');
+  const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!user) {
       return;
     }
 
-    const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
+    const primaryOrdersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
+    const legacyOrdersQuery = query(collection(db, 'orders'), where('user_id', '==', user.uid));
     const notificationsQuery = query(collection(db, 'notifications'), where('recipientId', '==', user.uid));
+    let primaryOrders: OrderRecord[] = [];
+    let legacyOrders: OrderRecord[] = [];
 
-    const unsubOrders = onSnapshot(
-      ordersQuery,
+    const mergeOrders = () => {
+      const byId = new Map<string, OrderRecord>();
+      [...primaryOrders, ...legacyOrders].forEach((entry) => {
+        byId.set(entry.id, entry);
+      });
+      const merged = Array.from(byId.values()).sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
+        const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
+        return bTime - aTime;
+      });
+      setOrders(merged);
+    };
+
+    const unsubPrimaryOrders = onSnapshot(
+      primaryOrdersQuery,
       (snapshot) => {
-        const data = snapshot.docs
-          .map((snap) => ({ id: snap.id, ...(snap.data() as Omit<OrderRecord, 'id'>) }))
-          .sort((a, b) => {
-            const aTime = a.createdAt?.toDate?.()?.getTime?.() || 0;
-            const bTime = b.createdAt?.toDate?.()?.getTime?.() || 0;
-            return bTime - aTime;
-          });
-
-        setOrders(data);
+        primaryOrders = snapshot.docs.map((snap) => ({
+          id: snap.id,
+          ...(snap.data() as Omit<OrderRecord, 'id'>),
+        }));
+        mergeOrders();
         setLoadingData(false);
       },
       (snapshotError) => {
-        console.error('Failed to load orders:', snapshotError);
+        console.error('Failed to load primary orders:', snapshotError);
         toast.error('Failed to load orders');
+        setLoadingData(false);
+      }
+    );
+
+    const unsubLegacyOrders = onSnapshot(
+      legacyOrdersQuery,
+      (snapshot) => {
+        legacyOrders = snapshot.docs.map((snap) => ({
+          id: snap.id,
+          ...(snap.data() as Omit<OrderRecord, 'id'>),
+        }));
+        mergeOrders();
+        setLoadingData(false);
+      },
+      (snapshotError) => {
+        console.error('Failed to load legacy orders:', snapshotError);
         setLoadingData(false);
       }
     );
@@ -173,7 +228,8 @@ function DashboardPageContent() {
     );
 
     return () => {
-      unsubOrders();
+      unsubPrimaryOrders();
+      unsubLegacyOrders();
       unsubNotifications();
     };
   }, [user, toast]);
@@ -307,19 +363,61 @@ function DashboardPageContent() {
     }
   }
 
+  async function uploadUserMessageAttachment(orderId: string, file: File) {
+    if (!user) {
+      throw new Error('You must be logged in to upload attachments.');
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      throw new Error('Attachment size must be less than 10MB.');
+    }
+
+    const media = await uploadMediaFile({
+      file,
+      folder: 'chat-attachments',
+      relatedType: 'order_message',
+      relatedId: orderId,
+      relatedOrderId: orderId,
+      relatedUserId: user.uid,
+      note: 'user-order-chat-attachment',
+    });
+
+    return {
+      url: media.url,
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      media: toStorageMetadata(media, user.uid),
+    };
+  }
+
   async function handleSendOrderMessage() {
     if (!selectedOrder || !user) {
       return;
     }
 
     const trimmed = composerMessage.trim();
-    if (!trimmed) {
-      toast.error('Message is required');
+    if (!trimmed && !composerAttachment) {
+      toast.error('Message or attachment is required');
       return;
     }
 
     setSendingMessage(true);
     try {
+      let attachmentPayload:
+        | {
+            url: string;
+            name: string;
+            type: string;
+            size: number;
+            media: ReturnType<typeof toStorageMetadata>;
+          }
+        | null = null;
+
+      if (composerAttachment) {
+        setAttachmentUploading(true);
+        attachmentPayload = await uploadUserMessageAttachment(selectedOrder.id, composerAttachment);
+      }
+
       const token = await user.getIdToken();
       const response = await fetch(`/api/orders/${encodeURIComponent(selectedOrder.id)}/messages`, {
         method: 'POST',
@@ -327,7 +425,10 @@ function DashboardPageContent() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({
+          message: trimmed,
+          attachment: attachmentPayload,
+        }),
       });
 
       const payload = (await response.json()) as { success?: boolean; error?: string };
@@ -336,13 +437,61 @@ function DashboardPageContent() {
       }
 
       setComposerMessage('');
+      setComposerAttachment(null);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = '';
+      }
       toast.success('Message sent');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send message';
       toast.error('Message failed', message);
     } finally {
       setSendingMessage(false);
+      setAttachmentUploading(false);
     }
+  }
+
+  function renderMessageContent(entry: any, isAdmin: boolean) {
+    const attachment = getMessageAttachment(entry);
+    const attachmentUrl = attachment
+      ? withProtectedFileToken(attachment.url, fileAccessToken)
+      : '';
+    const attachmentIsImage = attachment ? isImageAttachment(attachment) : false;
+
+    return (
+      <>
+        {entry.message ? <div>{entry.message}</div> : null}
+        {attachment ? (
+          attachmentIsImage ? (
+            <button
+              onClick={() => setReceiptViewerUrl(attachmentUrl)}
+              className="mt-2 block w-full text-left"
+            >
+              <img
+                src={attachmentUrl}
+                alt={attachment.name}
+                className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
+              />
+              <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/70' : 'text-brand-text/60'}`}>
+                {attachment.name}
+              </div>
+            </button>
+          ) : (
+            <a
+              href={attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`mt-2 inline-flex items-center gap-1.5 underline ${
+                isAdmin ? 'text-black/80' : 'text-brand-text/85'
+              }`}
+            >
+              <Paperclip className="w-3.5 h-3.5" />
+              {attachment.name}
+            </a>
+          )
+        ) : null}
+      </>
+    );
   }
 
   const sidebarItems = [
@@ -609,25 +758,7 @@ function DashboardPageContent() {
                                         isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
                                       }`}
                                     >
-                                      {entry.message}
-                                      {(entry as any).attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
-                                        <a
-                                          href={withProtectedFileToken(
-                                            (entry as any).attachmentUrl ||
-                                              (entry as any).attachmentMedia?.fileUrl ||
-                                              '',
-                                            fileAccessToken
-                                          )}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className={`mt-2 inline-flex items-center gap-1.5 underline ${
-                                            isAdmin ? 'text-black/80' : 'text-brand-text/85'
-                                          }`}
-                                        >
-                                          <MessageSquare className="w-3.5 h-3.5" />
-                                          {(entry as any).attachmentName || 'Attachment'}
-                                        </a>
-                                      ) : null}
+                                      {renderMessageContent(entry, isAdmin)}
                                       <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
                                         {formatDateTime(entry.createdAt)}
                                       </div>
@@ -719,25 +850,7 @@ function DashboardPageContent() {
                                   isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
                                 }`}
                               >
-                                {entry.message}
-                                {(entry as any).attachmentUrl || (entry as any).attachmentMedia?.fileUrl ? (
-                                  <a
-                                    href={withProtectedFileToken(
-                                      (entry as any).attachmentUrl ||
-                                        (entry as any).attachmentMedia?.fileUrl ||
-                                        '',
-                                      fileAccessToken
-                                    )}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`mt-2 inline-flex items-center gap-1.5 underline ${
-                                      isAdmin ? 'text-black/80' : 'text-brand-text/85'
-                                    }`}
-                                  >
-                                    <MessageSquare className="w-3.5 h-3.5" />
-                                    {(entry as any).attachmentName || 'Attachment'}
-                                  </a>
-                                ) : null}
+                                {renderMessageContent(entry, isAdmin)}
                                 <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
                                   {formatDateTime(entry.createdAt)}
                                 </div>
@@ -749,23 +862,58 @@ function DashboardPageContent() {
                     </div>
 
                     <div className="border-t border-white/10 p-3">
+                      {composerAttachment ? (
+                        <div className="mb-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-brand-text flex items-center justify-between gap-2">
+                          <span className="truncate">{composerAttachment.name}</span>
+                          <button
+                            onClick={() => {
+                              setComposerAttachment(null);
+                              if (attachmentInputRef.current) {
+                                attachmentInputRef.current.value = '';
+                              }
+                            }}
+                            className="text-brand-text/70 hover:text-brand-text"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : null}
+
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => attachmentInputRef.current?.click()}
+                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                          className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/15 text-brand-text/75 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-50"
+                          title="Attach file"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                        <input
+                          ref={attachmentInputRef}
+                          type="file"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] || null;
+                            setComposerAttachment(file);
+                          }}
+                        />
                         <textarea
                           value={composerMessage}
                           onChange={(event) => setComposerMessage(event.target.value)}
                           placeholder={selectedOrder ? 'Type your message for admin' : 'Select an order first'}
                           rows={2}
-                          disabled={!selectedOrder || sendingMessage}
+                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
                           className="min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-primary/50 disabled:opacity-50"
                         />
                         <button
                           onClick={() => {
                             void handleSendOrderMessage();
                           }}
-                          disabled={!selectedOrder || sendingMessage}
+                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
                           className="shrink-0 rounded-xl bg-primary px-4 py-3 text-black text-[11px] font-black uppercase tracking-widest border-b-2 border-secondary inline-flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          {sendingMessage || attachmentUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                           Send
                         </button>
                       </div>
