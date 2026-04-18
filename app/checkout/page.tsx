@@ -88,10 +88,6 @@ function CheckoutPageContent() {
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    setDeliveryEmail(user?.email || '');
-  }, [user?.email]);
-
-  useEffect(() => {
     const q = query(collection(db, 'payment_methods'), where('active', '==', true));
     const unsubscribe = onSnapshot(
       q,
@@ -246,18 +242,12 @@ function CheckoutPageContent() {
     [discountAmount, subtotal]
   );
 
-  async function resolveUniqueOrderId() {
-    let candidate = orderId || createOrderPublicId();
-
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const snap = await getDoc(doc(db, 'orders', candidate));
-      if (!snap.exists()) {
-        return candidate;
-      }
-      candidate = createOrderPublicId();
+  function resolveOrderIdWithoutPreRead() {
+    const fromState = (orderId || '').trim();
+    if (fromState) {
+      return fromState;
     }
-
-    throw new Error('Unable to generate a unique order ID. Please try again.');
+    return createOrderPublicId();
   }
 
   async function uploadPaymentProof(uid: string, finalOrderId: string) {
@@ -361,7 +351,8 @@ function CheckoutPageContent() {
       return;
     }
 
-    const emailValue = (deliveryEmail || user.email || '').trim();
+    const emailValue = deliveryEmail.trim();
+    const accountEmail = (user.email || '').trim();
     const phoneValue = phone.trim();
     const senderValue = senderAccount.trim();
     const transactionValue = transactionId.trim();
@@ -400,7 +391,7 @@ function CheckoutPageContent() {
     setSubmitting(true);
 
     try {
-      const finalOrderId = await resolveUniqueOrderId();
+      const finalOrderId = resolveOrderIdWithoutPreRead();
       const proofMedia = await uploadPaymentProof(user.uid, finalOrderId);
       const timestamp = serverTimestamp();
       const roundedSubtotal = Number(subtotal.toFixed(2));
@@ -413,8 +404,8 @@ function CheckoutPageContent() {
         userId: user.uid,
         user_id: user.uid,
         userName: user.displayName || '',
-        userEmail: emailValue,
-        email: emailValue,
+        userEmail: accountEmail,
+        email: accountEmail,
         deliveryEmail: emailValue,
         targetEmail: emailValue,
         userPhone: phoneValue,
@@ -577,6 +568,7 @@ function CheckoutPageContent() {
                       onChange={(event) => setDeliveryEmail(event.target.value)}
                       placeholder="Target / delivery email"
                       required
+                      autoComplete="off"
                       className="w-full rounded-2xl bg-[#0B0B0B] border border-white/10 px-4 py-3 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-primary/55"
                     />
                   </div>
