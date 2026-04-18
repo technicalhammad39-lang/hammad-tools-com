@@ -66,6 +66,50 @@ function normalizeRole(value: unknown): UserRole | null {
   return null;
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message || 'Unknown error';
+  }
+  return String(error || 'Unknown error');
+}
+
+function isPermissionDeniedError(error: unknown) {
+  const code = typeof (error as any)?.code === 'string' ? String((error as any).code).toLowerCase() : '';
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    code.includes('permission-denied') ||
+    message.includes('missing or insufficient permissions') ||
+    message.includes('insufficient permissions')
+  );
+}
+
+async function syncUserProfileViaApi(user: FirebaseUser, forcedDisplayName?: string) {
+  const token = await user.getIdToken(true);
+  const response = await fetch('/api/auth/profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      displayName: forcedDisplayName || user.displayName || '',
+      photoURL: user.photoURL || '',
+    }),
+  });
+
+  let payload: any = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok || !payload?.success) {
+    const fallback = `Failed to sync user profile (HTTP ${response.status || 500}).`;
+    throw new Error((payload?.error || '').trim() || fallback);
+  }
+}
+
 async function ensureUserProfile(user: FirebaseUser, forcedDisplayName?: string) {
   const ref = doc(db, 'users', user.uid);
   const snap = await getDoc(ref);
@@ -85,7 +129,21 @@ async function ensureUserProfile(user: FirebaseUser, forcedDisplayName?: string)
     payload.createdAt = serverTimestamp();
   }
 
-  await setDoc(ref, payload, { merge: true });
+  try {
+    await setDoc(ref, payload, { merge: true });
+  } catch (error) {
+    if (!isPermissionDeniedError(error)) {
+      throw error;
+    }
+
+    console.warn('Client profile write denied. Falling back to server profile sync.', {
+      uid: user.uid,
+      email: user.email || '',
+      reason: getErrorMessage(error),
+    });
+
+    await syncUserProfileViaApi(user, forcedDisplayName);
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -166,7 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(userCredential.user, { displayName: name.trim() });
-      await ensureUserProfile(userCredential.user, name.trim());
+      await ensureUserProfile(userCredential.user, name.trim()).catch((profileError) => {
+        console.error('Profile sync after signup failed:', profileError);
+      });
       await userCredential.user.reload();
     } catch (error) {
       console.error('Email signup failed:', error);
