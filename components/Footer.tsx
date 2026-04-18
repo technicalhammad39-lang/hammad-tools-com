@@ -6,25 +6,28 @@ import Image from 'next/image';
 import { Mail, MapPin, Phone } from 'lucide-react';
 import { FaFacebook, FaInstagram, FaWhatsapp, FaSnapchat, FaTiktok, FaGoogle } from 'react-icons/fa6';
 import { useSettings } from '@/context/SettingsContext';
+import { useToast } from '@/components/ToastProvider';
 
 import { usePathname } from 'next/navigation';
 
 const Footer = () => {
   const pathname = usePathname();
   const { settings } = useSettings();
+  const toast = useToast();
   const [newsletterEmail, setNewsletterEmail] = React.useState('');
   const [newsletterLoading, setNewsletterLoading] = React.useState(false);
   const [newsletterMessage, setNewsletterMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   if (pathname.startsWith('/admin')) return null;
 
-  const handleNewsletterSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleNewsletterSubmit = async () => {
 
     const email = newsletterEmail.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
     if (!emailRegex.test(email)) {
-      setNewsletterMessage({ type: 'error', text: 'Please enter a valid email address.' });
+      const message = 'Please enter a valid email address.';
+      setNewsletterMessage({ type: 'error', text: message });
+      toast.error('Subscription failed', message);
       return;
     }
 
@@ -55,16 +58,22 @@ const Footer = () => {
         throw new Error(payload.error || `Subscription failed (HTTP ${response.status}).`);
       }
 
+      const successText = payload.duplicate
+        ? 'Already subscribed. You are on the list.'
+        : 'You subscribed successfully.';
       setNewsletterMessage({
         type: 'success',
-        text: payload.duplicate ? 'Already subscribed. You are on the list.' : 'Subscribed successfully.',
+        text: successText,
       });
+      toast.success('Newsletter updated', successText);
       setNewsletterEmail('');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to subscribe. Please try again.';
       setNewsletterMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to subscribe. Please try again.',
+        text: message,
       });
+      toast.error('Subscription failed', message);
     } finally {
       setNewsletterLoading(false);
     }
@@ -163,17 +172,26 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-black uppercase tracking-widest mb-6 text-brand-text">Newsletter</h4>
             <p className="text-brand-text/60 mb-4 text-xs font-medium">Subscribe to get the latest updates and offers.</p>
-            <form className="space-y-3" onSubmit={handleNewsletterSubmit}>
+            <div className="space-y-3">
               <input
                 type="email"
                 placeholder="Your email address"
                 value={newsletterEmail}
                 onChange={(event) => setNewsletterEmail(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleNewsletterSubmit();
+                  }
+                }}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary transition-colors text-xs text-brand-text"
               />
               <button
-                type="submit"
+                type="button"
                 disabled={newsletterLoading}
+                onClick={() => {
+                  void handleNewsletterSubmit();
+                }}
                 className="w-full bg-primary text-white font-black uppercase tracking-widest py-3 rounded-xl border-b-2 border-accent transition-all text-xs disabled:opacity-60"
               >
                 {newsletterLoading ? 'Subscribing...' : 'Subscribe'}
@@ -183,7 +201,7 @@ const Footer = () => {
                   {newsletterMessage.text}
                 </p>
               ) : null}
-            </form>
+            </div>
           </div>
         </div>
 

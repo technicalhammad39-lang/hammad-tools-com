@@ -117,7 +117,7 @@ service cloud.firestore {
     }
 
     match /newsletter_subscribers/{subscriberId} {
-      allow read: if isStaff();
+      allow read: if isAdmin();
       allow write: if false;
     }
 

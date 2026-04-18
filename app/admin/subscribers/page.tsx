@@ -28,7 +28,7 @@ function toCsvValue(value: string) {
 }
 
 export default function AdminSubscribersPage() {
-  const { user, isStaff } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [subscribers, setSubscribers] = React.useState<SubscriberRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -45,7 +45,7 @@ export default function AdminSubscribersPage() {
     setErrorMessage('');
 
     try {
-      const token = await user.getIdToken(true);
+      const token = await user.getIdToken();
       const response = await fetch('/api/admin/subscribers', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -72,12 +72,12 @@ export default function AdminSubscribersPage() {
   }, [user]);
 
   React.useEffect(() => {
-    if (!isStaff || !user) {
+    if (!isAdmin || !user) {
       setLoading(false);
       return;
     }
     void fetchSubscribers();
-  }, [isStaff, user, fetchSubscribers]);
+  }, [isAdmin, user, fetchSubscribers]);
 
   const filteredSubscribers = React.useMemo(() => {
     if (!searchTerm.trim()) return subscribers;
@@ -114,7 +114,7 @@ export default function AdminSubscribersPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (!isStaff) {
+  if (!isAdmin) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;
   }
 

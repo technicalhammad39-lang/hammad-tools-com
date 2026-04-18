@@ -291,6 +291,9 @@ export async function POST(request: Request) {
       const message = error instanceof Error ? error.message : String(error);
       return jsonError(new ApiError(500, `Unexpected upload server error: ${message}`));
     }
+    if (!debugEnabled && error.status >= 500) {
+      return jsonError(new ApiError(500, 'Upload server failed. Please try again shortly.'));
+    }
     return jsonError(error);
   }
 }

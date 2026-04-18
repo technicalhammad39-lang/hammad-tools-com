@@ -11,7 +11,6 @@ import {
   MessageCircle,
   Minus,
   Plus,
-  Ticket,
   Clock,
   Sparkles,
   Star,
@@ -19,7 +18,7 @@ import {
   Users
 } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { createOrderPublicId } from '@/lib/order-system';
 import { resolveImageSource } from '@/lib/image-display';
@@ -104,9 +103,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const { user, profile } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [couponStatus, setCouponStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
 
   // Reviews State
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
@@ -223,27 +219,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     }
   }, [displayPlans]);
 
-  const handleCouponValidation = async () => {
-    if (!couponCode.trim()) return;
-    setCouponStatus('validating');
-
-    try {
-      const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase()), where('active', '==', true));
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        const couponData = snapshot.docs[0].data();
-        setDiscount(couponData.discountPercentage || 0);
-        setCouponStatus('valid');
-      } else {
-        setDiscount(0);
-        setCouponStatus('invalid');
-      }
-    } catch (error) {
-      setCouponStatus('invalid');
-    }
-  };
-
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-brand-bg"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-2xl shadow-primary/20" /></div>;
   if (!service) return <div className="min-h-screen flex flex-col items-center justify-center text-brand-text bg-brand-bg">
     <Shield className="w-20 h-20 text-accent mb-6 opacity-20" />
@@ -255,7 +230,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const currentOfficialPrice = selectedPlan
     ? (selectedPlan.officialPrice && selectedPlan.officialPrice > currentPrice ? selectedPlan.officialPrice : 0)
     : (Number(service.salePrice || 0) > currentPrice ? Number(service.salePrice) : 0);
-  const totalPrice = (currentPrice * quantity * (1 - discount / 100)).toFixed(2);
+  const totalPrice = (currentPrice * quantity).toFixed(2);
   const totalOfficialPrice = (currentOfficialPrice * quantity).toFixed(2);
   const savingsPercent = currentOfficialPrice > currentPrice
     ? Math.round(((currentOfficialPrice - currentPrice) / currentOfficialPrice) * 100)
@@ -278,9 +253,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       plan: planName,
       orderId: createOrderPublicId(),
     });
-    if (couponStatus === 'valid' && couponCode.trim()) {
-      params.set('coupon', couponCode.trim());
-    }
     router.push(`/checkout?${params.toString()}`);
   };
 
@@ -364,7 +336,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               </div>
             </div>
 
-            {/* License Quantity & Coupon */}
+            {/* License Quantity */}
             <div className="grid grid-cols-1 gap-4 pt-1">
               <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">License Quantity</label>
@@ -383,32 +355,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-
-              <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">Secure Coupon Code</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="ENTER CODE"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className={`w-full bg-white/5 border rounded-2xl px-12 py-5 text-sm font-black tracking-widest focus:outline-none transition-all ${couponStatus === 'valid' ? 'border-emerald-500/50 text-emerald-400' :
-                        couponStatus === 'invalid' ? 'border-accent/50 text-accent' :
-                          'border-white/10 text-brand-text'
-                      }`}
-                  />
-                  <Ticket className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20" />
-                  <button
-                    onClick={handleCouponValidation}
-                    disabled={couponStatus === 'validating'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
-                  >
-                    {couponStatus === 'validating' ? 'Checking...' : 'Apply'}
-                  </button>
-                </div>
-                {couponStatus === 'valid' && <p className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Success: {discount}% Discount Unlocked!</p>}
-                {couponStatus === 'invalid' && <p className="text-[10px] text-accent font-black uppercase tracking-widest">Error: Tactical Override Failed (Invalid Code)</p>}
               </div>
             </div>
 
@@ -498,7 +444,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                         )}
                       </div>
                     </div>
-                    {discount > 0 && <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-1 bg-emerald-400/5 w-fit px-3 py-1 rounded-md border border-emerald-400/10">Extra {discount}% Tactical Coupon Active</div>}
                   </div>
                 </div>
               )}
@@ -548,8 +493,8 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                   <div className="text-2xl font-black text-brand-text">{averageRating.toFixed(1)}</div>
                 </div>
                 <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Live Feed</div>
-                  <div className="text-xs font-black uppercase tracking-widest text-primary">Realtime</div>
+                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Total Reviews</div>
+                  <div className="text-2xl font-black text-brand-text">{reviews.length}</div>
                 </div>
               </div>
 

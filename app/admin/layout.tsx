@@ -66,7 +66,6 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     'orders',
     'categories',
     'notifications',
-    'subscribers',
     'coupons',
   ]);
 
@@ -85,6 +84,9 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     const timer = setTimeout(async () => {
       try {
         const needle = searchTerm.trim().toLowerCase();
+        const subscribersPromise = isAdmin
+          ? getDocs(query(collection(db, 'newsletter_subscribers'), limit(30)))
+          : Promise.resolve(null);
         const [
           usersSnap,
           servicesSnap,
@@ -106,7 +108,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           getDocs(query(collection(db, 'blogPosts'), limit(20))),
           getDocs(query(collection(db, 'giveaways'), limit(20))),
           getDocs(query(collection(db, 'notification_dispatches'), limit(20))),
-          getDocs(query(collection(db, 'newsletter_subscribers'), limit(30))),
+          subscribersPromise,
         ]);
 
         const results: Array<{ id: string; label: string; sub: string; href: string }> = [];
@@ -193,13 +195,15 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        subscribersSnap.forEach((doc) => {
-          const data = doc.data() as any;
-          const email = (data.email || '').toString();
-          if (email.toLowerCase().includes(needle)) {
-            results.push({ id: `subscriber-${doc.id}`, label: email, sub: 'Subscriber', href: '/admin/subscribers' });
-          }
-        });
+        if (subscribersSnap) {
+          subscribersSnap.forEach((doc) => {
+            const data = doc.data() as any;
+            const email = (data.email || '').toString();
+            if (email.toLowerCase().includes(needle)) {
+              results.push({ id: `subscriber-${doc.id}`, label: email, sub: 'Subscriber', href: '/admin/subscribers' });
+            }
+          });
+        }
 
         if (active) {
           setSearchResults(results.slice(0, 12));
@@ -220,7 +224,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       active = false;
       clearTimeout(timer);
     };
-  }, [searchTerm]);
+  }, [searchTerm, isAdmin]);
 
   if (loading) {
     return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-primary font-black uppercase tracking-widest">Loading...</div>;

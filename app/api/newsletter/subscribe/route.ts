@@ -5,6 +5,47 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 8;
+const requestBuckets = new Map<string, number[]>();
+
+function getClientIp(request: Request) {
+  const forwardedFor = (request.headers.get('x-forwarded-for') || '').split(',')[0]?.trim();
+  const realIp = (request.headers.get('x-real-ip') || '').trim();
+  return forwardedFor || realIp || 'unknown';
+}
+
+function cleanOldRequests(entries: number[], now: number) {
+  return entries.filter((time) => now - time <= RATE_LIMIT_WINDOW_MS);
+}
+
+function isRateLimited(ip: string) {
+  const now = Date.now();
+  const current = requestBuckets.get(ip) || [];
+  const recent = cleanOldRequests(current, now);
+  recent.push(now);
+  requestBuckets.set(ip, recent);
+  return recent.length > RATE_LIMIT_MAX_REQUESTS;
+}
+
+function validateOrigin(request: Request) {
+  const origin = (request.headers.get('origin') || '').trim();
+  if (!origin) {
+    return true;
+  }
+
+  const host = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').trim();
+  if (!host) {
+    return false;
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
+}
 
 function normalizeText(value: unknown, maxLength: number) {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -21,6 +62,27 @@ function toDocId(email: string) {
 
 export async function POST(request: Request) {
   try {
+    if (!validateOrigin(request)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Request origin is not allowed.',
+        },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    const ip = getClientIp(request);
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Too many subscribe attempts. Please wait a minute and try again.',
+        },
+        { status: 429, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
     let body: Record<string, unknown> = {};
     try {
       body = (await request.json()) as Record<string, unknown>;
@@ -38,7 +100,7 @@ export async function POST(request: Request) {
           success: false,
           error: 'Please enter a valid email address.',
         },
-        { status: 400 }
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
@@ -58,10 +120,10 @@ export async function POST(request: Request) {
       );
 
       return NextResponse.json({
-        success: true,
-        duplicate: true,
-        message: 'You are already subscribed.',
-      });
+          success: true,
+          duplicate: true,
+          message: 'You are already subscribed.',
+        }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
     await ref.set({
@@ -74,20 +136,23 @@ export async function POST(request: Request) {
       updatedAt: adminFieldValue.serverTimestamp(),
     });
 
-    return NextResponse.json({
-      success: true,
-      duplicate: false,
-      message: 'Subscription successful.',
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        duplicate: false,
+        message: 'Subscription successful.',
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error || 'Unknown error');
     console.error('[newsletter-subscribe] failed', { message });
     return NextResponse.json(
       {
         success: false,
-        error: `Failed to subscribe: ${message}`,
+        error: 'Subscription failed due to a server issue. Please try again.',
       },
-      { status: 500 }
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
     );
   }
 }

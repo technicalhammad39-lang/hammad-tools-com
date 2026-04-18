@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireStaff } from '@/lib/server/auth';
+import { requireAdmin } from '@/lib/server/auth';
 import { jsonError } from '@/lib/server/http';
 import { getFirebaseAdminInitDiagnostics } from '@/lib/server/firebase-admin';
 import {
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const firebaseAdmin = getFirebaseAdminInitDiagnostics();
-    const decoded = await requireStaff(request);
+    const decoded = await requireAdmin(request);
     const diagnostics = await getUploadRuntimeDiagnostics({
       ensureDirectories: true,
       attemptWriteTest: true,

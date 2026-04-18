@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/server/firebase-admin';
-import { requireStaff } from '@/lib/server/auth';
+import { requireAdmin } from '@/lib/server/auth';
 import { ApiError, jsonError } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ function toISOStringSafe(value: any) {
 
 export async function GET(request: Request) {
   try {
-    await requireStaff(request);
+    await requireAdmin(request);
 
     const snapshot = await adminDb
       .collection('newsletter_subscribers')
@@ -39,11 +39,14 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      count: subscribers.length,
-      subscribers,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        count: subscribers.length,
+        subscribers,
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error) {
     if (error instanceof ApiError) {
       return jsonError(error);
