@@ -120,13 +120,28 @@ function getMessageAttachment(entry: any) {
   return { url, name, mimeType };
 }
 
-function isImageAttachment(attachment: { url: string; mimeType?: string }) {
+function isImageAttachment(attachment: { url: string; mimeType?: string; name?: string }) {
   const mime = (attachment.mimeType || '').toLowerCase();
   if (mime.startsWith('image/')) {
     return true;
   }
 
-  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.url);
+  const urlWithoutQuery = (attachment.url || '').split('?')[0];
+  if (/\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(urlWithoutQuery)) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.name || '');
+}
+
+function isUserOutgoingMessage(entry: any, userId: string) {
+  const senderId = typeof entry?.senderId === 'string' ? entry.senderId.trim() : '';
+  if (senderId && senderId === userId) {
+    return true;
+  }
+
+  const senderRole = typeof entry?.senderRole === 'string' ? entry.senderRole.toLowerCase() : '';
+  return senderRole === 'user' || senderRole === 'customer' || senderRole === 'member';
 }
 
 function DashboardPageContent() {
@@ -145,6 +160,7 @@ function DashboardPageContent() {
   const [fileAccessToken, setFileAccessToken] = useState('');
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [orderSelectorOpen, setOrderSelectorOpen] = useState(false);
+  const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, boolean>>({});
   const [composerMessage, setComposerMessage] = useState('');
   const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -271,6 +287,7 @@ function DashboardPageContent() {
     () => orders.find((order) => order.id === selectedOrderId) || null,
     [orders, selectedOrderId]
   );
+  const selectedOrderDetailsExpanded = selectedOrder ? Boolean(expandedOrderDetails[selectedOrder.id]) : false;
 
   const messages = useMemo(() => {
     if (!selectedOrder?.messages || !Array.isArray(selectedOrder.messages)) {
@@ -451,7 +468,7 @@ function DashboardPageContent() {
     }
   }
 
-  function renderMessageContent(entry: any, isAdmin: boolean) {
+  function renderMessageContent(entry: any, isOutgoing: boolean) {
     const attachment = getMessageAttachment(entry);
     const attachmentUrl = attachment
       ? withProtectedFileToken(attachment.url, fileAccessToken)
@@ -472,7 +489,7 @@ function DashboardPageContent() {
                 alt={attachment.name}
                 className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
               />
-              <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/70' : 'text-brand-text/60'}`}>
+              <div className={`mt-1 text-[10px] ${isOutgoing ? 'text-black/70' : 'text-brand-text/60'}`}>
                 {attachment.name}
               </div>
             </button>
@@ -482,7 +499,7 @@ function DashboardPageContent() {
               target="_blank"
               rel="noopener noreferrer"
               className={`mt-2 inline-flex items-center gap-1.5 underline ${
-                isAdmin ? 'text-black/80' : 'text-brand-text/85'
+                isOutgoing ? 'text-black/80' : 'text-brand-text/85'
               }`}
             >
               <Paperclip className="w-3.5 h-3.5" />
@@ -690,76 +707,101 @@ function DashboardPageContent() {
                               {formatOrderStatusLabel(selectedOrder.status)}
                             </div>
                           </div>
-                          <div className="text-[11px] text-brand-text/45">
-                            Order ID: {getOrderDisplayId(selectedOrder)} • {formatDateTime(selectedOrder.createdAt)}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <div className="text-[11px] text-brand-text/45">
+                              Order ID: {getOrderDisplayId(selectedOrder)} • {formatDateTime(selectedOrder.createdAt)}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedOrderDetails((prev) => ({
+                                  ...prev,
+                                  [selectedOrder.id]: !prev[selectedOrder.id],
+                                }))
+                              }
+                              className="inline-flex items-center gap-2 rounded-lg border border-primary/35 bg-primary/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-black hover:bg-primary transition-colors"
+                            >
+                              {selectedOrderDetailsExpanded ? 'Hide Details' : 'View Details'}
+                            </button>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Delivery Email</div>
-                            <div className="text-brand-text break-all mt-1">{getOrderDeliveryEmail(selectedOrder)}</div>
-                          </div>
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Phone</div>
-                            <div className="text-brand-text break-words mt-1">{getOrderPhone(selectedOrder)}</div>
-                          </div>
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Payment Method</div>
-                            <div className="text-brand-text break-words mt-1">{getPaymentMethod(selectedOrder)}</div>
-                          </div>
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Sender Account</div>
-                            <div className="text-brand-text break-words mt-1">{getSenderAccount(selectedOrder)}</div>
-                          </div>
-                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 md:col-span-2">
-                            <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Transaction ID</div>
-                            <div className="text-brand-text break-words mt-1">{getTransactionId(selectedOrder)}</div>
-                          </div>
-                        </div>
+                        {selectedOrderDetailsExpanded ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                                <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Delivery Email</div>
+                                <div className="text-brand-text break-all mt-1">{getOrderDeliveryEmail(selectedOrder)}</div>
+                              </div>
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                                <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Phone</div>
+                                <div className="text-brand-text break-words mt-1">{getOrderPhone(selectedOrder)}</div>
+                              </div>
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                                <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Payment Method</div>
+                                <div className="text-brand-text break-words mt-1">{getPaymentMethod(selectedOrder)}</div>
+                              </div>
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                                <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Sender Account</div>
+                                <div className="text-brand-text break-words mt-1">{getSenderAccount(selectedOrder)}</div>
+                              </div>
+                              <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 md:col-span-2">
+                                <div className="text-[10px] uppercase tracking-widest text-brand-text/35">Transaction ID</div>
+                                <div className="text-brand-text break-words mt-1">{getTransactionId(selectedOrder)}</div>
+                              </div>
+                            </div>
 
-                        {getScreenshotUrl(selectedOrder) ? (
-                          <button
-                            onClick={() =>
-                              setReceiptViewerUrl(
-                                withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)
-                              )
-                            }
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left"
-                          >
-                            <img
-                              src={withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)}
-                              alt="Payment proof"
-                              className="w-full max-h-[280px] object-cover rounded-lg"
-                            />
-                            <div className="mt-2 text-[11px] text-brand-text/55">Tap to view fullscreen receipt</div>
-                          </button>
+                            {getScreenshotUrl(selectedOrder) ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setReceiptViewerUrl(
+                                    withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)
+                                  )
+                                }
+                                className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left"
+                              >
+                                <img
+                                  src={withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)}
+                                  alt="Payment proof"
+                                  className="w-full max-h-[280px] object-cover rounded-lg"
+                                />
+                                <div className="mt-2 text-[11px] text-brand-text/55">Tap to view fullscreen receipt</div>
+                              </button>
+                            ) : (
+                              <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-sm text-brand-text/45">
+                                Image not uploaded
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-sm text-brand-text/45">
-                            Image not uploaded
+                          <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-brand-text/60">
+                            Order payment and receipt details are hidden. Click <span className="text-primary font-semibold">View Details</span> to open them.
                           </div>
                         )}
 
-                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                          <div className="text-[10px] uppercase tracking-widest text-brand-text/35 mb-3">Message Thread</div>
-                          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 min-h-[440px] flex flex-col">
+                          <div className="mb-3 text-[10px] uppercase tracking-widest text-brand-text/35">Message Thread</div>
+                          <div className="flex-1 space-y-2 min-h-[240px] max-h-[420px] overflow-y-auto pr-1">
                             {messages.length === 0 ? (
-                              <div className="text-sm text-brand-text/40">No messages yet.</div>
+                              <div className="h-full min-h-[200px] grid place-items-center text-sm text-brand-text/40">
+                                No messages yet. Start conversation below.
+                              </div>
                             ) : (
                               messages.map((entry, index) => {
-                                const isAdmin = entry.senderRole === 'admin';
+                                const isOutgoing = isUserOutgoingMessage(entry, user.uid);
                                 return (
                                   <div
                                     key={`${entry.senderId}-${index}`}
-                                    className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
                                   >
                                     <div
-                                      className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
-                                        isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
+                                      className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words ${
+                                        isOutgoing ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
                                       }`}
                                     >
-                                      {renderMessageContent(entry, isAdmin)}
-                                      <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
+                                      {renderMessageContent(entry, isOutgoing)}
+                                      <div className={`mt-1 text-[10px] ${isOutgoing ? 'text-black/60' : 'text-brand-text/45'}`}>
                                         {formatDateTime(entry.createdAt)}
                                       </div>
                                     </div>
@@ -767,6 +809,66 @@ function DashboardPageContent() {
                                 );
                               })
                             )}
+                          </div>
+
+                          <div className="mt-3 border-t border-white/10 pt-3">
+                            {composerAttachment ? (
+                              <div className="mb-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs text-brand-text flex items-center justify-between gap-2">
+                                <span className="truncate">{composerAttachment.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setComposerAttachment(null);
+                                    if (attachmentInputRef.current) {
+                                      attachmentInputRef.current.value = '';
+                                    }
+                                  }}
+                                  className="text-brand-text/70 hover:text-brand-text"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : null}
+
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => attachmentInputRef.current?.click()}
+                                disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                                className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/15 text-brand-text/75 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-50"
+                                title="Attach file"
+                              >
+                                <Paperclip className="w-4 h-4" />
+                              </button>
+                              <input
+                                ref={attachmentInputRef}
+                                type="file"
+                                className="hidden"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0] || null;
+                                  setComposerAttachment(file);
+                                }}
+                              />
+                              <textarea
+                                value={composerMessage}
+                                onChange={(event) => setComposerMessage(event.target.value)}
+                                placeholder={selectedOrder ? 'Type your message for admin' : 'Select an order first'}
+                                rows={2}
+                                disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                                className="min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void handleSendOrderMessage();
+                                }}
+                                disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                                className="shrink-0 rounded-xl bg-primary px-4 py-3 text-black text-[11px] font-black uppercase tracking-widest border-b-2 border-secondary inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                {sendingMessage || attachmentUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                Send
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </>
@@ -842,16 +944,16 @@ function DashboardPageContent() {
                         </div>
                       ) : (
                         messages.map((entry, index) => {
-                          const isAdmin = entry.senderRole === 'admin';
+                          const isOutgoing = isUserOutgoingMessage(entry, user.uid);
                           return (
-                            <div key={`${entry.senderId}-${index}`} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                            <div key={`${entry.senderId}-${index}`} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
                               <div
                                 className={`max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                                  isAdmin ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
+                                  isOutgoing ? 'bg-[#E3B80D] text-black' : 'bg-white/15 text-brand-text'
                                 }`}
                               >
-                                {renderMessageContent(entry, isAdmin)}
-                                <div className={`mt-1 text-[10px] ${isAdmin ? 'text-black/60' : 'text-brand-text/45'}`}>
+                                {renderMessageContent(entry, isOutgoing)}
+                                <div className={`mt-1 text-[10px] ${isOutgoing ? 'text-black/60' : 'text-brand-text/45'}`}>
                                   {formatDateTime(entry.createdAt)}
                                 </div>
                               </div>

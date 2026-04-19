@@ -77,13 +77,18 @@ function getMessageAttachment(entry: any) {
   };
 }
 
-function isImageAttachment(attachment: { url: string; mimeType?: string }) {
+function isImageAttachment(attachment: { url: string; mimeType?: string; name?: string }) {
   const mime = (attachment.mimeType || '').toLowerCase();
   if (mime.startsWith('image/')) {
     return true;
   }
 
-  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.url);
+  const urlWithoutQuery = (attachment.url || '').split('?')[0];
+  if (/\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(urlWithoutQuery)) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.name || '');
 }
 
 function getPrimaryItem(order: OrderRecord) {
