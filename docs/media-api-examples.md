@@ -29,7 +29,7 @@ Success response:
   "success": true,
   "media": {
     "id": "2mkJw8d9zYV6Qmn8DwF2",
-    "url": "https://your-domain.com/api/upload/2mkJw8d9zYV6Qmn8DwF2",
+    "url": "https://hammadtools.com/api/upload/2mkJw8d9zYV6Qmn8DwF2",
     "publicPath": "",
     "storagePath": "uploads/payment-proofs/proof-1713277812345-a1b2c3d4e5f6.webp",
     "fileName": "proof-1713277812345-a1b2c3d4e5f6.webp",
