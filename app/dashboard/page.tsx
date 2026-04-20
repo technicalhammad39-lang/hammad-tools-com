@@ -33,9 +33,18 @@ import type { NotificationRecord, OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
-import { toStorageMetadata, uploadMediaFile, withProtectedFileToken } from '@/lib/storage-utils';
+import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+type ComposerAttachment = {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+  media: ReturnType<typeof toStorageMetadata>;
+};
 
 function statusClass(status: string) {
   const normalized = normalizeOrderStatus(status);
@@ -162,11 +171,10 @@ function DashboardPageContent() {
   const [orderSelectorOpen, setOrderSelectorOpen] = useState(false);
   const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, boolean>>({});
   const [composerMessage, setComposerMessage] = useState('');
-  const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
+  const [composerAttachment, setComposerAttachment] = useState<ComposerAttachment | null>(null);
+  const [isAttachmentLibraryOpen, setIsAttachmentLibraryOpen] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
-  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -306,6 +314,10 @@ function DashboardPageContent() {
   }, [selectedOrderId]);
 
   useEffect(() => {
+    setComposerAttachment(null);
+  }, [selectedOrderId]);
+
+  useEffect(() => {
     if (!chatScrollRef.current) {
       return;
     }
@@ -380,33 +392,6 @@ function DashboardPageContent() {
     }
   }
 
-  async function uploadUserMessageAttachment(orderId: string, file: File) {
-    if (!user) {
-      throw new Error('You must be logged in to upload attachments.');
-    }
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      throw new Error('Attachment size must be less than 10MB.');
-    }
-
-    const media = await uploadMediaFile({
-      file,
-      folder: 'chat-attachments',
-      relatedType: 'order_message',
-      relatedId: orderId,
-      relatedOrderId: orderId,
-      relatedUserId: user.uid,
-      note: 'user-order-chat-attachment',
-    });
-
-    return {
-      url: media.url,
-      name: file.name,
-      type: file.type || 'application/octet-stream',
-      size: file.size,
-      media: toStorageMetadata(media, user.uid),
-    };
-  }
-
   async function handleSendOrderMessage() {
     if (!selectedOrder || !user) {
       return;
@@ -420,20 +405,12 @@ function DashboardPageContent() {
 
     setSendingMessage(true);
     try {
-      let attachmentPayload:
-        | {
-            url: string;
-            name: string;
-            type: string;
-            size: number;
-            media: ReturnType<typeof toStorageMetadata>;
+      const attachmentPayload = composerAttachment
+        ? {
+            ...composerAttachment,
+            media: composerAttachment.media,
           }
-        | null = null;
-
-      if (composerAttachment) {
-        setAttachmentUploading(true);
-        attachmentPayload = await uploadUserMessageAttachment(selectedOrder.id, composerAttachment);
-      }
+        : null;
 
       const token = await user.getIdToken();
       const response = await fetch(`/api/orders/${encodeURIComponent(selectedOrder.id)}/messages`, {
@@ -455,16 +432,12 @@ function DashboardPageContent() {
 
       setComposerMessage('');
       setComposerAttachment(null);
-      if (attachmentInputRef.current) {
-        attachmentInputRef.current.value = '';
-      }
       toast.success('Message sent');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send message';
       toast.error('Message failed', message);
     } finally {
       setSendingMessage(false);
-      setAttachmentUploading(false);
     }
   }
 
@@ -890,9 +863,6 @@ function DashboardPageContent() {
                           <button
                             onClick={() => {
                               setComposerAttachment(null);
-                              if (attachmentInputRef.current) {
-                                attachmentInputRef.current.value = '';
-                              }
                             }}
                             className="text-brand-text/70 hover:text-brand-text"
                           >
@@ -904,38 +874,35 @@ function DashboardPageContent() {
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                         <button
                           type="button"
-                          onClick={() => attachmentInputRef.current?.click()}
-                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                          onClick={() => {
+                            if (!selectedOrder) {
+                              toast.error('Select an order first');
+                              return;
+                            }
+                            setIsAttachmentLibraryOpen(true);
+                          }}
+                          disabled={!selectedOrder || sendingMessage}
                           className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/15 text-brand-text/75 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-50"
                           title="Attach file"
                         >
                           <Paperclip className="w-4 h-4" />
                         </button>
-                        <input
-                          ref={attachmentInputRef}
-                          type="file"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0] || null;
-                            setComposerAttachment(file);
-                          }}
-                        />
                         <textarea
                           value={composerMessage}
                           onChange={(event) => setComposerMessage(event.target.value)}
                           placeholder={selectedOrder ? 'Type your message for admin' : 'Select an order first'}
                           rows={2}
-                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                          disabled={!selectedOrder || sendingMessage}
                           className="min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-primary/50 disabled:opacity-50"
                         />
                         <button
                           onClick={() => {
                             void handleSendOrderMessage();
                           }}
-                          disabled={!selectedOrder || sendingMessage || attachmentUploading}
+                          disabled={!selectedOrder || sendingMessage}
                           className="shrink-0 rounded-xl bg-primary px-4 py-3 text-black text-[11px] font-black uppercase tracking-widest border-b-2 border-secondary inline-flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          {sendingMessage || attachmentUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                           Send
                         </button>
                       </div>
@@ -1020,6 +987,41 @@ function DashboardPageContent() {
           </AnimatePresence>
         </div>
       </div>
+
+      <MediaLibraryModal
+        open={isAttachmentLibraryOpen}
+        onClose={() => setIsAttachmentLibraryOpen(false)}
+        onSelect={(media) => {
+          if (!user) {
+            toast.error('Authentication required');
+            return;
+          }
+
+          const size = Number(media.sizeBytes || 0);
+          if (size > MAX_ATTACHMENT_BYTES) {
+            toast.error('Attachment too large', 'Attachment size must be less than 10MB.');
+            return;
+          }
+
+          setComposerAttachment({
+            url: media.url,
+            name: media.originalFileName || media.fileName || 'Attachment',
+            type: media.mimeType || 'application/octet-stream',
+            size,
+            media: toStorageMetadataFromLibrary(media, user.uid),
+          });
+        }}
+        folder="chat-attachments"
+        title="Order Attachment Library"
+        description="Select your existing order files or upload a new one from device."
+        accept="image/*,application/pdf,text/plain,.doc,.docx"
+        relatedType="order_message"
+        relatedId={selectedOrder?.id || ''}
+        relatedOrderId={selectedOrder?.id || ''}
+        relatedUserId={user?.uid || ''}
+        fileAccessToken={fileAccessToken}
+        filterByRelatedFields
+      />
 
       {receiptViewerUrl ? (
         <div className="fixed inset-0 z-[95] bg-black/90 p-4 md:p-8">

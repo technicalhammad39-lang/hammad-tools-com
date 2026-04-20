@@ -19,18 +19,18 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Upload,
   Loader2,
   Image as ImageIcon,
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadataFromLibrary } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { Category, ProductItem, ProductPlan, StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 type DurationUnit = 'fixed_days' | 'fixed_months' | 'fixed_years';
 type DurationPreset = '1_month' | '2_months' | '3_months' | '6_months' | '12_months' | 'lifetime' | 'custom';
@@ -235,7 +235,7 @@ const AdminProductsPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductForm>(defaultForm);
 
@@ -650,45 +650,17 @@ const AdminProductsPage = () => {
                       placeholder="Image URL"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-3"
                     />
-                    <label className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl border border-white/10 cursor-pointer transition-colors">
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4 text-primary" />}
-                      <span className="text-xs font-bold uppercase tracking-widest">Upload Image</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        disabled={uploading}
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0];
-                          if (!file) {
-                            return;
-                          }
-
-                          setUploading(true);
-                          try {
-                            const media = await uploadMediaFile({
-                              file,
-                              folder: 'tools',
-                              relatedType: 'tool',
-                              relatedId: editingId || '',
-                              replaceMediaId: form.imageMedia?.mediaId || '',
-                            });
-                            setForm((prev) => ({
-                              ...prev,
-                              image: media.url,
-                              imageMedia: toStorageMetadata(media),
-                            }));
-                          } catch (error) {
-                            console.error('Failed to upload tool image:', error);
-                            const message =
-                              error instanceof Error ? error.message : 'Unable to upload image.';
-                            toast.error('Image upload failed', message);
-                          } finally {
-                            setUploading(false);
-                          }
-                        }}
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaLibraryOpen(true)}
+                      className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-xl border border-white/10 transition-colors"
+                    >
+                      <ImageIcon className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Open Media Library</span>
+                    </button>
+                    <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-brand-text/35">
+                      Reuse existing images or upload from device inside library.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -913,6 +885,25 @@ const AdminProductsPage = () => {
           </div>
         )})}
       </div>
+
+      <MediaLibraryModal
+        open={isMediaLibraryOpen}
+        onClose={() => setIsMediaLibraryOpen(false)}
+        onSelect={(media) => {
+          setForm((prev) => ({
+            ...prev,
+            image: media.url,
+            imageMedia: toStorageMetadataFromLibrary(media),
+          }));
+        }}
+        folder="tools"
+        title="Tool Media Library"
+        description="Choose an existing tool image or upload a new one from the same library."
+        accept="image/*"
+        relatedType="tool"
+        relatedId={editingId || ''}
+        replaceMediaId={form.imageMedia?.mediaId || ''}
+      />
     </div>
   );
 };

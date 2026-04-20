@@ -22,7 +22,6 @@ import {
   Trash2, 
   Save, 
   X, 
-  Upload, 
   Loader2, 
   Image as ImageIcon, 
   ArrowLeft,
@@ -30,12 +29,13 @@ import {
   Tag
 } from 'lucide-react';
 import Link from 'next/link';
-import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadataFromLibrary } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 interface AgencyService {
   id: string;
@@ -53,8 +53,7 @@ const ManageAgencyServices = () => {
   const [services, setServices] = useState<AgencyService[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form State
@@ -299,60 +298,21 @@ const ManageAgencyServices = () => {
                   </div>
                   <div className="mt-4 flex items-center justify-between">
                      <div className="text-[9px] text-brand-text/30 font-bold uppercase tracking-widest">Recommended: 1280x720px • Max 2MB</div>
-                     <label className="cursor-pointer bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-xl border border-white/10 transition-all flex items-center gap-2">
-                        {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <Upload className="w-3.5 h-3.5 text-primary" />}
-                        <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Processing...' : 'Upload Asset'}</span>
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          disabled={uploading}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setUploading(true);
-                            setUploadProgress(20);
-                            try {
-                              const media = await uploadMediaFile({
-                                file,
-                                folder: 'services',
-                                relatedType: 'agency_service',
-                                relatedId: editingId || '',
-                                replaceMediaId: form.thumbnailMedia?.mediaId || '',
-                              });
-                              setForm((prev) => ({
-                                ...prev,
-                                thumbnail: media.url,
-                                thumbnailMedia: toStorageMetadata(media),
-                              }));
-                              setUploadProgress(100);
-                            } catch (error) {
-                              const message =
-                                error instanceof Error ? error.message : 'Unable to upload thumbnail.';
-                              toast.error('Upload failed', message);
-                            } finally {
-                              setUploading(false);
-                              setUploadProgress(0);
-                            }
-                          }}
-                        />
-                     </label>
+                     <button
+                      type="button"
+                      onClick={() => setIsMediaLibraryOpen(true)}
+                      className="bg-white/5 hover:bg-white/10 px-6 py-2.5 rounded-xl border border-white/10 transition-all flex items-center gap-2"
+                     >
+                        <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Open Media Library</span>
+                     </button>
                   </div>
-                  {uploading && (
-                    <div className="mt-4 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                       <motion.div 
-                         initial={{ width: 0 }}
-                         animate={{ width: `${uploadProgress}%` }}
-                         className="h-full bg-primary"
-                       />
-                    </div>
-                  )}
                 </div>
 
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row gap-4">
                    <button 
                     onClick={handleSave}
-                    disabled={uploading || !form.title.trim()}
+                    disabled={!form.title.trim()}
                     className="flex-1 bg-primary text-brand-bg py-5 rounded-2xl font-black uppercase tracking-widest text-xs border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                    >
                      <Save className="w-5 h-5" />
@@ -427,6 +387,25 @@ const ManageAgencyServices = () => {
           )})
         )}
       </div>
+
+      <MediaLibraryModal
+        open={isMediaLibraryOpen}
+        onClose={() => setIsMediaLibraryOpen(false)}
+        onSelect={(media) => {
+          setForm((prev) => ({
+            ...prev,
+            thumbnail: media.url,
+            thumbnailMedia: toStorageMetadataFromLibrary(media),
+          }));
+        }}
+        folder="services"
+        title="Agency Service Media Library"
+        description="Select an existing asset or upload from device inside this media library."
+        accept="image/*"
+        relatedType="agency_service"
+        relatedId={editingId || ''}
+        replaceMediaId={form.thumbnailMedia?.mediaId || ''}
+      />
     </div>
   );
 };

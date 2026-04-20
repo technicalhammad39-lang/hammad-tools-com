@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -22,7 +22,8 @@ import type { OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
-import { toStorageMetadata, uploadMediaFile, withProtectedFileToken } from '@/lib/storage-utils';
+import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -32,6 +33,14 @@ const STATUS_FILTERS = [
 ] as const;
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+type ComposerAttachment = {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+  media: ReturnType<typeof toStorageMetadata>;
+};
 
 function statusStyles(status: string) {
   const normalized = normalizeOrderStatus(status);
@@ -217,9 +226,9 @@ export default function AdminOrdersPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [composerMessage, setComposerMessage] = useState('');
-  const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
+  const [composerAttachment, setComposerAttachment] = useState<ComposerAttachment | null>(null);
+  const [isAttachmentLibraryOpen, setIsAttachmentLibraryOpen] = useState(false);
   const [fileAccessToken, setFileAccessToken] = useState('');
-  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [deletingAllOrders, setDeletingAllOrders] = useState(false);
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [chatFullscreen, setChatFullscreen] = useState(false);
@@ -227,7 +236,6 @@ export default function AdminOrdersPage() {
     type: 'approve' | 'reject';
     value: string;
   } | null>(null);
-  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isStaff) {
@@ -361,33 +369,12 @@ export default function AdminOrdersPage() {
     });
   }, [selectedOrder?.messages]);
 
+  useEffect(() => {
+    setComposerAttachment(null);
+  }, [selectedOrderId]);
+
   if (!isStaff) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;
-  }
-
-  async function uploadMessageAttachment(orderId: string, file: File) {
-    if (!user) {
-      throw new Error('You must be logged in as admin.');
-    }
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      throw new Error('Attachment size must be less than 10MB.');
-    }
-    const media = await uploadMediaFile({
-      file,
-      folder: 'chat-attachments',
-      relatedType: 'order_message',
-      relatedId: orderId,
-      relatedOrderId: orderId,
-      relatedUserId: user.uid,
-      note: 'admin-order-chat-attachment',
-    });
-    return {
-      url: media.url,
-      name: file.name,
-      type: file.type || 'application/octet-stream',
-      size: file.size,
-      media: toStorageMetadata(media, user.uid),
-    };
   }
 
   async function pushOrderMessage(
@@ -576,25 +563,15 @@ export default function AdminOrdersPage() {
     setError('');
     setActionLoading(true);
     try {
-      let attachment:
-        | {
-            url: string;
-            name: string;
-            type: string;
-            size: number;
-            media?: ReturnType<typeof toStorageMetadata>;
+      const attachment = composerAttachment
+        ? {
+            ...composerAttachment,
+            media: composerAttachment.media,
           }
-        | null = null;
-      if (composerAttachment) {
-        setAttachmentUploading(true);
-        attachment = await uploadMessageAttachment(selectedOrder.id, composerAttachment);
-      }
+        : null;
       await pushOrderMessage(selectedOrder, composerMessage, 'message', 'Order Message', undefined, attachment);
       setComposerMessage('');
       setComposerAttachment(null);
-      if (attachmentInputRef.current) {
-        attachmentInputRef.current.value = '';
-      }
       toast.success('Message sent', getOrderDisplayId(selectedOrder));
       return true;
     } catch (actionError) {
@@ -604,7 +581,6 @@ export default function AdminOrdersPage() {
       return false;
     } finally {
       setActionLoading(false);
-      setAttachmentUploading(false);
     }
   }
 
@@ -767,9 +743,6 @@ export default function AdminOrdersPage() {
               <button
                 onClick={() => {
                   setComposerAttachment(null);
-                  if (attachmentInputRef.current) {
-                    attachmentInputRef.current.value = '';
-                  }
                 }}
                 className="text-white/70 hover:text-white"
               >
@@ -781,21 +754,18 @@ export default function AdminOrdersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-[40px_minmax(0,1fr)_auto] gap-2 items-end">
             <button
               type="button"
-              onClick={() => attachmentInputRef.current?.click()}
+              onClick={() => {
+                if (!selectedOrder) {
+                  toast.error('Select an order first');
+                  return;
+                }
+                setIsAttachmentLibraryOpen(true);
+              }}
               className="h-10 w-10 rounded-xl bg-[#1F2124] border border-white/15 text-white/80 grid place-items-center hover:border-primary/50 hover:text-primary transition-colors"
               title="Attach file"
             >
               <Paperclip className="w-4 h-4" />
             </button>
-            <input
-              ref={attachmentInputRef}
-              type="file"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0] || null;
-                setComposerAttachment(file);
-              }}
-            />
             <textarea
               value={composerMessage}
               onChange={(event) => setComposerMessage(event.target.value)}
@@ -807,10 +777,10 @@ export default function AdminOrdersPage() {
               onClick={() => {
                 void handleSendMessage();
               }}
-              disabled={actionLoading || attachmentUploading}
+              disabled={actionLoading}
               className="h-10 px-3 sm:px-4 rounded-xl bg-primary text-black border border-primary/70 inline-flex items-center justify-center gap-1.5 disabled:opacity-60 w-full sm:w-auto"
             >
-              {actionLoading || attachmentUploading ? (
+              {actionLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
@@ -1118,6 +1088,41 @@ export default function AdminOrdersPage() {
           {renderChatPanel(true)}
         </div>
       ) : null}
+
+      <MediaLibraryModal
+        open={isAttachmentLibraryOpen}
+        onClose={() => setIsAttachmentLibraryOpen(false)}
+        onSelect={(media) => {
+          if (!user) {
+            toast.error('Authentication required');
+            return;
+          }
+
+          const size = Number(media.sizeBytes || 0);
+          if (size > MAX_ATTACHMENT_BYTES) {
+            toast.error('Attachment too large', 'Attachment size must be less than 10MB.');
+            return;
+          }
+
+          setComposerAttachment({
+            url: media.url,
+            name: media.originalFileName || media.fileName || 'Attachment',
+            type: media.mimeType || 'application/octet-stream',
+            size,
+            media: toStorageMetadataFromLibrary(media, user.uid),
+          });
+        }}
+        folder="chat-attachments"
+        title="Order Attachment Library"
+        description="Select existing order files or upload from device inside this secure library."
+        accept="image/*,application/pdf,text/plain,.doc,.docx"
+        relatedType="order_message"
+        relatedId={selectedOrder?.id || ''}
+        relatedOrderId={selectedOrder?.id || ''}
+        relatedUserId={user?.uid || ''}
+        fileAccessToken={fileAccessToken}
+        filterByRelatedFields
+      />
 
       {receiptViewerUrl ? (
         <div className="fixed inset-0 z-[130] bg-black/90 p-4 md:p-8">

@@ -15,14 +15,15 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { Loader2, Plus, Edit2, Trash2, Save, X, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Save, X, Image as ImageIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import type { Category, CategoryType } from '@/lib/types/domain';
-import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadataFromLibrary } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 const CATEGORY_TYPES: Array<{ value: CategoryType; label: string }> = [
   { value: 'tools', label: 'Tools' },
@@ -47,7 +48,7 @@ export default function AdminCategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [form, setForm] = useState<Partial<Category>>({
     name: '',
     slug: '',
@@ -303,43 +304,14 @@ export default function AdminCategoriesPage() {
                       placeholder="Image URL (optional)"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
                     />
-                    <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-white/10">
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <ArrowLeft className="w-4 h-4 text-primary rotate-180" />}
-                      Upload Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0];
-                          if (!file) {
-                            return;
-                          }
-                          setUploading(true);
-                        try {
-                          const media = await uploadMediaFile({
-                            file,
-                            folder: 'services',
-                            relatedType: 'category',
-                            relatedId: editingId || '',
-                            replaceMediaId: form.imageMedia?.mediaId || '',
-                          });
-                          setForm((prev) => ({
-                            ...prev,
-                            imageUrl: media.url,
-                            imageMedia: toStorageMetadata(media),
-                          }));
-                        } catch (error) {
-                          console.error('Failed to upload category image:', error);
-                          const message =
-                            error instanceof Error ? error.message : 'Unable to upload image.';
-                          toast.error('Image upload failed', message);
-                        } finally {
-                          setUploading(false);
-                        }
-                      }}
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaLibraryOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/10"
+                    >
+                      <ImageIcon className="w-4 h-4 text-primary" />
+                      Open Media Library
+                    </button>
                   </div>
                 </div>
               </div>
@@ -351,7 +323,7 @@ export default function AdminCategoriesPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || uploading}
+                disabled={saving}
                 className="px-8 py-3 rounded-xl bg-primary text-black border-b-4 border-secondary text-xs font-black uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Category
@@ -426,6 +398,25 @@ export default function AdminCategoriesPage() {
           )})
         )}
       </div>
+
+      <MediaLibraryModal
+        open={isMediaLibraryOpen}
+        onClose={() => setIsMediaLibraryOpen(false)}
+        onSelect={(media) => {
+          setForm((prev) => ({
+            ...prev,
+            imageUrl: media.url,
+            imageMedia: toStorageMetadataFromLibrary(media),
+          }));
+        }}
+        folder="services"
+        title="Category Media Library"
+        description="Select an existing category image or upload a new one from this library."
+        accept="image/*"
+        relatedType="category"
+        relatedId={editingId || ''}
+        replaceMediaId={form.imageMedia?.mediaId || ''}
+      />
     </div>
   );
 }

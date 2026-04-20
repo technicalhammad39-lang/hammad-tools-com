@@ -22,9 +22,36 @@ export interface UploadedMediaPayload {
   access: 'public' | 'protected';
 }
 
+export interface MediaLibraryItem {
+  id: string;
+  url: string;
+  publicPath: string;
+  storagePath: string;
+  fileName: string;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  folder: UploadFolder;
+  access: 'public' | 'protected';
+  ownerId: string;
+  relatedType: string;
+  relatedId: string;
+  relatedUserId: string;
+  relatedOrderId: string;
+  relatedProductId: string;
+  note: string;
+  createdAt: string;
+}
+
 interface UploadApiResponse {
   success: boolean;
   media?: UploadedMediaPayload;
+  error?: string;
+}
+
+interface MediaLibraryApiResponse {
+  success: boolean;
+  items?: MediaLibraryItem[];
   error?: string;
 }
 
@@ -174,6 +201,17 @@ export interface UploadMediaOptions {
   replaceMediaId?: string;
 }
 
+export interface FetchMediaLibraryOptions {
+  folder: UploadFolder;
+  limit?: number;
+  search?: string;
+  relatedType?: string;
+  relatedId?: string;
+  relatedUserId?: string;
+  relatedOrderId?: string;
+  relatedProductId?: string;
+}
+
 export async function uploadMediaFile(options: UploadMediaOptions) {
   const formData = new FormData();
   formData.append('file', options.file);
@@ -223,6 +261,53 @@ export async function uploadMediaFile(options: UploadMediaOptions) {
   }
 
   return payload.media;
+}
+
+export async function fetchMediaLibrary(options: FetchMediaLibraryOptions) {
+  const params = new URLSearchParams();
+  params.set('folder', options.folder);
+  params.set('limit', String(Math.max(1, Math.min(200, Number(options.limit || 80)))));
+
+  if (options.search?.trim()) {
+    params.set('q', options.search.trim());
+  }
+  if (options.relatedType?.trim()) {
+    params.set('relatedType', options.relatedType.trim());
+  }
+  if (options.relatedId?.trim()) {
+    params.set('relatedId', options.relatedId.trim());
+  }
+  if (options.relatedUserId?.trim()) {
+    params.set('relatedUserId', options.relatedUserId.trim());
+  }
+  if (options.relatedOrderId?.trim()) {
+    params.set('relatedOrderId', options.relatedOrderId.trim());
+  }
+  if (options.relatedProductId?.trim()) {
+    params.set('relatedProductId', options.relatedProductId.trim());
+  }
+
+  const runListRequest = async (forceRefreshToken = false) => {
+    const response = await fetch(`/api/upload/library?${params.toString()}`, {
+      method: 'GET',
+      headers: await getAuthHeader(forceRefreshToken),
+    });
+    const payload = await parseApiPayload<MediaLibraryApiResponse>(response);
+    return { response, payload };
+  };
+
+  let { response, payload } = await runListRequest(false);
+
+  if (response.status === 401) {
+    ({ response, payload } = await runListRequest(true));
+  }
+
+  if (!response.ok || !payload?.success) {
+    const fallback = `Failed to load media library (HTTP ${response.status || 500}).`;
+    throw new Error(toApiErrorMessage(payload, fallback));
+  }
+
+  return Array.isArray(payload.items) ? payload.items : [];
 }
 
 /**
@@ -285,6 +370,36 @@ export function toStorageMetadata(
   }
 
   return metadata;
+}
+
+export function toStorageMetadataFromLibrary(
+  media: MediaLibraryItem,
+  uploadedBy?: string
+): {
+  mediaId: string;
+  fileUrl: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  folder: UploadFolder;
+  access: 'public' | 'protected';
+  uploadedBy?: string;
+} {
+  return toStorageMetadata(
+    {
+      id: media.id,
+      url: media.url,
+      publicPath: media.publicPath || '',
+      storagePath: media.storagePath,
+      fileName: media.fileName,
+      mimeType: media.mimeType,
+      sizeBytes: media.sizeBytes,
+      folder: media.folder,
+      access: media.access,
+    },
+    uploadedBy
+  );
 }
 
 export function withProtectedFileToken(url: string, token: string) {

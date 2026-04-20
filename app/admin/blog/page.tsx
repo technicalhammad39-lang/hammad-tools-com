@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
-import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { Plus, Trash2, Edit, Save, X, FileText, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { deleteUploadedMedia, toStorageMetadataFromLibrary } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
@@ -12,6 +12,7 @@ import { db } from '@/firebase';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 const BlogCMS = () => {
   const { isStaff, profile } = useAuth();
@@ -19,8 +20,7 @@ const BlogCMS = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -222,48 +222,14 @@ const BlogCMS = () => {
                       )}
                     </div>
                     <div className="flex-1">
-                      <label className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest">
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4 text-primary" />}
-                        <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setUploading(true);
-                            setUploadProgress(20);
-                            try {
-                              const media = await uploadMediaFile({
-                                file,
-                                folder: 'blogs',
-                                relatedType: 'blog',
-                                relatedId: editingPost?.id || '',
-                                replaceMediaId: formData.thumbnailMedia?.mediaId || '',
-                              });
-                              setFormData((prev) => ({
-                                ...prev,
-                                thumbnail: media.url,
-                                thumbnailMedia: toStorageMetadata(media),
-                              }));
-                              setUploadProgress(100);
-                            } catch (error) {
-                              const message =
-                                error instanceof Error ? error.message : 'Unable to upload image.';
-                              toast.error('Upload failed', message);
-                            } finally {
-                              setUploading(false);
-                              setUploadProgress(0);
-                            }
-                          }}
-                        />
-                      </label>
-                      {uploading && (
-                        <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden w-32">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} className="h-full bg-primary" />
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsMediaLibraryOpen(true)}
+                        className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 transition-colors text-xs font-bold uppercase tracking-widest"
+                      >
+                        <ImageIcon className="w-4 h-4 text-primary" />
+                        <span>Open Media Library</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -418,6 +384,25 @@ const BlogCMS = () => {
             )}
           </div>
         </div>
+
+        <MediaLibraryModal
+          open={isMediaLibraryOpen}
+          onClose={() => setIsMediaLibraryOpen(false)}
+          onSelect={(media) => {
+            setFormData((prev) => ({
+              ...prev,
+              thumbnail: media.url,
+              thumbnailMedia: toStorageMetadataFromLibrary(media),
+            }));
+          }}
+          folder="blogs"
+          title="Blog Media Library"
+          description="Select an existing blog image or upload from device inside this library."
+          accept="image/*"
+          relatedType="blog"
+          relatedId={editingPost?.id || ''}
+          replaceMediaId={formData.thumbnailMedia?.mediaId || ''}
+        />
       </div>
     </div>
   );

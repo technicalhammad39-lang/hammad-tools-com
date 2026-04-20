@@ -5,14 +5,15 @@ import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, Timestamp, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Gift, Calendar, Users, Trophy, Loader2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
-import { deleteUploadedMedia, toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
+import { deleteUploadedMedia, toStorageMetadataFromLibrary } from '@/lib/storage-utils';
 import { logFirestoreSaveFailure, sanitizeForFirestore } from '@/lib/firestore-sanitize';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import MediaLibraryModal from '@/components/MediaLibraryModal';
 
 interface Giveaway {
   id: string;
@@ -35,8 +36,7 @@ const AdminGiveaways = () => {
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [form, setForm] = useState<Partial<Giveaway>>({
     title: '',
     description: '',
@@ -213,43 +213,14 @@ const AdminGiveaways = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <label className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 cursor-pointer transition-colors text-xs font-bold uppercase tracking-widest">
-                    {uploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4 text-primary" />}
-                    <span>{uploading ? 'Uploading...' : 'Upload Image'}</span>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setUploading(true);
-                        setUploadProgress(20);
-                        try {
-                          const media = await uploadMediaFile({
-                            file,
-                            folder: 'services',
-                            relatedType: 'giveaway',
-                            relatedId: editingId || '',
-                            replaceMediaId: form.imageMedia?.mediaId || '',
-                          });
-                          setForm((prev) => ({
-                            ...prev,
-                            image: media.url,
-                            imageMedia: toStorageMetadata(media),
-                          }));
-                          setUploadProgress(100);
-                        } catch (error) {
-                          const message =
-                            error instanceof Error ? error.message : 'Unable to upload image.';
-                          toast.error('Upload failed', message);
-                        } finally {
-                          setUploading(false);
-                          setUploadProgress(0);
-                        }
-                      }}
-                    />
-                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsMediaLibraryOpen(true)}
+                    className="inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 transition-colors text-xs font-bold uppercase tracking-widest"
+                  >
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    <span>Open Media Library</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -329,6 +300,25 @@ const AdminGiveaways = () => {
             </div>
           ))}
         </div>
+
+        <MediaLibraryModal
+          open={isMediaLibraryOpen}
+          onClose={() => setIsMediaLibraryOpen(false)}
+          onSelect={(media) => {
+            setForm((prev) => ({
+              ...prev,
+              image: media.url,
+              imageMedia: toStorageMetadataFromLibrary(media),
+            }));
+          }}
+          folder="services"
+          title="Giveaway Media Library"
+          description="Use existing giveaway assets or upload from device inside this library."
+          accept="image/*"
+          relatedType="giveaway"
+          relatedId={editingId || ''}
+          replaceMediaId={form.imageMedia?.mediaId || ''}
+        />
       </div>
     </div>
   );
