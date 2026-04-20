@@ -302,36 +302,28 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             {/* Quick Badges */}
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform flex-shrink-0">
-                  <Sparkles className="w-5 h-5" />
-                </div>
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-emerald-400 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Delivery</div>
                   <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.deliveryStatus || 'Instant'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl border border-secondary/20 bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform flex-shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-secondary group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Access</div>
                   <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.accessLabel || service.accessType || 'Shared'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl border border-primary/20 bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform flex-shrink-0">
-                  <Shield className="w-5 h-5" />
-                </div>
+                <Shield className="w-5 h-5 md:w-6 md:h-6 text-primary group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Warranty</div>
                   <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.warranty || 'Full'}</div>
                 </div>
               </div>
               <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl border border-purple-500/20 bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform flex-shrink-0">
-                  <Users className="w-5 h-5" />
-                </div>
+                <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-400 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
                   <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Plan Type</div>
                   <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.planType || 'Individual'}</div>

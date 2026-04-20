@@ -794,8 +794,8 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="space-y-5 md:space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-6">
+    <div className="space-y-4 md:space-y-6">
+      <div className="space-y-3 md:space-y-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-brand-text uppercase">
             Order <span className="internal-gradient">Management</span>
@@ -805,28 +805,30 @@ export default function AdminOrdersPage() {
           </p>
         </div>
 
-        <div className="relative group w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20 group-focus-within:text-primary transition-colors" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search order, customer, payment..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 md:py-3 pl-11 md:pl-12 pr-4 text-[10px] md:text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
-          />
+        <div className="flex items-center gap-2.5 md:gap-3">
+          <div className="relative group min-w-0 flex-1 md:flex-none md:w-[22rem]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/20 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search order, customer, payment..."
+              className="h-10 md:h-11 w-full bg-white/5 border border-white/10 rounded-xl pl-10 md:pl-11 pr-3.5 md:pr-4 text-[10px] md:text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
+            />
+          </div>
+          {isAdmin ? (
+            <button
+              onClick={() => {
+                void handleDeleteAllOrders();
+              }}
+              disabled={deletingAllOrders}
+              className="h-10 md:h-11 shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-accent/35 bg-accent/15 px-3 md:px-3.5 text-[8px] md:text-[9px] font-black uppercase tracking-[0.14em] text-accent hover:bg-accent/20 disabled:opacity-60 whitespace-nowrap"
+            >
+              {deletingAllOrders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              Delete All Orders
+            </button>
+          ) : null}
         </div>
-        {isAdmin ? (
-          <button
-            onClick={() => {
-              void handleDeleteAllOrders();
-            }}
-            disabled={deletingAllOrders}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent/35 bg-accent/15 px-3.5 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/20 disabled:opacity-60"
-          >
-            {deletingAllOrders ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-            Delete All Orders
-          </button>
-        ) : null}
       </div>
 
       <div className="flex md:grid md:grid-cols-3 gap-2 md:gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 md:mx-0 md:px-0">

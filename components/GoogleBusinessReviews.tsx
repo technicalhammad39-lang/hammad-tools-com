@@ -14,8 +14,8 @@ export default function GoogleBusinessReviews() {
             viewport={{ once: true }}
             className="text-3xl md:text-6xl font-black text-brand-text uppercase"
           >
-            <span className="font-serif italic text-white normal-case">See Our</span>{' '}
-            <span className="internal-gradient">Live Reviews</span>
+            <span className="font-serif italic text-white normal-case">See Our Live</span>{' '}
+            <span className="internal-gradient">Reviews</span>
           </motion.h2>
           <p className="text-brand-text/50 text-[10px] md:text-sm font-black uppercase tracking-widest mt-3 md:mt-4">
             Live client feedback from our Google Business profile
