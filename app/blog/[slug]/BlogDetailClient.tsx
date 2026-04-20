@@ -44,7 +44,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
     <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4 text-center">
       <div>
         <h1 className="text-4xl font-black text-brand-text mb-6 uppercase">Transmission <span className="text-accent">Lost</span></h1>
-        <p className="text-brand-text/60 mb-10 max-w-md mx-auto">The article you're looking for has been archived or doesn't exist in our current timeline.</p>
+        <p className="text-brand-text/60 mb-10 max-w-md mx-auto">The article you&apos;re looking for has been archived or doesn&apos;t exist in our current timeline.</p>
         <Link href="/blog" className="bg-primary text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 inline-block hover:scale-105 transition-all">
           Return to Blog
         </Link>

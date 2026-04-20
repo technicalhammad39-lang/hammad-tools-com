@@ -35,7 +35,7 @@ export default function AboutClient() {
             transition={{ delay: 0.1 }}
             className="text-brand-text/50 font-medium max-w-2xl mx-auto leading-relaxed md:text-lg px-4 mt-2 md:mt-0"
           >
-            We don't just provide access; we build bridges to premium digital ecosystems. 
+            We don&apos;t just provide access; we build bridges to premium digital ecosystems. 
             Experience unparalleled speed, security, and global support.
           </motion.p>
         </div>
@@ -54,10 +54,10 @@ export default function AboutClient() {
                <h2 className="text-2xl md:text-4xl font-black uppercase text-white mb-4">Our Mission & Vision</h2>
                <div className="space-y-4 text-brand-text/70 font-medium leading-relaxed text-sm md:text-base">
                   <p>
-                    "Our vision is simple: democratize access to elite digital resources. We empower creators by removing the barriers of fragmented subscriptions and high costs."
+                    &ldquo;Our vision is simple: democratize access to elite digital resources. We empower creators by removing the barriers of fragmented subscriptions and high costs.&rdquo;
                   </p>
                   <p className="hidden md:block">
-                    "Today, we stand as the central hub for thousands of professionals globally. We merge hyper-support with flawlessly secure infrastructure."
+                    &ldquo;Today, we stand as the central hub for thousands of professionals globally. We merge hyper-support with flawlessly secure infrastructure.&rdquo;
                   </p>
                   <p className="text-primary font-bold text-xs md:text-sm">
                     - Hammad Tools Team

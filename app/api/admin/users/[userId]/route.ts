@@ -50,7 +50,7 @@ function assertValidUserId(userId: string) {
 
 async function countAdminUsers(excludeUid?: string) {
   const snapshot = await adminDb.collection('users').where('role', 'in', ['admin', 'Admin']).get();
-  return snapshot.docs.filter((doc) => doc.id !== excludeUid).length;
+  return snapshot.docs.filter((doc: FirebaseFirestore.QueryDocumentSnapshot) => doc.id !== excludeUid).length;
 }
 
 async function assertNotLastAdmin(targetUid: string, targetRole: AllowedRole, targetEmail: string) {
@@ -176,7 +176,7 @@ async function deleteMatchingDocuments(queryBuilder: () => any) {
     }
 
     const batch = adminDb.batch();
-    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    snapshot.docs.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => batch.delete(doc.ref));
     await batch.commit();
 
     deletedCount += snapshot.size;

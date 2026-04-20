@@ -1,16 +1,41 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
 
+type SnowParticleConfig = {
+  leftPercent: number;
+  scale: number;
+  driftPx: number;
+  duration: number;
+  delay: number;
+};
+
+const SNOW_PARTICLE_COUNT = 50;
+
+function seededRandom(seed: number) {
+  const x = Math.sin(seed * 9999.17) * 10000;
+  return x - Math.floor(x);
+}
+
+const SNOW_PARTICLES: SnowParticleConfig[] = Array.from(
+  { length: SNOW_PARTICLE_COUNT },
+  (_, index) => {
+    const base = index + 1;
+    return {
+      leftPercent: seededRandom(base * 3.11) * 100,
+      scale: seededRandom(base * 2.73) * 0.3 + 0.2,
+      driftPx: (seededRandom(base * 4.29) - 0.5) * 180,
+      duration: seededRandom(base * 5.07) * 10 + 10,
+      delay: seededRandom(base * 7.13) * 20,
+    };
+  }
+);
+
 const AnimatedBackground = () => {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const showParticles = ['/', '/about', '/services', '/blog', '/giveaway'].includes(pathname);
 
   return (
     <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none bg-[#0A0A0A]">
@@ -44,31 +69,31 @@ const AnimatedBackground = () => {
       />
 
       {/* Snowfall/Particle Animation - Only render on specific routes */}
-      {mounted && ['/', '/about', '/services', '/blog', '/giveaway'].includes(pathname) && (
+      {showParticles && (
         <div className="absolute inset-0 pointer-events-none">
-          {[...Array(50)].map((_, i) => (
+          {SNOW_PARTICLES.map((particle, i) => (
             <motion.div
               key={`snow-${i}`}
               initial={{ 
                 opacity: 0, 
-                x: Math.random() * 100 + "%", 
                 y: -20,
-                scale: Math.random() * 0.3 + 0.2,
+                x: 0,
+                scale: particle.scale,
               }}
               animate={{
                 opacity: [0, 0.4, 0],
                 y: ["0%", "100%"],
-                x: (Math.random() - 0.5) * 20 + "%", // Settle drift
+                x: [0, particle.driftPx],
               }}
               transition={{
-                duration: Math.random() * 10 + 10,
+                duration: particle.duration,
                 repeat: Infinity,
                 ease: "linear",
-                delay: Math.random() * 20,
+                delay: particle.delay,
               }}
               className="absolute w-1 h-1 bg-white rounded-full blur-[1px]"
               style={{
-                left: `${Math.random() * 100}%`,
+                left: `${particle.leftPercent}%`,
               }}
             />
           ))}
