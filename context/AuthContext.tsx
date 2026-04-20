@@ -23,6 +23,9 @@ interface UserProfile {
   displayName: string;
   photoURL: string;
   role: UserRole;
+  banned?: boolean;
+  bannedAt?: any;
+  bannedByAdminId?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -177,10 +180,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       unsubscribeProfile = onSnapshot(
         profileRef,
         (snapshot) => {
+          const nextProfile = snapshot.exists()
+            ? (snapshot.data() as UserProfile)
+            : profileFallback(nextUser);
+
+          if (nextProfile?.banned) {
+            setProfile(nextProfile);
+            setLoading(false);
+            void signOut(auth).catch((error) => {
+              console.error('Failed to sign out banned user:', error);
+            });
+            return;
+          }
+
           if (snapshot.exists()) {
-            setProfile(snapshot.data() as UserProfile);
+            setProfile(nextProfile);
           } else {
-            setProfile(profileFallback(nextUser));
+            setProfile(nextProfile);
           }
           setLoading(false);
         },
@@ -251,12 +267,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithEmail,
         signupWithEmail,
         logout,
-        isAdmin: profile?.role === 'admin' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
-        isManager: profile?.role === 'manager',
+        isAdmin:
+          !profile?.banned &&
+          (profile?.role === 'admin' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()),
+        isManager: !profile?.banned && profile?.role === 'manager',
         isStaff:
-          profile?.role === 'admin' ||
-          profile?.role === 'manager' ||
-          user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(),
+          !profile?.banned &&
+          (profile?.role === 'admin' ||
+            profile?.role === 'manager' ||
+            user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()),
       }}
     >
       {children}

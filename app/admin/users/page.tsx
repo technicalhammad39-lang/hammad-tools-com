@@ -1,150 +1,303 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { useAuth } from '@/context/AuthContext';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { db } from '@/firebase';
-import { collection, getDocs, updateDoc, doc, query, orderBy } from 'firebase/firestore';
-import { User, Search, Plus, Zap, CheckCircle2, X } from 'lucide-react';
-import { serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
+import { Loader2, Plus, Search, ShieldBan, ShieldCheck, Trash2, User } from 'lucide-react';
 
-interface UserProfile {
+type UserRole = 'admin' | 'manager' | 'user';
+
+interface UserProfileRecord {
   id: string;
-  displayName: string;
-  email: string;
-  role: 'admin' | 'manager' | 'user';
-  createdAt: any;
+  uid?: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  role?: UserRole;
+  banned?: boolean;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-interface Service {
-  id: string;
+interface NewUserForm {
   name: string;
-  price: number;
+  email: string;
+  password: string;
+  role: UserRole;
+  phone: string;
 }
 
-const AdminUsers = () => {
-  const { isAdmin } = useAuth();
+const defaultNewUser: NewUserForm = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'user',
+  phone: '',
+};
+
+function toDateLabel(value: any) {
+  const date = value?.toDate?.() || (value ? new Date(value) : null);
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return 'Unknown';
+  }
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(email);
+}
+
+export default function AdminUsersPage() {
+  const { user, isAdmin } = useAuth();
   const toast = useToast();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [users, setUsers] = useState<UserProfileRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [processingUserId, setProcessingUserId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activating, setActivating] = useState(false);
-  const [duration, setDuration] = useState(30); // Default 30 days
+  const [deleteCandidate, setDeleteCandidate] = useState<UserProfileRecord | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState<NewUserForm>(defaultNewUser);
+
+  const getAuthHeaders = useCallback(async () => {
+    const token = await user?.getIdToken();
+    if (!token) {
+      throw new Error('Admin session expired. Please login again.');
+    }
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  }, [user]);
+
+  const fetchUsers = useCallback(async (isRefresh = false) => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
+
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(usersQuery);
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<UserProfileRecord, 'id'>),
+      }));
+      setUsers(data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [isAdmin, toast]);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-      fetchServices();
+    void fetchUsers();
+  }, [fetchUsers]);
+
+  const filteredUsers = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    if (!needle) {
+      return users;
     }
-  }, [isAdmin]);
+
+    return users.filter((entry) => {
+      const haystack = `${entry.displayName || ''} ${entry.email || ''} ${entry.phone || ''} ${
+        entry.role || ''
+      } ${entry.banned ? 'banned' : 'active'}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [searchTerm, users]);
+
+  const isBusy = (uid: string) => processingUserId === uid;
 
   if (!isAdmin) {
     return (
       <div className="pt-32 pb-24 text-center">
-        <h1 className="text-3xl font-bold">Access Denied</h1>
+        <h1 className="text-3xl font-black uppercase text-brand-text">Access Denied</h1>
       </div>
     );
   }
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserProfile[];
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users');
-    } finally {
-      setLoading(false);
+  async function callAdminUserApi(path: string, init: RequestInit) {
+    const response = await fetch(path, {
+      ...init,
+      headers: {
+        ...(await getAuthHeaders()),
+        ...(init.headers || {}),
+      },
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      success?: boolean;
+      error?: string;
+      [key: string]: unknown;
+    };
+
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.error || `Request failed (HTTP ${response.status}).`);
     }
-  };
 
-  const fetchServices = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'services'));
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Service[];
-      setServices(data);
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      toast.error('Failed to load tools/services');
-    }
-  };
+    return payload;
+  }
 
-  const activateService = async (service: Service) => {
-    if (!selectedUser) return;
-    setActivating(true);
-    try {
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + duration);
-
-      await addDoc(collection(db, 'service_activations'), {
-        userId: selectedUser.id,
-        userEmail: selectedUser.email,
-        serviceName: service.name,
-        serviceId: service.id,
-        price: service.price,
-        status: 'Active',
-        paymentStatus: 'Paid',
-        type: 'manual_activation',
-        durationDays: duration,
-        expiryDate: expiryDate,
-        createdAt: serverTimestamp(),
-      });
-
-      // Also mark in public orders if necessary, but service_activations is primary
-      toast.success('Activation complete', `${service.name} activated for ${duration} days.`);
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error('Error activating service:', error);
-      toast.error('Activation failed', error instanceof Error ? error.message : 'Please try again.');
-    } finally {
-      setActivating(false);
-    }
-  };
-
-  const updateRole = async (userId: string, currentRole: string, nextRole: UserProfile['role']) => {
+  async function handleRoleChange(target: UserProfileRecord, nextRole: UserRole) {
+    const currentRole = target.role || 'user';
     if (currentRole === nextRole) {
       return;
     }
-    if (!confirm(`Are you sure you want to change this user's role to ${nextRole}?`)) return;
-    try {
-      await updateDoc(doc(db, 'users', userId), {
-        role: nextRole
-      });
-      fetchUsers();
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast.error('Failed to update user role');
-    }
-  };
 
-  const filteredUsers = users.filter(u => 
-    u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    if (!confirm(`Change role for ${target.email || 'this user'} to ${nextRole}?`)) {
+      return;
+    }
+
+    setProcessingUserId(target.id);
+    try {
+      await callAdminUserApi(`/api/admin/users/${encodeURIComponent(target.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action: 'set-role',
+          role: nextRole,
+        }),
+      });
+      toast.success('Role updated', `${target.email || 'User'} is now ${nextRole}.`);
+      await fetchUsers(true);
+    } catch (error) {
+      toast.error('Role update failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setProcessingUserId('');
+    }
+  }
+
+  async function handleBanToggle(target: UserProfileRecord) {
+    const nextBanned = !Boolean(target.banned);
+    const actionLabel = nextBanned ? 'ban' : 'unban';
+    const targetLabel = target.email || target.displayName || 'this user';
+
+    if (!confirm(`Are you sure you want to ${actionLabel} ${targetLabel}?`)) {
+      return;
+    }
+
+    setProcessingUserId(target.id);
+    try {
+      await callAdminUserApi(`/api/admin/users/${encodeURIComponent(target.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          action: 'set-ban',
+          banned: nextBanned,
+        }),
+      });
+      toast.success(nextBanned ? 'User banned' : 'User unbanned', targetLabel);
+      await fetchUsers(true);
+    } catch (error) {
+      toast.error('Ban action failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setProcessingUserId('');
+    }
+  }
+
+  async function handleDeleteUser(target: UserProfileRecord) {
+    setProcessingUserId(target.id);
+    try {
+      await callAdminUserApi(`/api/admin/users/${encodeURIComponent(target.id)}`, {
+        method: 'DELETE',
+      });
+      toast.success('User deleted', target.email || target.displayName || target.id);
+      setDeleteCandidate(null);
+      await fetchUsers(true);
+    } catch (error) {
+      toast.error('Delete failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setProcessingUserId('');
+    }
+  }
+
+  async function handleCreateUser(event: React.FormEvent) {
+    event.preventDefault();
+
+    const name = newUser.name.trim();
+    const email = newUser.email.trim().toLowerCase();
+    const password = newUser.password;
+
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      toast.error('Valid email is required');
+      return;
+    }
+    if (!password || password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      await callAdminUserApi('/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role: newUser.role,
+          phone: newUser.phone.trim(),
+        }),
+      });
+
+      toast.success('User created', `${email} can now login.`);
+      setCreateModalOpen(false);
+      setNewUser(defaultNewUser);
+      await fetchUsers(true);
+    } catch (error) {
+      toast.error('Create user failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setCreatingUser(false);
+    }
+  }
 
   return (
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-4xl font-black uppercase text-brand-text mb-2">User <span className="text-primary">Registry</span></h1>
-          <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest">Total Accounts: {users.length}</p>
+          <h1 className="text-4xl font-black uppercase text-brand-text mb-2">
+            User <span className="text-primary">Registry</span>
+          </h1>
+          <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest">
+            Total Accounts: {users.length}
+          </p>
         </div>
-        <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text/20 w-5 h-5 group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search by name or email..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary/50 text-brand-text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+
+        <div className="flex w-full md:w-auto gap-3">
+          <div className="relative w-full md:w-96 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text/20 w-5 h-5 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              placeholder="Search by name/email/status..."
+              className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary/50 text-brand-text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreateModalOpen(true)}
+            className="shrink-0 bg-primary text-black px-5 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-b-4 border-secondary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Add User
+          </button>
         </div>
       </div>
 
@@ -153,142 +306,298 @@ const AdminUsers = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/[0.02]">
-                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">Identity</th>
-                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">Access Level</th>
-                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">Registry Date</th>
-                <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5 text-right">Operations</th>
+                <th className="p-7 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">
+                  Identity
+                </th>
+                <th className="p-7 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">
+                  Status
+                </th>
+                <th className="p-7 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">
+                  Role
+                </th>
+                <th className="p-7 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5">
+                  Created
+                </th>
+                <th className="p-7 text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 border-b border-white/5 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan={4} className="p-20 text-center"><div className="animate-pulse text-primary font-black uppercase tracking-widest text-xs">Accessing Database...</div></td></tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={4} className="p-20 text-center text-brand-text/20 font-black uppercase tracking-widest text-xs">No records found</td></tr>
-              ) : filteredUsers.map(u => (
-                <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="p-8">
-                    <div className="flex items-center space-x-5">
-                      <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-primary border border-white/10 group-hover:border-primary/30 transition-all">
-                        <User className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="font-black text-brand-text uppercase text-sm">{u.displayName || 'Anonymous Entity'}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/30 mt-1">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-8">
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      u.role === 'admin'
-                        ? 'bg-primary/10 text-primary border-primary/20'
-                        : u.role === 'manager'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-white/5 text-brand-text/40 border-white/10'
-                    }`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="p-8 text-xs font-black uppercase text-brand-text/40">
-                    {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
-                  </td>
-                  <td className="p-8 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button 
-                        onClick={() => { setSelectedUser(u); setIsModalOpen(true); }}
-                        className="px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary text-[10px] font-black uppercase tracking-widest transition-all border border-primary/20 hover:text-brand-bg flex items-center gap-2"
-                      >
-                        <Zap className="w-3.5 h-3.5" /> Activate
-                      </button>
-                      <select
-                        value={u.role}
-                        onChange={(event) => updateRole(u.id, u.role, event.target.value as UserProfile['role'])}
-                        className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest text-brand-text/60 focus:outline-none focus:border-primary"
-                      >
-                        <option value="user">User</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                <tr>
+                  <td colSpan={5} className="p-20 text-center">
+                    <div className="inline-flex items-center gap-3 text-primary font-black uppercase tracking-widest text-xs">
+                      <Loader2 className="w-5 h-5 animate-spin" /> Loading users...
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-20 text-center text-brand-text/20 font-black uppercase tracking-widest text-xs">
+                    No records found
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((entry) => {
+                  const isSelf = entry.id === user?.uid;
+                  const entryRole = (entry.role || 'user') as UserRole;
+                  const isBanned = Boolean(entry.banned);
+
+                  return (
+                    <tr key={entry.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="p-7">
+                        <div className="flex items-center gap-4">
+                          <div className="w-11 h-11 bg-white/5 rounded-2xl flex items-center justify-center text-primary border border-white/10">
+                            <User className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-black text-brand-text uppercase text-sm">
+                              {entry.displayName || 'Unnamed User'}
+                            </p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/30 mt-1">
+                              {entry.email || 'No email'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="p-7">
+                        <span
+                          className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border inline-flex items-center gap-2 ${
+                            isBanned
+                              ? 'bg-accent/10 text-accent border-accent/20'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}
+                        >
+                          {isBanned ? <ShieldBan className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                          {isBanned ? 'Banned' : 'Active'}
+                        </span>
+                      </td>
+
+                      <td className="p-7">
+                        <select
+                          value={entryRole}
+                          disabled={isSelf || isBusy(entry.id)}
+                          onChange={(event) => {
+                            void handleRoleChange(entry, event.target.value as UserRole);
+                          }}
+                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[9px] font-black uppercase tracking-widest text-brand-text/70 focus:outline-none focus:border-primary disabled:opacity-50"
+                        >
+                          <option value="user">User</option>
+                          <option value="manager">Manager</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+
+                      <td className="p-7 text-xs font-black uppercase text-brand-text/40">
+                        {toDateLabel(entry.createdAt)}
+                      </td>
+
+                      <td className="p-7 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            disabled={isSelf || isBusy(entry.id)}
+                            onClick={() => {
+                              void handleBanToggle(entry);
+                            }}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border disabled:opacity-50 ${
+                              isBanned
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                                : 'bg-accent/10 text-accent border-accent/20 hover:bg-accent/20'
+                            }`}
+                          >
+                            {isBusy(entry.id) ? (
+                              <span className="inline-flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing
+                              </span>
+                            ) : isBanned ? (
+                              'Unban'
+                            ) : (
+                              'Ban'
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isSelf || isBusy(entry.id)}
+                            onClick={() => setDeleteCandidate(entry)}
+                            className="px-4 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Activation Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <motion.div 
+      <AnimatePresence>
+        {createModalOpen ? (
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-            onClick={() => setIsModalOpen(false)}
-          />
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="glass w-full max-w-xl rounded-[2.5rem] border border-white/10 overflow-hidden relative z-10 shadow-3xl"
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
           >
-            <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black uppercase text-brand-text">Activate <span className="text-primary">Service</span></h2>
-                <div className="mt-4 flex items-center space-x-3">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Duration:</p>
-                   <select 
-                     value={duration} 
-                     onChange={(e) => setDuration(Number(e.target.value))}
-                     className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary focus:outline-none"
-                   >
-                     <option value={7}>7 Days</option>
-                     <option value={30}>30 Days</option>
-                     <option value={90}>90 Days</option>
-                     <option value={365}>1 Year</option>
-                   </select>
-                </div>
+            <motion.form
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              onSubmit={handleCreateUser}
+              className="w-full max-w-2xl glass rounded-[2rem] border border-white/10 overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/5">
+                <h2 className="text-2xl font-black uppercase text-brand-text">Create New User</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mt-2">
+                  Create user in Auth + Firestore with assigned role
+                </p>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-3 hover:bg-white/5 rounded-2xl text-brand-text/30 hover:text-accent transition-all"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-10 space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar">
-              {services.length === 0 ? (
-                <div className="text-center py-10 text-brand-text/20 font-black uppercase tracking-widest text-xs">No services defined in library</div>
-              ) : services.map(service => (
-                <button
-                  key={service.id}
-                  disabled={activating}
-                  onClick={() => activateService(service)}
-                  className="w-full p-6 rounded-[1.5rem] bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/[0.02] transition-all flex items-center justify-between group"
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={newUser.name}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, name: event.target.value }))}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={newUser.email}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={newUser.password}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, password: event.target.value }))}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                />
+                <select
+                  value={newUser.role}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, role: event.target.value as UserRole }))}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10 group-hover:scale-110 transition-transform">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                       <div className="text-sm font-black text-brand-text uppercase">{service.name}</div>
-                       <div className="text-[10px] font-black text-primary uppercase">Rs {service.price} Value</div>
-                    </div>
-                  </div>
-                  <Plus className="w-5 h-5 text-brand-text/20 group-hover:text-primary transition-colors" />
+                  <option value="user">User</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Phone (optional)"
+                  value={newUser.phone}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, phone: event.target.value }))}
+                  className="md:col-span-2 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div className="p-6 border-t border-white/5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateModalOpen(false);
+                    setNewUser(defaultNewUser);
+                  }}
+                  className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-brand-text/50 hover:text-brand-text"
+                >
+                  Cancel
                 </button>
-              ))}
-            </div>
-            <div className="p-10 bg-black/40 border-t border-white/5">
-               <div className="flex items-center gap-3 text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Manual Override enabled</span>
-               </div>
-            </div>
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="px-8 py-3 rounded-xl bg-primary text-black border-b-4 border-secondary text-xs font-black uppercase tracking-widest flex items-center gap-2 disabled:opacity-60"
+                >
+                  {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Create User
+                </button>
+              </div>
+            </motion.form>
           </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteCandidate ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[125] bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              className="w-full max-w-xl glass rounded-[2rem] border border-white/10 overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-xl font-black uppercase text-brand-text">Delete User Permanently</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mt-2">
+                  This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="rounded-2xl border border-accent/20 bg-accent/10 p-4">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Target</div>
+                  <div className="text-sm font-black text-brand-text mt-1 whitespace-pre-wrap break-words">
+                    {deleteCandidate.displayName || 'Unnamed User'}
+                  </div>
+                  <div className="text-xs text-brand-text/60 mt-1 whitespace-pre-wrap break-words">
+                    {deleteCandidate.email || deleteCandidate.id}
+                  </div>
+                </div>
+                <p className="text-xs text-brand-text/60 leading-relaxed">
+                  User auth account, profile record, and related user-linked records will be removed.
+                </p>
+              </div>
+
+              <div className="p-6 border-t border-white/5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteCandidate(null)}
+                  className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-brand-text/50 hover:text-brand-text"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isBusy(deleteCandidate.id)}
+                  onClick={() => {
+                    void handleDeleteUser(deleteCandidate);
+                  }}
+                  className="px-8 py-3 rounded-xl bg-accent/15 border border-accent/30 text-accent text-xs font-black uppercase tracking-widest inline-flex items-center gap-2 disabled:opacity-60"
+                >
+                  {isBusy(deleteCandidate.id) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Deleting
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" /> Delete User
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      {refreshing ? (
+        <div className="fixed bottom-5 right-5 px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-widest text-brand-text/70">
+          Syncing...
         </div>
-      )}
+      ) : null}
     </div>
   );
-};
-
-export default AdminUsers;
+}
