@@ -4,11 +4,17 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Play, Star, MousePointer2, Quote } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import Typewriter from 'typewriter-effect';
+import UploadedImage from '@/components/UploadedImage';
 
 const Hero = () => {
   const [showDesktopVideo, setShowDesktopVideo] = React.useState(false);
+  const reviewAvatars = [
+    '/reviews/1-rev.png',
+    '/reviews/2-rev.png',
+    '/reviews/3-rev3.png',
+    '/reviews/4-rev4.png',
+  ];
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -98,16 +104,15 @@ const Hero = () => {
               </Link>
             </div>
 
-            <div className="mt-4 md:mt-6 flex flex-row items-center justify-start md:justify-center lg:justify-start gap-4 sm:gap-6 text-left md:text-center lg:text-left">
+            <div className="mt-6 md:mt-8 flex flex-row items-center justify-start md:justify-center lg:justify-start gap-4 sm:gap-6 text-left md:text-center lg:text-left">
               <div className="flex -space-x-3 md:-space-x-5">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-brand-bg overflow-hidden shadow-xl relative first:ml-0">
-                    <Image 
-                      src={`https://i.pravatar.cc/100?img=${i + 20}`} 
-                      alt="User" 
-                      fill
-                      className="object-cover"
-                      referrerPolicy="no-referrer" 
+                {reviewAvatars.map((avatarSrc, index) => (
+                  <div key={avatarSrc} className="w-10 h-10 md:w-14 md:h-14 rounded-full border-2 border-brand-bg overflow-hidden shadow-xl relative first:ml-0">
+                    <UploadedImage
+                      src={avatarSrc}
+                      fallbackSrc="/services-card.png"
+                      alt={`Trusted user review avatar ${index + 1}`}
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </div>
                 ))}
