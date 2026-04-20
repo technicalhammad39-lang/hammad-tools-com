@@ -15,7 +15,8 @@ import {
   Sparkles,
   Star,
   User,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, where, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
@@ -109,6 +110,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const [reviewName, setReviewName] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewFormMessage, setReviewFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
@@ -171,6 +173,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       setReviewText('');
       setReviewRating(5);
       setReviewFormMessage({ type: 'success', text: 'Review submitted successfully.' });
+      setIsReviewModalOpen(false);
     } catch (error) {
       console.error('Error submitting review: ', error);
       setReviewFormMessage({
@@ -337,7 +340,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             </div>
 
             {/* License Quantity */}
-            <div className="grid grid-cols-1 gap-4 pt-1">
+            <div className="hidden md:grid grid-cols-1 gap-4 pt-1">
               <div className="glass p-5 rounded-2xl md:rounded-3xl border border-white/5 space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">License Quantity</label>
                 <div className="flex items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
@@ -457,15 +460,34 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             <div className="pt-1">
                {/* Mobile Sticky CTA */}
                <div className="fixed bottom-0 left-0 w-full z-[60] p-4 bg-brand-bg/95 backdrop-blur-3xl md:relative md:bg-transparent md:p-0 md:mt-8 md:w-auto border-t border-white/5 md:border-0 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-none">
-                 <motion.button
-                   whileHover={{ scale: 1.02 }}
-                   whileTap={{ scale: 0.98 }}
-                   onClick={handleOrder}
-                   className="w-full bg-primary text-brand-bg px-10 py-5 md:py-6 rounded-2xl md:rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] md:text-sm flex items-center justify-center gap-4 border-b-[6px] md:border-b-8 border-[#FF8C2A] shadow-2xl shadow-primary/20 hover:shadow-primary/40 active:border-b-0 active:translate-y-2 transition-all group"
-                 >
-                   <span>Buy Now (Rs {totalPrice})</span>
-                   <MessageCircle className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
-                 </motion.button>
+                 <div className="flex items-center gap-2 md:block">
+                   <div className="md:hidden flex items-center bg-white/5 border border-white/10 rounded-2xl px-2 py-2 gap-1.5">
+                     <button
+                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                       className="w-9 h-9 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                       aria-label="Decrease quantity"
+                     >
+                       <Minus className="w-4 h-4" />
+                     </button>
+                     <span className="min-w-[2ch] text-center text-base font-black text-brand-text">{quantity}</span>
+                     <button
+                       onClick={() => setQuantity(quantity + 1)}
+                       className="w-9 h-9 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                       aria-label="Increase quantity"
+                     >
+                       <Plus className="w-4 h-4" />
+                     </button>
+                   </div>
+                   <motion.button
+                     whileHover={{ scale: 1.02 }}
+                     whileTap={{ scale: 0.98 }}
+                     onClick={handleOrder}
+                     className="flex-1 w-full bg-primary text-brand-bg px-5 md:px-10 py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-sm flex items-center justify-center gap-2.5 md:gap-4 border-b-[6px] md:border-b-8 border-[#FF8C2A] shadow-2xl shadow-primary/20 hover:shadow-primary/40 active:border-b-0 active:translate-y-2 transition-all group"
+                   >
+                     <span>Buy Now (Rs {totalPrice})</span>
+                     <MessageCircle className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
+                   </motion.button>
+                 </div>
                </div>
             </div>
 
@@ -480,77 +502,91 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
         {/* Customer Reviews Section */}
         <div className="mt-12 pt-12 border-t border-white/5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-            <div className="glass p-7 md:p-8 rounded-[2rem] border border-white/5 shadow-2xl min-h-[520px] flex flex-col">
-              <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
+            <div className="glass p-4 sm:p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 shadow-2xl min-h-0 lg:min-h-[520px] flex flex-col">
+              <div className="flex items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3">
-                  <Star className="w-7 h-7 text-primary fill-primary" />
-                  <h3 className="text-2xl md:text-3xl font-black uppercase text-brand-text">Customer Reviews</h3>
+                  <Star className="w-5 h-5 md:w-7 md:h-7 text-primary fill-primary" />
+                  <h3 className="text-lg sm:text-xl md:text-3xl font-black uppercase text-brand-text">Customer Reviews</h3>
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">
+                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/40">
                   {reviews.length} total
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Average</div>
-                  <div className="text-2xl font-black text-brand-text">{averageRating.toFixed(1)}</div>
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4">
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-1.5">Average</div>
+                  <div className="text-xl md:text-2xl font-black text-brand-text">{averageRating.toFixed(1)}</div>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                  <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Total Reviews</div>
-                  <div className="text-2xl font-black text-brand-text">{reviews.length}</div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4">
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/40 mb-1.5">Total Reviews</div>
+                  <div className="text-xl md:text-2xl font-black text-brand-text">{reviews.length}</div>
                 </div>
               </div>
 
+              <button
+                type="button"
+                onClick={() => setIsReviewModalOpen(true)}
+                className="lg:hidden mb-4 w-full bg-primary text-black py-3.5 rounded-xl font-black uppercase tracking-[0.18em] text-[10px] border-b-4 border-secondary shadow-xl shadow-primary/15"
+              >
+                Write Review
+              </button>
+
+              {reviewFormMessage ? (
+                <p className={`text-[9px] font-black uppercase tracking-widest mb-3 ${reviewFormMessage.type === 'success' ? 'text-emerald-400' : 'text-accent'}`}>
+                  {reviewFormMessage.text}
+                </p>
+              ) : null}
+
               {reviews.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-10 bg-white/[0.02] border border-white/5 rounded-[1.5rem] text-center">
-                  <Star className="w-12 h-12 text-brand-text/10 mb-4" />
-                  <p className="text-brand-text/40 font-bold uppercase tracking-widest text-sm">No reviews yet.</p>
-                  <p className="text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to review!</p>
+                <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-white/[0.02] border border-white/5 rounded-[1.2rem] md:rounded-[1.5rem] text-center">
+                  <Star className="w-10 h-10 md:w-12 md:h-12 text-brand-text/10 mb-3" />
+                  <p className="text-brand-text/40 font-bold uppercase tracking-widest text-xs md:text-sm">No reviews yet.</p>
+                  <p className="text-[9px] md:text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to review!</p>
                 </div>
               ) : (
-                <div className="flex-1 space-y-4 max-h-[430px] overflow-y-auto pr-1 no-scrollbar">
+                <div className="flex-1 space-y-2.5 md:space-y-4 max-h-[360px] md:max-h-[430px] overflow-y-auto pr-1 no-scrollbar">
                   {reviews.map((review) => {
                     const maskedIdentity = review.userEmailMasked || '';
                     const displayName = review.userName || 'Customer';
                     return (
                       <motion.div
                         key={review.id}
-                        className="p-5 rounded-2xl border border-white/5 bg-white/[0.02] hover:border-primary/20 transition-all shadow-xl"
+                        className="p-3.5 md:p-5 rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.02] hover:border-primary/20 transition-all shadow-xl"
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2.5 md:gap-3">
                           {review.userPhotoURL ? (
                             <UploadedImage
                               src={review.userPhotoURL}
                               fallbackSrc="/services-card.png"
                               alt={displayName}
-                              className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+                              className="w-9 h-9 md:w-11 md:h-11 rounded-full object-cover border border-white/10 shrink-0"
                               referrerPolicy="no-referrer"
                             />
                           ) : (
-                            <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                              <User className="w-5 h-5 text-primary" />
+                            <div className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                              <User className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                             </div>
                           )}
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1 mb-2">
+                            <div className="flex items-center gap-1 mb-1.5">
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
-                                  className={`w-4 h-4 ${i < Number(review.rating || 0) ? 'fill-primary text-primary' : 'text-brand-text/20'}`}
+                                  className={`w-3.5 h-3.5 md:w-4 md:h-4 ${i < Number(review.rating || 0) ? 'fill-primary text-primary' : 'text-brand-text/20'}`}
                                 />
                               ))}
                             </div>
-                            <p className="text-sm font-medium text-brand-text/80 leading-relaxed mb-3 whitespace-pre-wrap break-words">
+                            <p className="text-xs md:text-sm font-medium text-brand-text/80 leading-relaxed mb-2 whitespace-pre-wrap break-words">
                               {review.text}
                             </p>
-                            <div className="text-[11px] font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">
+                            <div className="text-[10px] md:text-[11px] font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">
                               {displayName}
                             </div>
                             {maskedIdentity ? (
-                              <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/35 mt-1">
+                              <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/35 mt-1">
                                 {maskedIdentity}
                               </div>
                             ) : null}
@@ -563,7 +599,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               )}
             </div>
 
-            <div className="glass p-7 md:p-8 rounded-[2rem] border border-white/5 shadow-2xl min-h-[520px] flex flex-col">
+            <div className="hidden lg:flex glass p-7 md:p-8 rounded-[2rem] border border-white/5 shadow-2xl min-h-[520px] flex-col">
               <h4 className="text-2xl font-black uppercase tracking-widest text-brand-text mb-2 text-center">Share Your Experience</h4>
               <p className="text-center text-brand-text/40 text-xs font-black uppercase tracking-widest mb-7">
                 Help others by leaving a review after purchase
@@ -630,6 +666,85 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
           </div>
         </div>
       </div>
+
+      {isReviewModalOpen ? (
+        <div className="lg:hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm p-3 flex items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-h-[88vh] overflow-y-auto no-scrollbar bg-[#171717] border border-white/10 rounded-[1.5rem] shadow-2xl"
+          >
+            <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
+              <h4 className="text-base font-black uppercase tracking-widest text-brand-text">Write Review</h4>
+              <button
+                type="button"
+                onClick={() => setIsReviewModalOpen(false)}
+                className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-brand-text/70 flex items-center justify-center"
+                aria-label="Close review form"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleReviewSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Your Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter identity"
+                  value={reviewName}
+                  onChange={(e) => setReviewName(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Rate Service</label>
+                <div className="flex gap-1.5 items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="focus:outline-none hover:scale-110 transition-transform"
+                    >
+                      <Star className={`w-7 h-7 ${star <= reviewRating ? 'fill-primary text-primary' : 'text-brand-text/20 hover:text-primary/50'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">Detailed Feedback</label>
+                <textarea
+                  required
+                  placeholder="Tell us what you liked..."
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  rows={5}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors text-brand-text resize-none"
+                />
+              </div>
+
+              {reviewFormMessage ? (
+                <p className={`text-[10px] font-black uppercase tracking-widest ${reviewFormMessage.type === 'success' ? 'text-emerald-400' : 'text-accent'}`}>
+                  {reviewFormMessage.text}
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isSubmittingReview}
+                className="w-full bg-primary text-black py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] disabled:opacity-50 transition-all hover:bg-primary/90 shadow-xl shadow-primary/20 flex items-center justify-center gap-2.5"
+              >
+                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                <MessageCircle className="w-4 h-4" />
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      ) : null}
     </div>
   );
 }

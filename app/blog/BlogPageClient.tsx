@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, User, ArrowRight, Search, Tag } from 'lucide-react';
+import { Calendar, User, ArrowRight, Search } from 'lucide-react';
 import Link from 'next/link';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -140,14 +140,14 @@ const BlogPage = () => {
   }
 
   return (
-    <main className="min-h-screen pt-20 md:pt-24 pb-20 px-4 bg-brand-bg">
+    <main className="min-h-screen pt-16 md:pt-24 pb-16 md:pb-20 px-4 bg-brand-bg">
     <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
+        <div className="text-center mb-6 md:mb-12">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-4 text-brand-text md:whitespace-nowrap"
+            className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-3 md:mb-4 text-brand-text leading-none sm:whitespace-nowrap"
           >
             <span className="font-serif italic text-white normal-case">Latest</span> <span className="internal-gradient">Blogs</span>
           </motion.h1>
@@ -155,30 +155,30 @@ const BlogPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-brand-text/60 max-w-2xl mx-auto text-base md:text-lg mt-2"
+            className="text-brand-text/60 max-w-2xl mx-auto text-sm md:text-lg mt-1 md:mt-2"
           >
             Stay updated with the latest trends in digital tools, design, and productivity.
           </motion.p>
         </div>
 
         {/* Search & Filter */}
-        <div className="flex flex-col md:flex-row gap-6 mb-12">
+        <div className="flex flex-col md:flex-row gap-3 md:gap-6 mb-7 md:mb-12">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text/40 w-5 h-5" />
+            <Search className="absolute left-3.5 md:left-4 top-1/2 -translate-y-1/2 text-brand-text/40 w-4 h-4 md:w-5 md:h-5" />
             <input 
               type="text" 
               placeholder="Search articles..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-colors text-brand-text"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 md:py-4 pl-10 md:pl-12 pr-4 focus:outline-none focus:border-primary/50 transition-colors text-brand-text text-sm"
             />
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+          <div className="flex gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-2 no-scrollbar">
             {['All', 'Productivity', 'Design', 'Tools', 'Tutorials'].map((cat) => (
               <button 
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-6 py-3 rounded-xl glass border ${selectedCategory === cat ? 'border-primary text-primary' : 'border-white/10 text-brand-text'} text-sm font-black uppercase tracking-widest hover:border-primary/50 transition-all whitespace-nowrap`}
+                className={`px-4 md:px-6 py-2.5 md:py-3 rounded-xl glass border ${selectedCategory === cat ? 'border-primary text-primary' : 'border-white/10 text-brand-text'} text-[10px] md:text-sm font-black uppercase tracking-widest hover:border-primary/50 transition-all whitespace-nowrap`}
               >
                 {cat}
               </button>

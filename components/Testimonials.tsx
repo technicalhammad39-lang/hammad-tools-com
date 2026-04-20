@@ -94,14 +94,14 @@ const Testimonials = () => {
   const row2 = testimonials.slice(3, 6);
 
   return (
-    <section className="py-16 md:py-32 relative bg-white/[0.01] overflow-hidden">
+    <section className="py-12 md:py-32 relative bg-white/[0.01] overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12 md:mb-20">
+        <div className="text-center mb-8 md:mb-20">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-7xl font-black mb-4 md:mb-6 text-brand-text uppercase"
+            className="text-3xl md:text-7xl font-black mb-3 md:mb-6 text-brand-text uppercase"
           >
             <span className="font-serif italic text-white normal-case">What Our</span> <span className="internal-gradient">Legends</span> Say
           </motion.h2>

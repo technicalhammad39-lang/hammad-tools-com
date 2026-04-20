@@ -118,9 +118,9 @@ const ServicesSection = () => {
   }
 
   return (
-    <section className="py-10 md:py-16 relative overflow-hidden bg-brand-bg">
+    <section className="py-8 md:py-16 relative overflow-hidden bg-brand-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center text-center mb-8 md:mb-12 gap-4 md:gap-6">
+        <div className="flex flex-col items-center text-center mb-6 md:mb-12 gap-3 md:gap-6">
           <div className="max-w-4xl flex flex-col items-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -130,7 +130,7 @@ const ServicesSection = () => {
               <span className="font-serif italic text-white normal-case">Premium </span>
               <span className="internal-gradient inline">Subscriptions</span>
             </motion.h2>
-            <p className="text-brand-text/50 text-sm md:text-lg font-medium max-w-2xl mx-auto text-center mt-2">
+              <p className="text-brand-text/50 text-xs md:text-lg font-medium max-w-2xl mx-auto text-center mt-1 md:mt-2">
               Deploy high-performance digital subscriptions, exclusive premium software, and elite tools with instant automated execution.
             </p>
           </div>
@@ -155,7 +155,7 @@ const ServicesSection = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 md:mb-16 items-center"
+            className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-16 items-center"
           >
             <div className="lg:col-span-4 relative group">
               <input
@@ -163,15 +163,15 @@ const ServicesSection = () => {
                 placeholder="SEARCH TOOLS..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-12 py-5 text-[10px] font-black tracking-widest focus:outline-none focus:border-primary/50 transition-all uppercase placeholder:opacity-30"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-11 md:px-12 py-3.5 md:py-5 text-[9px] md:text-[10px] font-black tracking-widest focus:outline-none focus:border-primary/50 transition-all uppercase placeholder:opacity-30"
               />
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-primary transition-colors" />
             </div>
 
-            <div className="lg:col-span-8 flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <div className="lg:col-span-8 flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 md:pb-2 no-scrollbar">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`whitespace-nowrap px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${selectedCategory === 'all'
+                className={`whitespace-nowrap px-4 md:px-6 py-2.5 md:py-4 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${selectedCategory === 'all'
                   ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20'
                   : 'bg-white/5 border-white/5 text-brand-text/40 hover:border-white/20'
                   }`}
@@ -182,7 +182,7 @@ const ServicesSection = () => {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`whitespace-nowrap px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${selectedCategory === category.id
+                  className={`whitespace-nowrap px-4 md:px-6 py-2.5 md:py-4 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${selectedCategory === category.id
                     ? 'bg-primary border-primary text-black shadow-lg shadow-primary/20'
                     : 'bg-white/5 border-white/5 text-brand-text/40 hover:border-white/20'
                     }`}

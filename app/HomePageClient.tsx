@@ -53,16 +53,16 @@ export default function Home() {
       <ServicesSection />
       
       {/* Why Choose Us Section - Premium Cards */}
-      <section className="py-16 md:py-32 relative overflow-hidden">
+      <section className="py-12 md:py-32 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 -z-10" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
+          <div className="text-center mb-10 md:mb-20">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-5xl md:text-7xl font-black mb-6 text-brand-text uppercase"
+              className="text-4xl md:text-7xl font-black mb-4 md:mb-6 text-brand-text uppercase"
             >
               <span className="font-serif italic text-white normal-case">Why</span> Choose <span className="internal-gradient">Us</span>?
             </motion.h2>
@@ -154,7 +154,7 @@ export default function Home() {
       <Testimonials />
 
       {/* FAQ Section with Animated Icons */}
-      <section className="py-20 md:py-40 relative overflow-hidden">
+      <section className="py-14 md:py-40 relative overflow-hidden">
         {/* Large Background Question Marks */}
         <motion.div 
           animate={{ 
@@ -207,11 +207,11 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-5xl md:text-7xl font-black mb-4 text-brand-text uppercase">Got <span className="internal-gradient">Questions</span>?</h2>
+            <div className="text-center mb-10 md:mb-16">
+              <h2 className="text-4xl md:text-7xl font-black mb-3 md:mb-4 text-brand-text uppercase">Got <span className="internal-gradient">Questions</span>?</h2>
               <p className="text-brand-text/40 font-black uppercase tracking-widest text-[10px]">Everything you need to know about Hammad Tools.</p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {[
                 { q: "How do I receive my subscription?", a: "After payment proof verification, your credentials are delivered inside your dashboard and linked to your account automatically." },
                 { q: "Are these subscriptions legal?", a: "Yes, we provide legitimate access to premium services through official channels and bulk enterprise accounts." },
@@ -220,13 +220,13 @@ export default function Home() {
                 { q: "What payment methods do you accept?", a: "Checkout shows all active payment methods configured by admin, including wallet, bank, and transfer options with live account details." }
               ].map((item, i) => (
                 <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500">
-                  <summary className="p-8 cursor-pointer font-black text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
+                  <summary className="p-5 md:p-8 cursor-pointer font-black text-xs md:text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
                     <span>{item.q}</span>
                     <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform duration-500 group-open:rotate-180 border border-primary/20">
                       <Zap className="w-4 h-4" />
                     </span>
                   </summary>
-                  <div className="px-8 pb-8 text-brand-text/50 border-t border-white/5 pt-6 font-medium leading-relaxed text-sm">
+                  <div className="px-5 pb-5 pt-4 md:px-8 md:pb-8 md:pt-6 text-brand-text/50 border-t border-white/5 font-medium leading-relaxed text-xs md:text-sm">
                     {item.a}
                   </div>
                 </details>

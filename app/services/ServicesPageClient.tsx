@@ -74,9 +74,9 @@ export default function AgencyServicesPage() {
   }, [services, searchQuery]);
 
   return (
-    <main className="min-h-screen pt-24 pb-20 bg-brand-bg relative overflow-hidden">
+    <main className="min-h-screen pt-20 md:pt-24 pb-16 md:pb-20 bg-brand-bg relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col items-center text-center mb-8 md:mb-12">
+        <div className="flex flex-col items-center text-center mb-6 md:mb-12">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -91,23 +91,23 @@ export default function AgencyServicesPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-brand-text/40 text-xs md:text-lg font-medium max-w-2xl mx-auto leading-relaxed mt-4"
+            className="text-brand-text/40 text-[11px] md:text-lg font-medium max-w-2xl mx-auto leading-relaxed mt-3 md:mt-4"
           >
             Request premium agency-grade services directly from the website with secure payment proof and realtime approval tracking.
           </motion.p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 mb-6 md:mb-10">
           <div className="relative w-full md:w-96">
             <input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search services..."
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary/50"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 md:px-5 py-3 md:py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-primary/50"
             />
           </div>
-          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">{filteredServices.length} services</div>
+          <div className="hidden md:block text-[9px] font-black uppercase tracking-widest text-brand-text/40">{filteredServices.length} services</div>
         </div>
 
         {loading ? (

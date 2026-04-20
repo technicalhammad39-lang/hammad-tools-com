@@ -27,19 +27,17 @@ const PartnerSection = () => {
   ];
 
   return (
-    <section className="py-14 md:py-20 relative overflow-hidden bg-brand-bg">
-    {/* Reduce top spacing fix */}
-      <div className="-mt-12" />
+    <section className="py-10 md:py-20 relative overflow-hidden bg-brand-bg">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full -z-10" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 md:mb-20">
+        <div className="text-center mb-10 md:mb-20">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[40px] sm:text-6xl md:text-7xl font-black uppercase text-brand-text mb-6 flex flex-col md:block"
+            className="text-4xl sm:text-6xl md:text-7xl font-black uppercase text-brand-text mb-4 md:mb-6 flex flex-col md:block"
           >
             <span className="font-serif italic text-white normal-case md:inline">Trusted </span>
             <span className="internal-gradient md:inline">Partners</span>

@@ -5,19 +5,19 @@ export default function GoogleBusinessReviews() {
   const embedUrl = 'https://www.google.com/maps?q=Paid+Services+By+Hammad&output=embed';
 
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden bg-brand-bg">
+    <section className="py-12 md:py-24 relative overflow-hidden bg-brand-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black text-brand-text uppercase"
+            className="text-3xl md:text-6xl font-black text-brand-text uppercase"
           >
             <span className="font-serif italic text-white normal-case">See Our</span>{' '}
             <span className="internal-gradient">Live Reviews</span>
           </motion.h2>
-          <p className="text-brand-text/50 text-xs md:text-sm font-black uppercase tracking-widest mt-4">
+          <p className="text-brand-text/50 text-[10px] md:text-sm font-black uppercase tracking-widest mt-3 md:mt-4">
             Live client feedback from our Google Business profile
           </p>
         </div>
