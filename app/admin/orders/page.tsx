@@ -794,13 +794,13 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-5 md:space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-6">
         <div>
-          <h1 className="text-4xl font-black text-brand-text uppercase">
+          <h1 className="text-3xl md:text-4xl font-black text-brand-text uppercase">
             Order <span className="internal-gradient">Management</span>
           </h1>
-          <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-[0.3em] mt-2">
+          <p className="text-brand-text/40 text-[9px] md:text-[10px] font-black uppercase tracking-[0.25em] md:tracking-[0.3em] mt-1 md:mt-2">
             Realtime Review + Messaging
           </p>
         </div>
@@ -812,7 +812,7 @@ export default function AdminOrdersPage() {
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search order, customer, payment..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 md:py-3 pl-11 md:pl-12 pr-4 text-[10px] md:text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
           />
         </div>
         {isAdmin ? (
@@ -821,7 +821,7 @@ export default function AdminOrdersPage() {
               void handleDeleteAllOrders();
             }}
             disabled={deletingAllOrders}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent/35 bg-accent/15 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/20 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent/35 bg-accent/15 px-3.5 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/20 disabled:opacity-60"
           >
             {deletingAllOrders ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
             Delete All Orders
@@ -829,25 +829,25 @@ export default function AdminOrdersPage() {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="flex md:grid md:grid-cols-3 gap-2 md:gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 md:mx-0 md:px-0">
         {[
           { label: 'Pending', value: stats.pending, color: 'text-amber-400', bg: 'bg-amber-400/5' },
           { label: 'Approved', value: stats.approved, color: 'text-emerald-400', bg: 'bg-emerald-400/5' },
           { label: 'Rejected', value: stats.rejected, color: 'text-accent', bg: 'bg-accent/5' },
         ].map((stat) => (
-          <div key={stat.label} className={`p-4 rounded-2xl border border-white/5 ${stat.bg}`}>
-            <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
-            <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">{stat.label}</div>
+          <div key={stat.label} className={`min-w-[130px] md:min-w-0 p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 ${stat.bg}`}>
+            <div className={`text-xl md:text-2xl font-black ${stat.color}`}>{stat.value}</div>
+            <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {STATUS_FILTERS.map((filter) => (
           <button
             key={filter.id}
             onClick={() => setStatusFilter(filter.id)}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+            className={`px-3.5 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${
               statusFilter === filter.id
                 ? 'bg-primary border-primary text-black'
                 : 'bg-white/5 border-white/10 text-brand-text/40'
@@ -859,7 +859,7 @@ export default function AdminOrdersPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-8 glass rounded-[2rem] border border-primary/20 p-4 md:p-6 lg:p-7 min-h-[640px]">
+        <div className="xl:col-span-8 glass rounded-[1.5rem] md:rounded-[2rem] border border-primary/20 p-3.5 md:p-6 lg:p-7 min-h-[520px] md:min-h-[640px]">
           {!selectedOrder ? (
             <div className="h-full grid place-items-center text-center text-brand-text/40 text-sm font-semibold px-4">
               Pick an order from the right list to open full order details.
@@ -1010,8 +1010,8 @@ export default function AdminOrdersPage() {
           )}
         </div>
 
-        <div className="xl:col-span-4 glass rounded-[2rem] border border-white/5 overflow-hidden">
-          <div className="p-4 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-text/40">
+        <div className="xl:col-span-4 glass rounded-[1.5rem] md:rounded-[2rem] border border-white/5 overflow-hidden">
+          <div className="p-3.5 md:p-4 border-b border-white/5 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-text/40">
             Orders ({filteredOrders.length})
           </div>
           {loading ? (
@@ -1019,9 +1019,12 @@ export default function AdminOrdersPage() {
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="py-20 text-center text-brand-text/30 text-sm">No orders found.</div>
+            <div className="py-16 md:py-20 text-center px-5">
+              <div className="text-brand-text/55 text-sm font-semibold">No orders found.</div>
+              <div className="text-brand-text/35 text-[11px] mt-1">Try changing the filter or search query.</div>
+            </div>
           ) : (
-            <div className="divide-y divide-white/5 max-h-[920px] overflow-y-auto">
+            <div className="divide-y divide-white/5 max-h-[520px] md:max-h-[920px] overflow-y-auto no-scrollbar">
               {filteredOrders.map((order) => {
                 const primary = getPrimaryItem(order);
                 const paymentName = paymentMethodName(order);

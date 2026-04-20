@@ -46,7 +46,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { id: 'agency', label: 'Agency Services', href: '/admin/agency-services', icon: Layout, mobileLabel: 'Agency' },
     { id: 'giveaways', label: 'Giveaway', href: '/admin/giveaways', icon: Gift, mobileLabel: 'Giveaway' },
     { id: 'blogs', label: 'Blog', href: '/admin/blog', icon: FileText, mobileLabel: 'Blog' },
-    { id: 'orders', label: 'Order Management', href: '/admin/orders', icon: Zap },
+    { id: 'orders', label: 'Order Management', href: '/admin/orders', icon: Zap, mobileLabel: 'Orders' },
     { id: 'categories', label: 'Categories', href: '/admin/categories', icon: Layout },
     { id: 'payments', label: 'Payment Methods', href: '/admin/payment-methods', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', href: '/admin/notifications', icon: Bell },
@@ -70,7 +70,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   ]);
 
   const visibleSidebarItems = isAdmin ? sidebarItems : sidebarItems.filter((item) => staffVisibleIds.has(item.id));
-  const bottomNavItems = visibleSidebarItems.slice(0, 4);
+  const mobileBottomNavIds = ['dashboard', 'tools', 'orders', 'giveaways'];
+  const bottomNavItems = mobileBottomNavIds
+    .map((id) => visibleSidebarItems.find((item) => item.id === id))
+    .filter((item): item is (typeof visibleSidebarItems)[number] => Boolean(item));
   const hamburgerItems = visibleSidebarItems.slice(4);
 
   React.useEffect(() => {

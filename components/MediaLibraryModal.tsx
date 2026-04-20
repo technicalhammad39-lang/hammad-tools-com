@@ -95,6 +95,7 @@ export default function MediaLibraryModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [items, setItems] = useState<MediaLibraryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -159,6 +160,12 @@ export default function MediaLibraryModal({
     window.addEventListener('keydown', onEscape);
     return () => window.removeEventListener('keydown', onEscape);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) {
+      setMobileSearchOpen(false);
+    }
+  }, [open]);
 
   const filteredItems = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -292,8 +299,57 @@ export default function MediaLibraryModal({
           </div>
         </div>
 
-        <div className="px-5 md:px-7 py-4 border-b border-white/10 bg-[#111111]">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
+        <div className="px-4 md:px-7 py-3 md:py-4 border-b border-white/10 bg-[#111111]">
+          <div className="md:hidden space-y-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenDevicePicker}
+                disabled={uploading}
+                className="flex-1 rounded-xl border border-primary/35 bg-gradient-to-r from-primary via-[#FFE54A] to-[#F9B12D] px-4 py-2.5 text-black text-[10px] font-black uppercase tracking-widest shadow-[0_10px_24px_rgba(255,214,0,0.25)] disabled:opacity-70 inline-flex items-center justify-center gap-2"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Upload from Device
+              </button>
+
+              <button
+                onClick={() => setMobileSearchOpen((prev) => !prev)}
+                className={`h-10 w-10 rounded-xl border grid place-items-center transition-colors ${
+                  mobileSearchOpen
+                    ? 'border-primary/45 text-primary bg-primary/10'
+                    : 'border-white/15 bg-white/[0.03] text-brand-text/65'
+                }`}
+                aria-label="Toggle search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => {
+                  void loadLibrary(true);
+                }}
+                disabled={loading || refreshing || uploading}
+                className="h-10 w-10 rounded-xl border border-white/15 bg-white/[0.03] text-brand-text/65 hover:text-brand-text disabled:opacity-60 inline-flex items-center justify-center"
+                aria-label="Refresh library"
+              >
+                {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {mobileSearchOpen ? (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/35" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search files"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-primary/40"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/35" />
               <input
@@ -324,15 +380,15 @@ export default function MediaLibraryModal({
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               Upload from Device
             </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={accept}
-              className="hidden"
-              onChange={handleUploadChange}
-            />
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={handleUploadChange}
+          />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 py-5 bg-[#0F0F0F]">
@@ -424,21 +480,21 @@ export default function MediaLibraryModal({
           )}
         </div>
 
-        <div className="px-5 md:px-7 py-4 border-t border-white/10 bg-[#111111] flex items-center justify-between gap-3">
-          <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/35">
+        <div className="px-4 md:px-7 py-3 md:py-4 border-t border-white/10 bg-[#111111] flex items-center justify-between gap-2.5 md:gap-3">
+          <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-text/35">
             {selectedMedia ? `${selectedMedia.originalFileName || selectedMedia.fileName} selected` : 'No media selected'}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="rounded-xl border border-white/15 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-brand-text/65 hover:text-brand-text"
+              className="rounded-xl border border-white/15 bg-white/[0.03] px-3.5 md:px-4 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-text/65 hover:text-brand-text"
             >
               Cancel
             </button>
             <button
               onClick={handleSelectAndApply}
               disabled={!selectedMedia}
-              className="rounded-xl border border-primary/35 bg-primary px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-60 disabled:cursor-not-allowed"
+              className="rounded-xl border border-primary/35 bg-primary px-4 md:px-5 py-2 md:py-2.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Use Selected
             </button>

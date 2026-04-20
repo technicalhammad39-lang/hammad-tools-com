@@ -491,6 +491,7 @@ function DashboardPageContent() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
+  const mobileQuickMenuItems = sidebarItems.filter((item) => item.id !== 'notifications');
 
   return (
     <main className="min-h-screen pt-24 pb-40 md:pb-12 px-4 bg-brand-bg">
@@ -547,21 +548,28 @@ function DashboardPageContent() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 overflow-x-auto no-scrollbar">
                   {[
                     { label: 'Pending', value: pendingOrders, icon: Clock },
                     { label: 'Approved', value: approvedOrders, icon: CheckCircle2 },
                     { label: 'Rejected', value: rejectedOrders, icon: XCircle },
                     { label: 'Unread Alerts', value: unreadNotifications.length, icon: Bell },
-                  ].map((stat) => (
-                    <div key={stat.label} className="glass p-3 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-primary shrink-0">
-                          <stat.icon className="w-4 h-4" />
+                  ].map((stat, index) => (
+                    <div
+                      key={stat.label}
+                      className={`min-w-[145px] md:min-w-0 p-2.5 md:p-3 rounded-xl border transition-colors ${
+                        index % 2 === 0
+                          ? 'bg-[#F7F7F7] border-black/10'
+                          : 'bg-[#FFF2B3] border-black/10'
+                      } md:border-white/5 md:bg-[rgba(26,26,26,0.4)] md:backdrop-blur-[12px] md:shadow-[0_4px_24px_rgba(0,0,0,0.8)]`}
+                    >
+                      <div className="flex items-center gap-2.5 md:gap-3">
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-black/10 md:bg-white/5 border border-black/15 md:border-white/10 flex items-center justify-center text-[#111111] md:text-primary shrink-0">
+                          <stat.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-xl font-black text-brand-text leading-none">{stat.value}</div>
-                          <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/40 mt-1">
+                          <div className="text-lg md:text-xl font-black text-[#111111] md:text-brand-text leading-none">{stat.value}</div>
+                          <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-black/70 md:text-brand-text/40 mt-1">
                             {stat.label}
                           </div>
                         </div>
@@ -1042,8 +1050,8 @@ function DashboardPageContent() {
       ) : null}
 
       <div className="lg:hidden fixed bottom-0 left-0 w-full z-[85] bg-[#0A0A0A]/95 backdrop-blur-2xl border-t border-white/10 px-2 py-3 pb-safe">
-        <div className="grid grid-cols-5 gap-1">
-          {sidebarItems.map((item) => (
+        <div className="grid grid-cols-4 gap-1.5">
+          {mobileQuickMenuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}

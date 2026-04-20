@@ -381,11 +381,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               >
                 {service.longDescription || service.description}
               </motion.p>
-              <p className="mt-4 text-xs md:text-sm text-brand-text/45 leading-relaxed max-w-3xl">
-                Looking for cheap <strong className="text-brand-text">{service.name}</strong> in Pakistan? Hammad Tools offers
-                secure checkout, fast delivery, and budget-friendly pricing for premium subscriptions including Canva Pro,
-                ChatGPT Plus, Netflix, and more.
-              </p>
             </div>
 
             {/* Plan Selection */}
@@ -491,9 +486,9 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                </div>
             </div>
 
-            <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex items-center gap-4">
-              <Shield className="w-6 h-6 text-emerald-400" />
-              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest leading-relaxed">
+            <div className="p-3 md:p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4">
+              <Shield className="w-4 h-4 md:w-6 md:h-6 text-emerald-400 shrink-0" />
+              <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest leading-relaxed">
                 Secured checkout with payment proof upload, admin verification, and realtime order tracking in your dashboard.
               </p>
             </div>
