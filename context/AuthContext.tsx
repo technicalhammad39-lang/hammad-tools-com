@@ -137,8 +137,6 @@ async function ensureUserProfile(user: FirebaseUser, forcedDisplayName?: string)
     }
 
     console.warn('Client profile write denied. Falling back to server profile sync.', {
-      uid: user.uid,
-      email: user.email || '',
       reason: getErrorMessage(error),
     });
 

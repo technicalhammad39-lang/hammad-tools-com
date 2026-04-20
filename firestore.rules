@@ -49,6 +49,21 @@ service cloud.firestore {
       return (value is int || value is float) && value >= 1 && value <= 5;
     }
 
+    function normalizedOrderStatus(data) {
+      return (data.status == "approved" || data.status == "rejected")
+        ? data.status
+        : "pending";
+    }
+
+    function isOrderFinalized(data) {
+      return normalizedOrderStatus(data) == "approved" || normalizedOrderStatus(data) == "rejected";
+    }
+
+    function canUpdateOrderStatus() {
+      return !isOrderFinalized(resource.data) ||
+        normalizedOrderStatus(request.resource.data) == normalizedOrderStatus(resource.data);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
       allow create: if isOwner(userId) &&
@@ -136,8 +151,13 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (
         request.resource.data.userId == request.auth.uid ||
         request.resource.data.user_id == request.auth.uid
-      );
-      allow update, delete: if isStaff();
+      ) &&
+      request.resource.data.orderId is string &&
+      request.resource.data.status == "pending" &&
+      (request.resource.data.totalAmount is int || request.resource.data.totalAmount is float) &&
+      (!("note" in request.resource.data) || request.resource.data.note is string);
+      allow update: if isStaff() && canUpdateOrderStatus();
+      allow delete: if isStaff();
 
       match /messages/{messageId} {
         allow read: if isStaff() || (

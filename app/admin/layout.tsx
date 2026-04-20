@@ -74,6 +74,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const hamburgerItems = visibleSidebarItems.slice(4);
 
   React.useEffect(() => {
+    if (!isStaff) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
     if (!searchTerm.trim()) {
       setSearchResults([]);
       return;
@@ -83,7 +89,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     setSearchLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const needle = searchTerm.trim().toLowerCase();
+        const needle = searchTerm.trim().slice(0, 120).toLowerCase();
         const subscribersPromise = isAdmin
           ? getDocs(query(collection(db, 'newsletter_subscribers'), limit(30)))
           : Promise.resolve(null);
@@ -224,7 +230,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       active = false;
       clearTimeout(timer);
     };
-  }, [searchTerm, isAdmin]);
+  }, [searchTerm, isAdmin, isStaff]);
 
   if (loading) {
     return <div className="min-h-screen bg-brand-soft flex items-center justify-center text-primary font-black uppercase tracking-widest">Loading...</div>;

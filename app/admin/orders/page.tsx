@@ -14,7 +14,7 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useSearchParams } from 'next/navigation';
 import { onIdTokenChanged } from 'firebase/auth';
 import { auth, db } from '@/firebase';
@@ -42,6 +42,11 @@ function statusStyles(status: string) {
     return 'bg-accent/10 text-accent border-accent/30';
   }
   return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+}
+
+function isFinalizedStatus(status: string) {
+  const normalized = normalizeOrderStatus(status);
+  return normalized === 'approved' || normalized === 'rejected';
 }
 
 function paymentMethodName(order: OrderRecord) {
@@ -201,7 +206,7 @@ function DataField({
 export default function AdminOrdersPage() {
   const params = useSearchParams();
   const requestedOrder = params.get('order');
-  const { isStaff, user } = useAuth();
+  const { isAdmin, isStaff, user } = useAuth();
   const toast = useToast();
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -215,6 +220,7 @@ export default function AdminOrdersPage() {
   const [composerAttachment, setComposerAttachment] = useState<File | null>(null);
   const [fileAccessToken, setFileAccessToken] = useState('');
   const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [deletingAllOrders, setDeletingAllOrders] = useState(false);
   const [receiptViewerUrl, setReceiptViewerUrl] = useState('');
   const [chatFullscreen, setChatFullscreen] = useState(false);
   const [statusModal, setStatusModal] = useState<{
@@ -408,6 +414,12 @@ export default function AdminOrdersPage() {
     if (!trimmed && !attachment) {
       throw new Error('Message or attachment is required.');
     }
+    const currentStatus = normalizeOrderStatus(order.status);
+    if (nextStatus && isFinalizedStatus(currentStatus) && nextStatus !== currentStatus) {
+      throw new Error(
+        `Order ${getOrderDisplayId(order)} is already ${formatOrderStatusLabel(currentStatus)}. Final status cannot be changed.`
+      );
+    }
 
     const existingMessages = Array.isArray(order.messages) ? [...order.messages] : [];
     const newMessage = {
@@ -442,6 +454,8 @@ export default function AdminOrdersPage() {
       updatePayload.status = nextStatus;
       updatePayload.statusUpdatedAt = serverTimestamp();
       updatePayload.status_updated_at = serverTimestamp();
+      updatePayload.statusFinal = nextStatus !== 'pending';
+      updatePayload.statusFinalizedAt = nextStatus !== 'pending' ? serverTimestamp() : null;
       if (nextStatus === 'rejected') {
         updatePayload.rejectionReason = trimmed;
       }
@@ -483,6 +497,18 @@ export default function AdminOrdersPage() {
     if (!selectedOrder) {
       return false;
     }
+    if (isFinalizedStatus(selectedOrder.status) && normalizeOrderStatus(selectedOrder.status) !== 'approved') {
+      const message = 'This order is already rejected and cannot be approved.';
+      setError(message);
+      toast.error('Approve blocked', message);
+      return false;
+    }
+    if (normalizeOrderStatus(selectedOrder.status) === 'approved') {
+      const message = 'This order is already approved.';
+      setError(message);
+      toast.error('Approve blocked', message);
+      return false;
+    }
 
     setError('');
     setActionLoading(true);
@@ -505,6 +531,18 @@ export default function AdminOrdersPage() {
 
   async function handleReject(reasonInput?: string) {
     if (!selectedOrder) {
+      return false;
+    }
+    if (isFinalizedStatus(selectedOrder.status) && normalizeOrderStatus(selectedOrder.status) !== 'rejected') {
+      const message = 'This order is already approved and cannot be rejected.';
+      setError(message);
+      toast.error('Reject blocked', message);
+      return false;
+    }
+    if (normalizeOrderStatus(selectedOrder.status) === 'rejected') {
+      const message = 'This order is already rejected.';
+      setError(message);
+      toast.error('Reject blocked', message);
       return false;
     }
 
@@ -584,6 +622,52 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function handleDeleteAllOrders() {
+    if (!isAdmin) {
+      toast.error('Only admin can delete all orders.');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      'Delete ALL orders permanently? This cannot be undone.'
+    );
+    if (!confirmDelete) {
+      return;
+    }
+
+    setDeletingAllOrders(true);
+    setError('');
+    try {
+      const chunkSize = 300;
+      let totalDeleted = 0;
+
+      for (;;) {
+        const snapshot = await getDocs(query(collection(db, 'orders'), limit(chunkSize)));
+        if (snapshot.empty) {
+          break;
+        }
+
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((entry) => batch.delete(entry.ref));
+        await batch.commit();
+        totalDeleted += snapshot.size;
+
+        if (snapshot.size < chunkSize) {
+          break;
+        }
+      }
+
+      setSelectedOrderId(null);
+      toast.success('Orders deleted', `${totalDeleted} order(s) removed.`);
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : 'Failed to delete orders.';
+      setError(message);
+      toast.error('Delete all failed', message);
+    } finally {
+      setDeletingAllOrders(false);
+    }
+  }
+
   const selectedPrimaryItem = selectedOrder ? getPrimaryItem(selectedOrder) : null;
   const selectedProductName = selectedPrimaryItem?.productTitle || productSummary(selectedOrder || ({} as OrderRecord));
   const selectedPlanName = selectedOrder ? getOrderPlanLabel(selectedOrder) : '';
@@ -592,6 +676,8 @@ export default function AdminOrdersPage() {
   const selectedCoupon = selectedOrder ? getOrderCoupon(selectedOrder) : '';
   const selectedDiscountAmount = selectedOrder ? getOrderDiscountAmount(selectedOrder) : 0;
   const selectedOriginalTotal = selectedOrder ? getOrderOriginalTotal(selectedOrder) : 0;
+  const selectedStatus = selectedOrder ? normalizeOrderStatus(selectedOrder.status) : 'pending';
+  const selectedOrderIsFinal = selectedOrder ? isFinalizedStatus(selectedOrder.status) : false;
   const selectedScreenshotUrl = selectedOrder
     ? withProtectedFileToken(screenshotUrl(selectedOrder), fileAccessToken)
     : '';
@@ -759,6 +845,18 @@ export default function AdminOrdersPage() {
             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-[11px] font-black tracking-wide focus:outline-none focus:border-primary/50"
           />
         </div>
+        {isAdmin ? (
+          <button
+            onClick={() => {
+              void handleDeleteAllOrders();
+            }}
+            disabled={deletingAllOrders}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent/35 bg-accent/15 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/20 disabled:opacity-60"
+          >
+            {deletingAllOrders ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+            Delete All Orders
+          </button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -920,19 +1018,24 @@ export default function AdminOrdersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={() => setStatusModal({ type: 'approve', value: selectedOrder.adminMessage || '' })}
-                  disabled={actionLoading}
+                  disabled={actionLoading || selectedOrderIsFinal}
                   className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   <CheckCircle2 className="w-4 h-4" /> Approve Order
                 </button>
                 <button
                   onClick={() => setStatusModal({ type: 'reject', value: selectedOrder.rejectionReason || '' })}
-                  disabled={actionLoading}
+                  disabled={actionLoading || selectedOrderIsFinal}
                   className="bg-accent/15 text-accent border border-accent/30 rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   <XCircle className="w-4 h-4" /> Reject Order
                 </button>
               </div>
+              {selectedOrderIsFinal ? (
+                <div className="text-xs text-brand-text/55 border border-white/10 bg-white/5 rounded-xl px-4 py-3">
+                  Final status lock is active. This order is already <span className="text-primary font-semibold">{formatOrderStatusLabel(selectedStatus)}</span> and cannot be changed.
+                </div>
+              ) : null}
             </div>
           )}
         </div>

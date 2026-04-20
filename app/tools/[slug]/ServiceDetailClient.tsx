@@ -378,6 +378,11 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               >
                 {service.longDescription || service.description}
               </motion.p>
+              <p className="mt-4 text-xs md:text-sm text-brand-text/45 leading-relaxed max-w-3xl">
+                Looking for cheap <strong className="text-brand-text">{service.name}</strong> in Pakistan? Hammad Tools offers
+                secure checkout, fast delivery, and budget-friendly pricing for premium subscriptions including Canva Pro,
+                ChatGPT Plus, Netflix, and more.
+              </p>
             </div>
 
             {/* Plan Selection */}

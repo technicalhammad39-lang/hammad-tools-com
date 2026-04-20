@@ -11,27 +11,66 @@ import CartDrawer from '@/components/CartDrawer';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { ToastProvider } from '@/components/ToastProvider';
 import UserOrderTicker from '@/components/UserOrderTicker';
+import { CORE_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, createPageMetadata, getSiteUrl } from '@/lib/seo';
 
 const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
 const displayFont = Oswald({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-display' });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
+  ...createPageMetadata({
+    title: `${SITE_NAME} | Premium Subscription & Software Marketplace`,
+    description: SITE_DESCRIPTION,
+    path: '/',
+    keywords: CORE_KEYWORDS,
+  }),
   title: {
-    default: 'Hammad Tools | Premium Subscription & Software Marketplace',
-    template: '%s | Hammad Tools'
+    default: `${SITE_NAME} | Premium Subscription & Software Marketplace`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: 'Access premium digital subscriptions, tools, and pro courses at unbeatable prices. Fast, secure, and reliable service from Hammad Tools.',
+  metadataBase: new URL(siteUrl),
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
     apple: '/favicon.png',
-  }
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE_NAME,
+    url: siteUrl,
+    logo: `${siteUrl}/logo-header.png`,
+    sameAs: [],
+    description: SITE_DESCRIPTION,
+  };
+
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: siteUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${siteUrl}/tools?search={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <html lang="en" className="dark">
       <body className={`${brandFont.className} ${displayFont.variable} bg-brand-bg text-brand-text min-h-screen flex flex-col relative`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
         <AnimatedBackground />
         <ErrorBoundary>
           <AuthProvider>

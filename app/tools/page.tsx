@@ -1,15 +1,16 @@
-'use client';
+import type { Metadata } from 'next';
+import ToolsPageClient from './ToolsPageClient';
+import { TOOL_KEYWORDS, createPageMetadata } from '@/lib/seo';
 
-import React from 'react';
-import ServicesSection from '@/components/ServicesSection';
-import { motion } from 'motion/react';
+export const metadata: Metadata = createPageMetadata({
+  title: 'Tools Catalog - Cheap Canva Pro, ChatGPT Plus, Netflix Pakistan',
+  description:
+    'Explore Hammad Tools catalog for cheap Canva Pro, ChatGPT Plus, Netflix Pakistan and other premium subscription tools with instant delivery.',
+  path: '/tools',
+  keywords: [...TOOL_KEYWORDS, 'tools catalog Pakistan', 'cheap subscriptions list'],
+});
 
-const ToolsPage = () => {
-  return (
-    <main className="min-h-screen pt-8 md:pt-12 pb-20 bg-brand-bg">
-      <ServicesSection />
-    </main>
-  );
-};
+export default function ToolsPage() {
+  return <ToolsPageClient />;
+}
 
-export default ToolsPage;

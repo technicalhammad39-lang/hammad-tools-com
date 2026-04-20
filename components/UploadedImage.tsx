@@ -34,12 +34,14 @@ export default function UploadedImage({
     setCurrentSrc(preferred);
   }, [preferred]);
 
+  const resolvedLoading = loading || (rest.fetchPriority === 'high' ? 'eager' : 'lazy');
+
   return (
     <img
       src={currentSrc}
       alt={alt}
       className={className}
-      loading={loading || 'lazy'}
+      loading={resolvedLoading}
       decoding={decoding || 'async'}
       onError={() => {
         if (currentSrc !== normalizedFallback) {
