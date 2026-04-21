@@ -97,6 +97,21 @@ function parseNumberInput(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function createEditorPlanId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `plan_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizePlanForEditor(plan: ProductPlan): ProductPlan {
+  return {
+    ...plan,
+    id: plan.id || createEditorPlanId(),
+    benefits: normalizeBenefitsForEditor(plan.benefits),
+  };
+}
+
 function normalizeBenefitsForEditor(benefits: unknown) {
   const values = Array.isArray(benefits)
     ? benefits.map((benefit) => String(benefit ?? '')).filter((benefit) => benefit.length > 0)
@@ -219,10 +234,7 @@ function mapDocToForm(item: ProductItem): ProductForm {
     warranty: item.warranty || '',
     planType: item.planType || '',
     plans: Array.isArray(item.plans)
-      ? item.plans.map((plan) => ({
-          ...plan,
-          benefits: normalizeBenefitsForEditor(plan.benefits),
-        }))
+      ? item.plans.map((plan) => normalizePlanForEditor(plan))
       : [],
     ...durationPresetValues,
   };
@@ -686,6 +698,7 @@ const AdminProductsPage = () => {
                         plans: [
                           ...prev.plans,
                           {
+                            id: createEditorPlanId(),
                             planName: 'Standard',
                             ourPrice: basePrice,
                             officialPrice: basePrice ? basePrice * 1.5 : 0,
@@ -702,7 +715,7 @@ const AdminProductsPage = () => {
 
                 <div className="space-y-4">
                   {form.plans.map((plan, planIndex) => (
-                    <div key={`${plan.planName}-${planIndex}`} className="bg-black/30 border border-white/10 rounded-xl p-4 space-y-3">
+                    <div key={plan.id || `plan-${planIndex}`} className="bg-black/30 border border-white/10 rounded-xl p-4 space-y-3">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div className="space-y-1">
                           <label className="text-[9px] font-black uppercase tracking-widest text-brand-text/40">Plan name</label>

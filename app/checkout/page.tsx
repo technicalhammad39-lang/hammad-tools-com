@@ -31,9 +31,77 @@ interface AppliedCoupon {
 }
 
 const MAX_PROOF_SIZE_BYTES = 5 * 1024 * 1024;
+const MANUAL_WHATSAPP_NUMBER = '923209310656';
 
 function toCurrency(amount: number) {
   return `Rs ${amount.toFixed(2)}`;
+}
+
+function isManualChatPaymentMethod(method: PaymentMethod | null) {
+  if (!method) {
+    return false;
+  }
+  return (method.name || '').trim().toLowerCase().includes('manual');
+}
+
+function getPaymentMethodDisplayName(method: PaymentMethod) {
+  return isManualChatPaymentMethod(method) ? 'WhatsApp Manual Chat' : method.name;
+}
+
+function buildWhatsAppManualOrderMessage({
+  orderId,
+  customerName,
+  customerEmail,
+  customerPhone,
+  paymentMethodName,
+  items,
+  totalAmount,
+  note,
+}: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  paymentMethodName: string;
+  items: CheckoutItem[];
+  totalAmount: number;
+  note: string;
+}) {
+  const itemLines = items.map((item, index) => {
+    return [
+      `Item ${index + 1}: ${item.title}`,
+      `Plan: ${item.selectedPlanName || 'Standard'}`,
+      `Quantity: ${item.quantity}`,
+      `Unit Price: ${toCurrency(item.unitPrice)}`,
+      `Line Total: ${toCurrency(item.totalPrice)}`,
+      item.durationLabel ? `Duration: ${item.durationLabel}` : '',
+      item.planType ? `Plan Type: ${item.planType}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
+  });
+
+  const lines = [
+    'Assalam o Alaikum, I want to place a manual order.',
+    '',
+    'Order Details:',
+    `Order ID: ${orderId}`,
+    `Customer Name: ${customerName || 'N/A'}`,
+    `Customer Email: ${customerEmail}`,
+    `Customer Phone: ${customerPhone}`,
+    `Selected Payment Method: ${paymentMethodName}`,
+    '',
+    'Items:',
+    ...itemLines,
+    '',
+    `Total Amount: ${toCurrency(totalAmount)}`,
+  ];
+
+  if (note) {
+    lines.push(`Checkout Note: ${note}`);
+  }
+
+  return lines.join('\n');
 }
 
 function getProductTitle(product: ProductItem) {
@@ -227,6 +295,10 @@ function CheckoutPageContent() {
     () => paymentMethods.find((method) => method.id === selectedPaymentMethodId) || null,
     [paymentMethods, selectedPaymentMethodId]
   );
+  const selectedPaymentMethodIsManual = useMemo(
+    () => isManualChatPaymentMethod(selectedPaymentMethod),
+    [selectedPaymentMethod]
+  );
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
   const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
@@ -356,6 +428,7 @@ function CheckoutPageContent() {
     const phoneValue = phone.trim();
     const senderValue = senderAccount.trim();
     const transactionValue = transactionId.trim();
+    const normalizedNote = note.trim().slice(0, 1000);
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailValue || !emailPattern.test(emailValue)) {
@@ -376,13 +449,13 @@ function CheckoutPageContent() {
       return;
     }
 
-    if (!senderValue) {
+    if (!selectedPaymentMethodIsManual && !senderValue) {
       setErrorMessage('Sender number/account is required.');
       toast.error('Sender account is required');
       return;
     }
 
-    if (!transactionValue) {
+    if (!selectedPaymentMethodIsManual && !transactionValue) {
       setErrorMessage('Transaction ID is required.');
       toast.error('Transaction ID is required');
       return;
@@ -392,7 +465,7 @@ function CheckoutPageContent() {
 
     try {
       const finalOrderId = resolveOrderIdWithoutPreRead();
-      const proofMedia = await uploadPaymentProof(user.uid, finalOrderId);
+      const proofMedia = selectedPaymentMethodIsManual ? null : await uploadPaymentProof(user.uid, finalOrderId);
       const timestamp = serverTimestamp();
       const roundedSubtotal = Number(subtotal.toFixed(2));
       const roundedDiscount = Number(discountAmount.toFixed(2));
@@ -454,18 +527,27 @@ function CheckoutPageContent() {
           instructions: selectedPaymentMethod.instructions || '',
         },
 
-        paymentProof: {
-          senderAccount: senderValue,
-          senderNumber: senderValue,
-          transactionId: transactionValue,
-          screenshotUrl: proofMedia?.url || '',
-          screenshotMedia: proofMedia
-            ? {
-                ...toStorageMetadata(proofMedia, user.uid),
-                createdAt: timestamp,
-              }
-            : null,
-        },
+        paymentProof: selectedPaymentMethodIsManual
+          ? {
+              senderAccount: '',
+              senderNumber: '',
+              transactionId: '',
+              screenshotUrl: '',
+              screenshotMedia: null,
+              note: 'Manual WhatsApp checkout initiated.',
+            }
+          : {
+              senderAccount: senderValue,
+              senderNumber: senderValue,
+              transactionId: transactionValue,
+              screenshotUrl: proofMedia?.url || '',
+              screenshotMedia: proofMedia
+                ? {
+                    ...toStorageMetadata(proofMedia, user.uid),
+                    createdAt: timestamp,
+                  }
+                : null,
+            },
 
         adminMessage: '',
         rejectionReason: '',
@@ -478,11 +560,28 @@ function CheckoutPageContent() {
         updated_at: timestamp,
         statusUpdatedAt: timestamp,
         status_updated_at: timestamp,
-        note: note.trim().slice(0, 1000),
+        note: normalizedNote,
       });
 
       if (checkoutMode === 'cart') {
         clearCart();
+      }
+
+      if (selectedPaymentMethodIsManual) {
+        const whatsappMessage = buildWhatsAppManualOrderMessage({
+          orderId: finalOrderId,
+          customerName: user.displayName || '',
+          customerEmail: emailValue,
+          customerPhone: phoneValue,
+          paymentMethodName: 'Manual',
+          items,
+          totalAmount: roundedFinalTotal,
+          note: normalizedNote,
+        });
+        const whatsappUrl = `https://wa.me/${MANUAL_WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
+        toast.success('Redirecting to WhatsApp', `Order ${finalOrderId} created. Continue in chat.`);
+        window.location.assign(whatsappUrl);
+        return;
       }
 
       setOrderId(createOrderPublicId());
@@ -606,23 +705,32 @@ function CheckoutPageContent() {
                               : 'bg-white/5 text-brand-text/50 border-white/10 hover:border-primary/40'
                           }`}
                         >
-                          {method.name}
+                          {getPaymentMethodDisplayName(method)}
                         </button>
                       ))}
                     </div>
 
                     {selectedPaymentMethod ? (
                       <div className="rounded-xl md:rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Title</div>
-                            <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountTitle}</div>
+                        {selectedPaymentMethodIsManual ? (
+                          <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+                            <div className="text-[10px] uppercase tracking-widest font-black text-primary">Manual Chat Checkout</div>
+                            <div className="text-xs font-black text-brand-text/80 mt-2 leading-relaxed">
+                              This method redirects you to WhatsApp with your full order details prefilled.
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Number</div>
-                            <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountNumber}</div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Title</div>
+                              <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountTitle}</div>
+                            </div>
+                            <div>
+                              <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Number</div>
+                              <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountNumber}</div>
+                            </div>
                           </div>
-                        </div>
+                        )}
                         {selectedPaymentMethod.instructions ? (
                           <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/45 border-t border-white/10 pt-4">
                             {selectedPaymentMethod.instructions}
@@ -635,53 +743,63 @@ function CheckoutPageContent() {
               </section>
 
               <section className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
-                <h2 className="text-xl font-black uppercase text-brand-text">Payment Proof</h2>
+                <h2 className="text-xl font-black uppercase text-brand-text">
+                  {selectedPaymentMethodIsManual ? 'Manual WhatsApp Checkout' : 'Payment Proof'}
+                </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-2xl bg-gradient-to-r from-white via-[#FFF3B8] to-primary p-[1px]">
-                    <input
-                      type="text"
-                      value={senderAccount}
-                      onChange={(event) => setSenderAccount(event.target.value)}
-                      placeholder="Sender number / sender account"
-                      required
-                      className="w-full rounded-2xl bg-[#0B0B0B] border border-white/10 px-4 py-3 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-primary/55"
-                    />
+                {selectedPaymentMethodIsManual ? (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-primary leading-relaxed">
+                    Sender account, transaction ID, and screenshot are skipped for manual chat. On submit, your order is created and you are redirected to WhatsApp with all order details.
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="rounded-2xl bg-gradient-to-r from-white via-[#FFF3B8] to-primary p-[1px]">
+                        <input
+                          type="text"
+                          value={senderAccount}
+                          onChange={(event) => setSenderAccount(event.target.value)}
+                          placeholder="Sender number / sender account"
+                          required
+                          className="w-full rounded-2xl bg-[#0B0B0B] border border-white/10 px-4 py-3 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-primary/55"
+                        />
+                      </div>
 
-                  <div className="rounded-2xl bg-gradient-to-r from-white via-[#FFF3B8] to-primary p-[1px]">
-                    <input
-                      type="text"
-                      value={transactionId}
-                      onChange={(event) => setTransactionId(event.target.value)}
-                      placeholder="Transaction ID"
-                      required
-                      className="w-full rounded-2xl bg-[#0B0B0B] border border-white/10 px-4 py-3 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-primary/55"
-                    />
-                  </div>
-                </div>
+                      <div className="rounded-2xl bg-gradient-to-r from-white via-[#FFF3B8] to-primary p-[1px]">
+                        <input
+                          type="text"
+                          value={transactionId}
+                          onChange={(event) => setTransactionId(event.target.value)}
+                          placeholder="Transaction ID"
+                          required
+                          className="w-full rounded-2xl bg-[#0B0B0B] border border-white/10 px-4 py-3 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-primary/55"
+                        />
+                      </div>
+                    </div>
 
-                <label className="bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-primary/30 transition-colors">
-                  <span className="text-brand-text/45 font-black uppercase tracking-widest text-[10px]">
-                    Upload screenshot proof (optional)
-                  </span>
-                  <Upload className="w-4 h-4 text-primary" />
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/jpg"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      setProofFile(file);
-                    }}
-                  />
-                </label>
+                    <label className="bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-primary/30 transition-colors">
+                      <span className="text-brand-text/45 font-black uppercase tracking-widest text-[10px]">
+                        Upload screenshot proof (optional)
+                      </span>
+                      <Upload className="w-4 h-4 text-primary" />
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/jpg"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setProofFile(file);
+                        }}
+                      />
+                    </label>
 
-                {proofPreview ? (
-                  <div className="border border-white/10 rounded-xl md:rounded-2xl overflow-hidden max-w-sm">
-                    <img src={proofPreview} alt="Payment proof preview" className="w-full h-auto" />
-                  </div>
-                ) : null}
+                    {proofPreview ? (
+                      <div className="border border-white/10 rounded-xl md:rounded-2xl overflow-hidden max-w-sm">
+                        <img src={proofPreview} alt="Payment proof preview" className="w-full h-auto" />
+                      </div>
+                    ) : null}
+                  </>
+                )}
 
                 <textarea
                   value={note}
@@ -710,7 +828,7 @@ function CheckoutPageContent() {
                   className="w-full bg-primary text-black py-4 rounded-xl text-[11px] font-black uppercase tracking-widest border-b-4 border-secondary flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                  Submit Order
+                  {selectedPaymentMethodIsManual ? 'Continue to WhatsApp' : 'Submit Order'}
                 </button>
               </section>
             </div>
@@ -746,7 +864,7 @@ function CheckoutPageContent() {
                   </div>
                   <div className="flex justify-between text-brand-text/40">
                     <span>Payment Method</span>
-                    <span className="text-brand-text">{selectedPaymentMethod?.name || 'Select one'}</span>
+                    <span className="text-brand-text">{selectedPaymentMethod ? getPaymentMethodDisplayName(selectedPaymentMethod) : 'Select one'}</span>
                   </div>
                 </div>
 

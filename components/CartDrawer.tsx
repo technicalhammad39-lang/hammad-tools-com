@@ -23,6 +23,7 @@ const CartDrawer = () => {
             exit={{ opacity: 0 }}
             onClick={() => setIsCartOpen(false)}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]"
+            data-lenis-prevent
           />
 
           <motion.div
@@ -31,6 +32,7 @@ const CartDrawer = () => {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 h-full w-full max-w-md bg-brand-bg border-l border-white/10 z-[101] shadow-2xl flex flex-col"
+            data-lenis-prevent
           >
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-black/20">
               <div className="flex items-center space-x-3">
@@ -50,7 +52,7 @@ const CartDrawer = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6" data-lenis-prevent>
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
                   <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center text-brand-text/20 border border-white/5">

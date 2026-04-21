@@ -279,6 +279,7 @@ export default function MediaLibraryModal({
     <div
       className="fixed inset-0 z-[150] bg-black/75 backdrop-blur-sm p-4 md:p-8"
       onMouseDown={closeIfBackdrop}
+      data-lenis-prevent
     >
       <div className="mx-auto h-full max-w-6xl rounded-[2rem] border border-primary/20 bg-[#101010] shadow-[0_24px_80px_rgba(0,0,0,0.55)] overflow-hidden flex flex-col">
         <div className="px-5 md:px-7 py-4 border-b border-white/10 bg-gradient-to-r from-[#141414] via-[#1A1A1A] to-[#121212]">
@@ -391,7 +392,7 @@ export default function MediaLibraryModal({
           />
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 py-5 bg-[#0F0F0F]">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-7 py-5 bg-[#0F0F0F]" data-lenis-prevent>
           {loading ? (
             <div className="h-full min-h-[260px] grid place-items-center">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />

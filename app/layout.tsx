@@ -11,6 +11,7 @@ import CartDrawer from '@/components/CartDrawer';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import { ToastProvider } from '@/components/ToastProvider';
 import UserOrderTicker from '@/components/UserOrderTicker';
+import LenisProvider from '@/components/LenisProvider';
 import { CORE_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, createPageMetadata, getSiteUrl } from '@/lib/seo';
 
 const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <CartProvider>
               <SettingsProvider>
                 <ToastProvider>
+                  <LenisProvider />
                   <Navbar />
                   <UserOrderTicker />
                   <CartDrawer />

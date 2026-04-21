@@ -149,7 +149,10 @@ export default function NotificationBell({
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-3 w-[340px] max-w-[90vw] bg-[#0A0A0A]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[130]">
+        <div
+          className="absolute right-0 mt-3 w-[340px] max-w-[90vw] bg-[#0A0A0A]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[130]"
+          data-lenis-prevent
+        >
           <div className="p-4 border-b border-white/5 flex items-center justify-between">
             <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/50">Notifications</div>
             <button
@@ -160,7 +163,7 @@ export default function NotificationBell({
             </button>
           </div>
 
-          <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
+          <div className="max-h-96 overflow-y-auto divide-y divide-white/5" data-lenis-prevent>
             {notifications.length === 0 ? (
               <div className="p-8 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/20">
                 No notifications yet.

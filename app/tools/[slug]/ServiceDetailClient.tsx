@@ -533,7 +533,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                   <p className="text-[9px] md:text-[10px] text-brand-text/20 mt-1 uppercase tracking-widest">Be the first to review!</p>
                 </div>
               ) : (
-                <div className="flex-1 space-y-2.5 md:space-y-4 max-h-[360px] md:max-h-[430px] overflow-y-auto pr-1 no-scrollbar">
+                <div className="flex-1 space-y-2.5 md:space-y-4 max-h-[360px] md:max-h-[430px] overflow-y-auto pr-1 no-scrollbar" data-lenis-prevent>
                   {reviews.map((review) => {
                     const maskedIdentity = review.userEmailMasked || '';
                     const displayName = review.userName || 'Customer';
@@ -655,11 +655,12 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       </div>
 
       {isReviewModalOpen ? (
-        <div className="lg:hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm p-3 flex items-end">
+        <div className="lg:hidden fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm p-3 flex items-end" data-lenis-prevent>
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-h-[88vh] overflow-y-auto no-scrollbar bg-[#171717] border border-white/10 rounded-[1.5rem] shadow-2xl"
+            data-lenis-prevent
           >
             <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
               <h4 className="text-base font-black uppercase tracking-widest text-brand-text">Write Review</h4>
