@@ -107,9 +107,9 @@ const AdminDashboard = () => {
   }, [users]);
 
   const stats = [
-    { label: 'Total Revenue', value: `Rs ${totalRevenue.toFixed(2)}`, icon: DollarSign, tone: 'neutral' as const },
+    { label: 'Total Revenue', value: `Rs ${totalRevenue.toFixed(2)}`, icon: DollarSign, tone: 'light' as const },
     { label: 'Total Orders', value: totalOrders.toString(), icon: ShoppingBag, tone: 'warm' as const },
-    { label: 'Active Users', value: activeUsers.toString(), icon: Users, tone: 'neutral' as const },
+    { label: 'Active Users', value: activeUsers.toString(), icon: Users, tone: 'light' as const },
     { label: 'New Signups', value: newSignups.toString(), icon: TrendingUp, tone: 'warm' as const },
   ];
 
@@ -192,27 +192,25 @@ const AdminDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`min-w-[210px] md:min-w-0 glass p-4 md:p-10 rounded-[1.3rem] md:rounded-[2rem] border relative overflow-hidden group transition-all ${
+            className={`min-w-[210px] md:min-w-0 p-4 md:p-10 rounded-[1.3rem] md:rounded-[2rem] border border-black/10 relative overflow-hidden group transition-all shadow-2xl ${
               stat.tone === 'warm'
-                ? 'bg-[#FFF2B3]/[0.08] border-[#FFF2B3]/20 hover:border-[#FFF2B3]/35'
-                : 'bg-[#F7F7F7]/[0.06] border-[#F7F7F7]/15 hover:border-[#F7F7F7]/30'
+                ? 'bg-[#FFF2B3]'
+                : 'bg-[#F7F7F7]'
             }`}
           >
-            <div className="absolute top-0 right-0 p-3 md:p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+            <div className="absolute top-0 right-0 p-3 md:p-4 opacity-[0.08] group-hover:opacity-[0.18] transition-opacity">
               <stat.icon className="w-12 h-12 md:w-16 md:h-16" />
             </div>
             <div className="flex items-center justify-between mb-3 md:mb-8">
               <div
-                className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-black/15 flex items-center justify-center border group-hover:scale-110 transition-transform ${
-                  stat.tone === 'warm' ? 'text-[#FFE38B] border-[#FFF2B3]/30' : 'text-[#EDEDED] border-[#F7F7F7]/30'
-                }`}
+                className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-black/10 text-[#111111] flex items-center justify-center border border-black/20 group-hover:scale-110 transition-transform"
               >
                 <stat.icon className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-              <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/40">Live</span>
+              <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-black/60">Live</span>
             </div>
-            <div className="text-2xl md:text-4xl font-black mb-1 text-brand-text break-words">{stat.value}</div>
-            <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-text/30">{stat.label}</div>
+            <div className="text-2xl md:text-4xl font-black mb-1 text-[#111111] break-words">{stat.value}</div>
+            <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-black/70">{stat.label}</div>
           </motion.div>
         ))}
       </div>

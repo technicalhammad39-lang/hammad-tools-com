@@ -422,7 +422,7 @@ export default function GiveawayPageClient() {
   return (
     <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg relative overflow-hidden">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div data-gsap-reveal className="flex items-center justify-between mb-10">
           <div>
             <h1 className="text-4xl font-black uppercase text-brand-text">Mission <span className="internal-gradient">Feed</span></h1>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/30">Hammad Tools Reward Protocol v2.0</p>
@@ -439,13 +439,13 @@ export default function GiveawayPageClient() {
           </div>
         </div>
 
-        <div className="space-y-4 mt-4">
+        <div data-gsap-reveal className="space-y-4 mt-4">
           {giveaways.map((item) => (
             <GiveawayPost key={item.id} giveaway={item} />
           ))}
         </div>
 
-        <div className="text-center mt-20 opacity-20 hover:opacity-100 transition-opacity">
+        <div data-gsap-reveal className="text-center mt-20 opacity-20 hover:opacity-100 transition-opacity">
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-text">End of Secure Feed</p>
         </div>
       </div>

@@ -100,6 +100,17 @@ function maskEmail(email: string) {
   return `${localStart}${localMask}@${domain}`;
 }
 
+function formatPriceLabel(amount: number) {
+  if (!Number.isFinite(amount)) {
+    return '0';
+  }
+  const normalized = Number(amount.toFixed(2));
+  if (Number.isInteger(normalized)) {
+    return String(normalized);
+  }
+  return normalized.toFixed(2).replace(/\.?0+$/, '');
+}
+
 export default function ServiceDetailClient({ service, loading }: { service: Service | null, loading: boolean }) {
   const router = useRouter();
   const { user, profile } = useAuth();
@@ -235,8 +246,8 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const currentOfficialPrice = selectedPlan
     ? (selectedPlan.officialPrice && selectedPlan.officialPrice > currentPrice ? selectedPlan.officialPrice : 0)
     : (Number(service.salePrice || 0) > currentPrice ? Number(service.salePrice) : 0);
-  const totalPrice = (currentPrice * quantity).toFixed(2);
-  const totalOfficialPrice = (currentOfficialPrice * quantity).toFixed(2);
+  const totalPrice = formatPriceLabel(currentPrice * quantity);
+  const totalOfficialPrice = formatPriceLabel(currentOfficialPrice * quantity);
   const savingsPercent = currentOfficialPrice > currentPrice
     ? Math.round(((currentOfficialPrice - currentPrice) / currentOfficialPrice) * 100)
     : 0;

@@ -35,12 +35,12 @@ const Hero = () => {
             loop
             muted
             playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-25"
+            className="absolute inset-0 w-full h-full object-cover opacity-20"
           >
             <source src="/web-background.mp4" type="video/mp4" />
           </video>
         ) : null}
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-black/60" />
         <div className="absolute inset-0 cyber-grid opacity-[0.1]" />
         
         {/* Decorative Gradients */}
@@ -56,9 +56,9 @@ const Hero = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="md:w-full md:max-w-4xl md:mx-auto md:flex md:flex-col md:items-center md:text-center lg:items-start lg:text-left lg:mx-0"
           >
-            <h1 className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.08] md:leading-[1] mb-4 md:mb-6 text-brand-text flex flex-col items-start md:items-center lg:items-start gap-2 md:gap-4 text-left md:text-center lg:text-left transition-all">
-              <span className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-serif italic text-white leading-tight">Unlock The</span>
-              <span style={{ fontFamily: 'var(--font-display)' }} className="text-[2.45rem] sm:text-7xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0">
+            <h1 className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.08] md:leading-[1] mb-4 md:mb-6 text-brand-text flex flex-col md:flex-row items-start md:items-end lg:items-end gap-2 md:gap-3 text-left md:text-center lg:text-left transition-all md:whitespace-nowrap">
+              <span className="text-[2.45rem] sm:text-6xl md:text-7xl lg:text-8xl font-serif italic text-white leading-tight whitespace-nowrap">Unlock The</span>
+              <span style={{ fontFamily: 'var(--font-display)' }} className="inline-block text-[2.45rem] sm:text-7xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-none mt-1 sm:mt-2 md:mt-0 whitespace-nowrap">
                 <Typewriter
                   options={{
                     strings: ['PRO COURSES', 'PREMIUM TOOLS', 'DIGITAL ASSETS'],

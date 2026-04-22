@@ -83,6 +83,7 @@ export interface ProductItem {
 export interface PaymentMethod {
   id: string;
   name: string;
+  paymentType?: 'standard' | 'manual_chat';
   accountTitle: string;
   accountNumber: string;
   instructions?: string;
@@ -187,6 +188,7 @@ export interface OrderRecord {
   paymentMethodName?: string;
   paymentMethodSnapshot?: {
     name?: string;
+    paymentType?: 'standard' | 'manual_chat';
     accountTitle?: string;
     accountNumber?: string;
     instructions?: string;

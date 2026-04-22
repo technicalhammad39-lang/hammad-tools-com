@@ -45,6 +45,22 @@ select:disabled {
   cursor: not-allowed;
 }
 
+select {
+  color: var(--foreground);
+  background-color: #101010;
+}
+
+select option,
+select optgroup {
+  color: #F5F5F5;
+  background-color: #101010;
+}
+
+select option:checked {
+  color: #111111;
+  background-color: #FFD600;
+}
+
 .glass {
   background: rgba(26, 26, 26, 0.4);
   backdrop-filter: blur(12px);
@@ -112,6 +128,21 @@ select:disabled {
 
 .animate-float {
   animation: float 5s ease-in-out infinite;
+}
+
+@keyframes faqArrowFlash {
+  0%, 100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 0 rgba(255, 214, 0, 0));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(255, 214, 0, 0.8));
+  }
+}
+
+.faq-arrow-flash {
+  animation: faqArrowFlash 1.6s ease-in-out infinite;
 }
 
 /* Custom Scrollbar */

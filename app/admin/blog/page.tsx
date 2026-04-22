@@ -388,6 +388,7 @@ const BlogCMS = () => {
         <MediaLibraryModal
           open={isMediaLibraryOpen}
           onClose={() => setIsMediaLibraryOpen(false)}
+          allowDelete
           onSelect={(media) => {
             setFormData((prev) => ({
               ...prev,

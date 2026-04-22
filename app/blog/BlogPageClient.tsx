@@ -143,7 +143,7 @@ const BlogPage = () => {
     <main className="min-h-screen pt-16 md:pt-24 pb-16 md:pb-20 px-4 bg-brand-bg">
     <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6 md:mb-12">
+        <div data-gsap-reveal className="text-center mb-6 md:mb-12">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -162,7 +162,7 @@ const BlogPage = () => {
         </div>
 
         {/* Search & Filter */}
-        <div className="flex flex-col md:flex-row gap-3 md:gap-6 mb-7 md:mb-12">
+        <div data-gsap-reveal className="flex flex-col md:flex-row gap-3 md:gap-6 mb-7 md:mb-12">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 md:left-4 top-1/2 -translate-y-1/2 text-brand-text/40 w-4 h-4 md:w-5 md:h-5" />
             <input 
@@ -187,7 +187,7 @@ const BlogPage = () => {
         </div>
 
         {/* Blog Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div data-gsap-reveal className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredPosts.map((post, index) => {
             const thumbnailSrc = resolveImageSource(post, {
               mediaPaths: ['thumbnailMedia'],
@@ -258,7 +258,7 @@ const BlogPage = () => {
         </div>
 
         {/* Pagination */}
-        <div className="mt-16 flex justify-center gap-4">
+        <div data-gsap-reveal className="mt-16 flex justify-center gap-4">
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all text-brand-text">1</button>
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all opacity-50 text-brand-text">2</button>
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all opacity-50 text-brand-text">3</button>

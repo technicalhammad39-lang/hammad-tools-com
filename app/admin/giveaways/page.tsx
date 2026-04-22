@@ -304,6 +304,7 @@ const AdminGiveaways = () => {
         <MediaLibraryModal
           open={isMediaLibraryOpen}
           onClose={() => setIsMediaLibraryOpen(false)}
+          allowDelete
           onSelect={(media) => {
             setForm((prev) => ({
               ...prev,

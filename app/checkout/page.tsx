@@ -41,11 +41,20 @@ function isManualChatPaymentMethod(method: PaymentMethod | null) {
   if (!method) {
     return false;
   }
+  if (method.paymentType === 'manual_chat') {
+    return true;
+  }
+  if (method.paymentType === 'standard') {
+    return false;
+  }
   return (method.name || '').trim().toLowerCase().includes('manual');
 }
 
 function getPaymentMethodDisplayName(method: PaymentMethod) {
-  return isManualChatPaymentMethod(method) ? 'WhatsApp Manual Chat' : method.name;
+  if (isManualChatPaymentMethod(method)) {
+    return method.name?.trim() || 'Manual Chat (WhatsApp)';
+  }
+  return method.name;
 }
 
 function buildWhatsAppManualOrderMessage({
@@ -526,6 +535,7 @@ function CheckoutPageContent() {
         paymentMethodName: selectedPaymentMethod.name,
         paymentMethodSnapshot: {
           name: selectedPaymentMethod.name,
+          paymentType: selectedPaymentMethod.paymentType || 'standard',
           accountTitle: selectedPaymentMethod.accountTitle,
           accountNumber: selectedPaymentMethod.accountNumber,
           instructions: selectedPaymentMethod.instructions || '',
@@ -577,7 +587,7 @@ function CheckoutPageContent() {
           customerName: user.displayName || '',
           customerEmail: emailValue,
           customerPhone: phoneValue,
-          paymentMethodName: 'Manual',
+          paymentMethodName: getPaymentMethodDisplayName(selectedPaymentMethod),
           items,
           totalAmount: roundedFinalTotal,
           note: normalizedNote,

@@ -1097,6 +1097,7 @@ export default function AdminOrdersPage() {
       <MediaLibraryModal
         open={isAttachmentLibraryOpen}
         onClose={() => setIsAttachmentLibraryOpen(false)}
+        allowDelete
         onSelect={(media) => {
           if (!user) {
             toast.error('Authentication required');

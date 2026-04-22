@@ -1,15 +1,14 @@
 ﻿'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
 import Hero from '@/components/Hero';
 import ServicesSection from '@/components/ServicesSection';
 import GoogleBusinessReviews from '@/components/GoogleBusinessReviews';
 import PartnerSection from '@/components/PartnerSection';
 import Testimonials from '@/components/Testimonials';
 import { motion } from 'motion/react';
-import { Users, Globe, Award, Heart, Zap, Shield, Headphones, Layers, HelpCircle } from 'lucide-react';
+import { Users, Globe, Award, Heart, Zap, Shield, Headphones, Layers, HelpCircle, ChevronDown } from 'lucide-react';
 import Marquee from 'react-fast-marquee';
-import { useGsapReveal } from '@/hooks/useGsapReveal';
 
 const stats = [
   { label: 'Active Users', value: '10K+', icon: <Users className="w-5 h-5" /> },
@@ -21,11 +20,8 @@ const stats = [
 ];
 
 export default function Home() {
-  const pageRef = useRef<HTMLDivElement | null>(null);
-  useGsapReveal(pageRef);
-
   return (
-    <div ref={pageRef} className="relative bg-brand-bg">
+    <div className="relative bg-brand-bg">
       <Hero />
       
       {/* Logo Marquee Section */}
@@ -165,6 +161,10 @@ export default function Home() {
 
       {/* FAQ Section with Animated Icons */}
       <section data-gsap-reveal className="py-14 md:py-40 relative overflow-hidden">
+        <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] max-w-[780px] max-h-[780px] rounded-full bg-primary/8 blur-[140px] -z-10 pointer-events-none" />
+        <div className="absolute -bottom-24 left-[8%] w-56 h-56 rounded-full bg-secondary/12 blur-[90px] -z-10 pointer-events-none" />
+        <div className="absolute -top-20 right-[8%] w-56 h-56 rounded-full bg-primary/12 blur-[90px] -z-10 pointer-events-none" />
+
         {/* Large Background Question Marks */}
         <motion.div 
           animate={{ 
@@ -222,18 +222,20 @@ export default function Home() {
               <p className="text-brand-text/40 font-black uppercase tracking-widest text-[10px]">Everything you need to know about Hammad Tools.</p>
             </div>
             <div className="space-y-4 md:space-y-6">
-              {[
+              {[ 
                 { q: "How do I receive my subscription?", a: "After payment proof verification, your credentials are delivered inside your dashboard and linked to your account automatically." },
                 { q: "Are these subscriptions legal?", a: "Yes, we provide legitimate access to premium services through official channels and bulk enterprise accounts." },
                 { q: "What if my account stops working?", a: "We offer a full warranty on all our services. If any issue arises, open a support request and our team will fix or replace access after review." },
                 { q: "Can I cancel my subscription?", a: "Yes, you can cancel your monthly plans at any time from your dashboard settings." },
                 { q: "What payment methods do you accept?", a: "Checkout shows all active payment methods configured by admin, including wallet, bank, and transfer options with live account details." }
               ].map((item, i) => (
-                <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500">
+                <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500 hover:border-primary/25">
                   <summary className="p-5 md:p-8 cursor-pointer font-black text-xs md:text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
                     <span>{item.q}</span>
-                    <span className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-transform duration-500 group-open:rotate-180 border border-primary/20">
-                      <Zap className="w-4 h-4" />
+                    <span className="relative w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-500 group-open:rotate-180">
+                      <span className="absolute inset-0 rounded-full bg-primary/20 blur-[1px]" />
+                      <span className="absolute inset-0 rounded-full border border-primary/35 bg-primary/10" />
+                      <ChevronDown className="relative w-5 h-5 text-primary faq-arrow-flash" />
                     </span>
                   </summary>
                   <div className="px-5 pb-5 pt-4 md:px-8 md:pb-8 md:pt-6 text-brand-text/50 border-t border-white/5 font-medium leading-relaxed text-xs md:text-sm">

@@ -8,11 +8,13 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import UploadedImage from '@/components/UploadedImage';
 import {
+  deleteUploadedMedia,
   fetchMediaLibrary,
   type MediaLibraryItem,
   type UploadFolder,
@@ -37,6 +39,7 @@ interface MediaLibraryModalProps {
   replaceMediaId?: string;
   fileAccessToken?: string;
   filterByRelatedFields?: boolean;
+  allowDelete?: boolean;
 }
 
 function formatFileSize(bytes: number) {
@@ -87,11 +90,13 @@ export default function MediaLibraryModal({
   replaceMediaId = '',
   fileAccessToken = '',
   filterByRelatedFields = false,
+  allowDelete = false,
 }: MediaLibraryModalProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [items, setItems] = useState<MediaLibraryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -207,8 +212,8 @@ export default function MediaLibraryModal({
   }
 
   async function handleUploadChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) {
       return;
     }
 
@@ -216,41 +221,73 @@ export default function MediaLibraryModal({
     setErrorMessage('');
 
     try {
-      const uploaded = await uploadMediaFile({
-        file,
-        folder,
-        relatedType,
-        relatedId,
-        relatedUserId,
-        relatedOrderId,
-        relatedProductId,
-        replaceMediaId,
-      });
+      const uploadedItems: MediaLibraryItem[] = [];
+      let failedCount = 0;
 
-      const nextItem: MediaLibraryItem = {
-        id: uploaded.id,
-        url: uploaded.url,
-        publicPath: uploaded.publicPath,
-        storagePath: uploaded.storagePath,
-        fileName: uploaded.fileName,
-        originalFileName: file.name,
-        mimeType: uploaded.mimeType,
-        sizeBytes: uploaded.sizeBytes,
-        folder: uploaded.folder,
-        access: uploaded.access,
-        ownerId: '',
-        relatedType,
-        relatedId,
-        relatedUserId,
-        relatedOrderId,
-        relatedProductId,
-        note: '',
-        createdAt: new Date().toISOString(),
-      };
+      for (const [index, file] of files.entries()) {
+        try {
+          const uploaded = await uploadMediaFile({
+            file,
+            folder,
+            relatedType,
+            relatedId,
+            relatedUserId,
+            relatedOrderId,
+            relatedProductId,
+            replaceMediaId: index === 0 ? replaceMediaId : '',
+          });
 
-      setItems((prev) => [nextItem, ...prev.filter((item) => item.id !== nextItem.id)]);
-      setSelectedId(nextItem.id);
-      toast.success('File uploaded');
+          uploadedItems.push({
+            id: uploaded.id,
+            url: uploaded.url,
+            publicPath: uploaded.publicPath,
+            storagePath: uploaded.storagePath,
+            fileName: uploaded.fileName,
+            originalFileName: file.name,
+            mimeType: uploaded.mimeType,
+            sizeBytes: uploaded.sizeBytes,
+            folder: uploaded.folder,
+            access: uploaded.access,
+            ownerId: '',
+            relatedType,
+            relatedId,
+            relatedUserId,
+            relatedOrderId,
+            relatedProductId,
+            note: '',
+            createdAt: new Date().toISOString(),
+          });
+        } catch {
+          failedCount += 1;
+        }
+      }
+
+      if (uploadedItems.length) {
+        setItems((prev) => {
+          const next = [...uploadedItems];
+          const seen = new Set(next.map((item) => item.id));
+          for (const currentItem of prev) {
+            if (!seen.has(currentItem.id)) {
+              next.push(currentItem);
+            }
+          }
+          return next;
+        });
+        setSelectedId(uploadedItems[0].id);
+      }
+
+      if (uploadedItems.length && failedCount === 0) {
+        toast.success(
+          uploadedItems.length === 1 ? 'File uploaded' : `${uploadedItems.length} files uploaded`
+        );
+      } else if (uploadedItems.length && failedCount > 0) {
+        toast.info(
+          `${uploadedItems.length} files uploaded`,
+          `${failedCount} file${failedCount > 1 ? 's' : ''} failed`
+        );
+      } else {
+        throw new Error('Failed to upload selected files.');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to upload file.';
       setErrorMessage(message);
@@ -260,6 +297,32 @@ export default function MediaLibraryModal({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  }
+
+  async function handleDeleteItem(item: MediaLibraryItem, event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+
+    if (!allowDelete || deletingIds.includes(item.id)) {
+      return;
+    }
+
+    if (!window.confirm(`Delete "${item.originalFileName || item.fileName}" from media library?`)) {
+      return;
+    }
+
+    setDeletingIds((prev) => [...prev, item.id]);
+    try {
+      await deleteUploadedMedia(item.id);
+      setItems((prev) => prev.filter((entry) => entry.id !== item.id));
+      setSelectedId((prev) => (prev === item.id ? '' : prev));
+      toast.success('Media deleted');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete media.';
+      setErrorMessage(message);
+      toast.error('Delete failed', message);
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== item.id));
     }
   }
 
@@ -309,7 +372,7 @@ export default function MediaLibraryModal({
                 className="flex-1 rounded-xl border border-primary/35 bg-gradient-to-r from-primary via-[#FFE54A] to-[#F9B12D] px-4 py-2.5 text-black text-[10px] font-black uppercase tracking-widest shadow-[0_10px_24px_rgba(255,214,0,0.25)] disabled:opacity-70 inline-flex items-center justify-center gap-2"
               >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Upload from Device
+                Upload Files
               </button>
 
               <button
@@ -379,7 +442,7 @@ export default function MediaLibraryModal({
               className="rounded-xl border border-primary/35 bg-gradient-to-r from-primary via-[#FFE54A] to-[#F9B12D] px-5 py-2.5 text-black text-[11px] font-black uppercase tracking-widest shadow-[0_10px_24px_rgba(255,214,0,0.25)] disabled:opacity-70 inline-flex items-center justify-center gap-2"
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Upload from Device
+              Upload Files
             </button>
           </div>
 
@@ -387,6 +450,7 @@ export default function MediaLibraryModal({
             ref={fileInputRef}
             type="file"
             accept={accept}
+            multiple
             className="hidden"
             onChange={handleUploadChange}
           />
@@ -414,7 +478,7 @@ export default function MediaLibraryModal({
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/35 bg-primary/90 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-black"
                 >
                   <Upload className="w-4 h-4" />
-                  Upload from Device
+                  Upload Files
                 </button>
               </div>
             </div>
@@ -433,15 +497,41 @@ export default function MediaLibraryModal({
                   : '';
 
                 return (
-                  <button
+                  <div
                     key={item.id}
                     onClick={() => setSelectedId(item.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedId(item.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={`group relative text-left rounded-2xl border overflow-hidden transition-all ${
                       isSelected
                         ? 'border-primary bg-white/10 shadow-[0_0_0_1px_rgba(255,214,0,0.4),0_12px_30px_rgba(0,0,0,0.35)]'
                         : 'border-white/10 bg-white/[0.03] hover:border-primary/35'
                     }`}
                   >
+                    {allowDelete ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          void handleDeleteItem(item, event);
+                        }}
+                        disabled={deletingIds.includes(item.id)}
+                        className="absolute left-2 top-2 z-20 h-6 w-6 rounded-full border border-accent/30 bg-black/65 text-accent hover:bg-accent/15 hover:text-accent disabled:opacity-50 grid place-items-center"
+                        aria-label={`Delete ${displayName}`}
+                      >
+                        {deletingIds.includes(item.id) ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    ) : null}
+
                     <div className="relative h-32 md:h-36 bg-[#161616]">
                       {isImage ? (
                         <UploadedImage
@@ -474,7 +564,7 @@ export default function MediaLibraryModal({
                         {createdAtLabel ? <span className="truncate">{createdAtLabel}</span> : null}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

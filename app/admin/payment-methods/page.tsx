@@ -21,11 +21,23 @@ import { useToast } from '@/components/ToastProvider';
 
 const defaultForm: Partial<PaymentMethod> = {
   name: '',
+  paymentType: 'standard',
   accountTitle: '',
   accountNumber: '',
   instructions: '',
   active: true,
 };
+
+function normalizePaymentType(method: Partial<PaymentMethod>) {
+  if (method.paymentType === 'manual_chat') {
+    return 'manual_chat' as const;
+  }
+  const normalizedName = (method.name || '').trim().toLowerCase();
+  if (normalizedName.includes('manual')) {
+    return 'manual_chat' as const;
+  }
+  return 'standard' as const;
+}
 
 export default function AdminPaymentMethodsPage() {
   const { isAdmin } = useAuth();
@@ -64,8 +76,13 @@ export default function AdminPaymentMethodsPage() {
   }
 
   async function handleSave() {
-    if (!form.name?.trim() || !form.accountTitle?.trim() || !form.accountNumber?.trim()) {
-      toast.error('Missing required fields', 'Name, account title, and number are required.');
+    const paymentType = normalizePaymentType(form);
+    if (!form.name?.trim()) {
+      toast.error('Missing required fields', 'Method name is required.');
+      return;
+    }
+    if (paymentType === 'standard' && (!form.accountTitle?.trim() || !form.accountNumber?.trim())) {
+      toast.error('Missing required fields', 'Account title and number are required for standard payments.');
       return;
     }
 
@@ -73,8 +90,15 @@ export default function AdminPaymentMethodsPage() {
     try {
       const payload = {
         name: form.name.trim(),
-        accountTitle: form.accountTitle.trim(),
-        accountNumber: form.accountNumber.trim(),
+        paymentType,
+        accountTitle:
+          paymentType === 'manual_chat'
+            ? (form.accountTitle?.trim() || 'Manual Chat')
+            : form.accountTitle!.trim(),
+        accountNumber:
+          paymentType === 'manual_chat'
+            ? (form.accountNumber?.trim() || 'WhatsApp')
+            : form.accountNumber!.trim(),
         instructions: form.instructions?.trim() || '',
         active: Boolean(form.active),
         updatedAt: serverTimestamp(),
@@ -160,18 +184,28 @@ export default function AdminPaymentMethodsPage() {
                 placeholder="Method name (e.g. JazzCash)"
                 className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
               />
+              <select
+                value={normalizePaymentType(form)}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, paymentType: event.target.value as 'standard' | 'manual_chat' }))
+                }
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+              >
+                <option value="standard">Standard Payment</option>
+                <option value="manual_chat">Manual Chat (WhatsApp)</option>
+              </select>
               <input
                 type="text"
                 value={form.accountTitle || ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, accountTitle: event.target.value }))}
-                placeholder="Account title"
+                placeholder={normalizePaymentType(form) === 'manual_chat' ? 'Optional label (e.g. Manual Chat)' : 'Account title'}
                 className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
               />
               <input
                 type="text"
                 value={form.accountNumber || ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, accountNumber: event.target.value }))}
-                placeholder="Account / Wallet number"
+                placeholder={normalizePaymentType(form) === 'manual_chat' ? 'Optional contact (e.g. WhatsApp)' : 'Account / Wallet number'}
                 className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
               />
               <div className="md:col-span-2">
@@ -223,6 +257,9 @@ export default function AdminPaymentMethodsPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <h3 className="text-lg font-black uppercase text-brand-text">{method.name}</h3>
+                  <span className={`text-[9px] px-3 py-1 rounded-full border font-black uppercase tracking-widest ${normalizePaymentType(method) === 'manual_chat' ? 'bg-primary/15 text-primary border-primary/35' : 'bg-white/5 text-brand-text/60 border-white/10'}`}>
+                    {normalizePaymentType(method) === 'manual_chat' ? 'Manual Chat' : 'Standard'}
+                  </span>
                   <span className={`text-[9px] px-3 py-1 rounded-full border font-black uppercase tracking-widest ${method.active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-accent/10 text-accent border-accent/20'}`}>
                     {method.active ? 'Active' : 'Inactive'}
                   </span>
@@ -237,7 +274,10 @@ export default function AdminPaymentMethodsPage() {
                 <button
                   onClick={() => {
                     setEditingId(method.id);
-                    setForm(method);
+                    setForm({
+                      ...method,
+                      paymentType: normalizePaymentType(method),
+                    });
                     setIsFormOpen(true);
                   }}
                   className="p-3 rounded-xl bg-white/5 border border-white/10 text-primary hover:bg-white/10"

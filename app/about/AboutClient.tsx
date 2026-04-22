@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, Sparkles, Send, Globe, Users, Award, PlaySquare, Store, Ghost, Music } from 'lucide-react';
 import { FaFacebook, FaInstagram, FaWhatsapp, FaTiktok, FaSnapchat, FaYoutube, FaGoogle } from 'react-icons/fa6';
 import Image from 'next/image';
 import { useSettings } from '@/context/SettingsContext';
-import { useGsapReveal } from '@/hooks/useGsapReveal';
 
 export default function AboutClient() {
   const { settings } = useSettings();
-  const pageRef = useRef<HTMLDivElement | null>(null);
-  useGsapReveal(pageRef);
   return (
-    <div ref={pageRef} className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
+    <div className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
