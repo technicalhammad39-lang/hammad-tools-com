@@ -28,15 +28,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      let errorMessage = 'An unexpected error occurred.';
-      try {
-        if (this.state.error?.message) {
-          const parsed = JSON.parse(this.state.error.message);
-          if (parsed.error) errorMessage = parsed.error;
-        }
-      } catch (e) {
-        errorMessage = this.state.error?.message || errorMessage;
-      }
+      const errorMessage = 'Something went wrong while loading this page. Please refresh and try again.';
 
       return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-brand-bg">

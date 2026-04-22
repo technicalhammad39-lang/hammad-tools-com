@@ -26,6 +26,7 @@ import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import UploadedImage from '@/components/UploadedImage';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ToastProvider';
 
 interface Plan {
   planName: string;
@@ -102,6 +103,7 @@ function maskEmail(email: string) {
 export default function ServiceDetailClient({ service, loading }: { service: Service | null, loading: boolean }) {
   const router = useRouter();
   const { user, profile } = useAuth();
+  const toast = useToast();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [quantity, setQuantity] = useState(1);
 
@@ -256,7 +258,13 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
       plan: planName,
       orderId: createOrderPublicId(),
     });
-    router.push(`/checkout?${params.toString()}`);
+    const checkoutPath = `/checkout?${params.toString()}`;
+    if (!user) {
+      toast.error('Login required', 'Please login for a safe purchase.');
+      router.push(`/login?next=${encodeURIComponent(checkoutPath)}`);
+      return;
+    }
+    router.push(checkoutPath);
   };
 
   return (

@@ -17,6 +17,9 @@ export default function PushNotificationBootstrap() {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       return;
     }
+    if (!window.isSecureContext) {
+      return;
+    }
 
     let unsubscribeForeground: (() => void) | undefined;
 
@@ -75,7 +78,9 @@ export default function PushNotificationBootstrap() {
       });
     }
 
-    setupPush();
+    void setupPush().catch((error) => {
+      console.warn('Push notification setup skipped:', error);
+    });
 
     return () => {
       if (unsubscribeForeground) {

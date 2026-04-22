@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 8;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 const requestBuckets = new Map<string, number[]>();
 
 function getClientIp(request: Request) {
@@ -28,27 +28,90 @@ function isRateLimited(ip: string) {
   return recent.length > RATE_LIMIT_MAX_REQUESTS;
 }
 
+function normalizeHost(value: string) {
+  return value.trim().toLowerCase().replace(/\.$/, '');
+}
+
+function stripPort(host: string) {
+  return normalizeHost(host).split(':')[0] || normalizeHost(host);
+}
+
+function parseUrlHost(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return '';
+  }
+}
+
+function isSameOrSubdomain(a: string, b: string) {
+  const hostA = stripPort(a);
+  const hostB = stripPort(b);
+  return hostA === hostB || hostA.endsWith(`.${hostB}`) || hostB.endsWith(`.${hostA}`);
+}
+
+function collectTrustedHostsFromEnv() {
+  const candidates = [
+    process.env.NEXT_PUBLIC_APP_URL || '',
+    process.env.APP_URL || '',
+    process.env.NEWSLETTER_ALLOWED_ORIGINS || '',
+  ];
+
+  const trustedHosts = new Set<string>();
+  for (const candidate of candidates) {
+    const parts = candidate
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    for (const part of parts) {
+      const parsedHost = parseUrlHost(part);
+      const host = parsedHost || part;
+      if (host) {
+        trustedHosts.add(stripPort(host));
+      }
+    }
+  }
+
+  return trustedHosts;
+}
+
 function validateOrigin(request: Request) {
   const origin = (request.headers.get('origin') || '').trim();
-  if (!origin) {
+  if (!origin || origin === 'null') {
     return true;
   }
 
-  const host = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').trim();
+  const hostHeaderValue =
+    (request.headers.get('x-forwarded-host') || request.headers.get('host') || '')
+      .split(',')[0]
+      ?.trim() || '';
+  const host = normalizeHost(hostHeaderValue);
   if (!host) {
     return true;
   }
 
   try {
     const originUrl = new URL(origin);
-    const normalizedOriginHost = originUrl.host.toLowerCase();
-    const normalizedHost = host.toLowerCase();
-    if (normalizedOriginHost === normalizedHost) {
+    const originHost = normalizeHost(originUrl.host);
+    const originHostname = normalizeHost(originUrl.hostname);
+
+    if (originHost === host || stripPort(originHost) === stripPort(host)) {
       return true;
     }
-    const originHostname = originUrl.hostname.toLowerCase();
-    const hostWithoutPort = normalizedHost.split(':')[0] || normalizedHost;
-    return originHostname === hostWithoutPort;
+
+    if (isSameOrSubdomain(originHostname, host)) {
+      return true;
+    }
+
+    const trustedHosts = collectTrustedHostsFromEnv();
+    for (const trustedHost of trustedHosts) {
+      if (isSameOrSubdomain(originHostname, trustedHost)) {
+        return true;
+      }
+    }
+
+    return false;
   } catch {
     return false;
   }

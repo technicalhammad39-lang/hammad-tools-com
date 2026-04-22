@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createPageMetadata } from '@/lib/seo';
+import DashboardAuthGate from '@/components/DashboardAuthGate';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'User Dashboard',
@@ -9,6 +10,5 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <DashboardAuthGate>{children}</DashboardAuthGate>;
 }
-

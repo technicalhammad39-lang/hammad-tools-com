@@ -8,10 +8,12 @@ import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/firebase';
+import { getSafeAuthErrorMessage } from '@/lib/auth-errors';
 
 const ADMIN_EMAIL = 'technicalhammad39@gmail.com';
 
@@ -37,6 +39,7 @@ interface AuthContextType {
   login: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   signupWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
@@ -221,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error('Login failed:', error);
-      throw error;
+      throw new Error(getSafeAuthErrorMessage(error, 'google_login'));
     }
   };
 
@@ -230,7 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
       console.error('Email login failed:', error);
-      throw error;
+      throw new Error(getSafeAuthErrorMessage(error, 'email_login'));
     }
   };
 
@@ -244,7 +247,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await userCredential.user.reload();
     } catch (error) {
       console.error('Email signup failed:', error);
-      throw error;
+      throw new Error(getSafeAuthErrorMessage(error, 'email_signup'));
+    }
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error('Password reset request failed:', error);
+      throw new Error(getSafeAuthErrorMessage(error, 'password_reset'));
     }
   };
 
@@ -253,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
     } catch (error) {
       console.error('Logout failed:', error);
-      throw error;
+      throw new Error(getSafeAuthErrorMessage(error, 'logout'));
     }
   };
 
@@ -266,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         loginWithEmail,
         signupWithEmail,
+        requestPasswordReset,
         logout,
         isAdmin:
           !profile?.banned &&

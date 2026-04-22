@@ -169,7 +169,7 @@ function parseBooleanEnv(rawValue: string | undefined, fallback = false) {
 }
 
 export function isUploadDebugEnabled() {
-  return parseBooleanEnv(process.env.HOSTINGER_UPLOAD_DEBUG, true);
+  return parseBooleanEnv(process.env.HOSTINGER_UPLOAD_DEBUG, false);
 }
 
 function getPathWithinWorkspace(configuredPath: string) {

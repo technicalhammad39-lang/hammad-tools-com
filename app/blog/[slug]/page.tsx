@@ -62,21 +62,33 @@ async function getPost(slug: string): Promise<BlogPost | null> {
   try {
     const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim();
 
-    const q = query(collection(db, 'blogPosts'), where('slug', '==', normalizedSlug), limit(1));
+    const q = query(
+      collection(db, 'blogPosts'),
+      where('published', '==', true),
+      where('slug', '==', normalizedSlug),
+      limit(1)
+    );
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
       return { id: doc.id, ...doc.data() } as BlogPost;
     }
 
-    const rawQ = query(collection(db, 'blogPosts'), where('slug', '==', slug), limit(1));
+    const rawQ = query(
+      collection(db, 'blogPosts'),
+      where('published', '==', true),
+      where('slug', '==', slug),
+      limit(1)
+    );
     const rawSnapshot = await getDocs(rawQ);
     if (!rawSnapshot.empty) {
       const doc = rawSnapshot.docs[0];
       return { id: doc.id, ...doc.data() } as BlogPost;
     }
 
-    const fallbackSnapshot = await getDocs(collection(db, 'blogPosts'));
+    const fallbackSnapshot = await getDocs(
+      query(collection(db, 'blogPosts'), where('published', '==', true))
+    );
     const fallbackDoc = fallbackSnapshot.docs.find((entry) => {
       const data = entry.data() as Partial<BlogPost>;
       return slugify(String(data.title || '')) === normalizedSlug;

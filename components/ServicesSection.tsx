@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart,
@@ -15,6 +15,7 @@ import { usePathname } from 'next/navigation';
 import type { Category, ProductItem } from '@/lib/types/domain';
 import { resolveImageSource } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import { useGsapReveal } from '@/hooks/useGsapReveal';
 
 function getTitle(service: ProductItem) {
   return service.title || service.name || 'Untitled Product';
@@ -44,6 +45,8 @@ const ServicesSection = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'order' | 'price-low' | 'price-high'>('order');
   const pathname = usePathname();
+  const sectionRef = useRef<HTMLElement | null>(null);
+  useGsapReveal(sectionRef);
 
   useEffect(() => {
     const unsubscribeServices = onSnapshot(
@@ -118,9 +121,9 @@ const ServicesSection = () => {
   }
 
   return (
-    <section className="py-8 md:py-16 relative overflow-hidden bg-brand-bg">
+    <section ref={sectionRef} className="py-8 md:py-16 relative overflow-hidden bg-brand-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center text-center mb-6 md:mb-12 gap-3 md:gap-6">
+        <div data-gsap-reveal className="flex flex-col items-center text-center mb-6 md:mb-12 gap-3 md:gap-6">
           <div className="max-w-4xl flex flex-col items-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -153,6 +156,7 @@ const ServicesSection = () => {
 
         {pathname === '/tools' && (
           <motion.div
+            data-gsap-reveal
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-16 items-center"
@@ -209,6 +213,7 @@ const ServicesSection = () => {
 
               return (
                 <motion.div
+                  data-gsap-reveal
                   key={service.id}
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}

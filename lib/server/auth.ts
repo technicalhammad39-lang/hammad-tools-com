@@ -74,17 +74,12 @@ export async function requireAuth(
       allowQueryToken: options?.allowQueryToken === true,
     });
 
-    const hint =
+    const publicMessage =
       code === 'auth/id-token-expired'
-        ? 'Please refresh your session and try again.'
-        : !adminInit.initializedWithExplicitCert
-          ? 'Firebase Admin is not initialized with explicit service account credentials.'
-          : 'Verify Firebase Admin credentials/project configuration on the server.';
+        ? 'Authentication token expired. Please sign in again.'
+        : 'Authentication token verification failed. Please sign in again.';
 
-    throw new ApiError(
-      401,
-      `Authentication token verification failed (${code}). ${hint}${message ? ` Details: ${message}` : ''}`
-    );
+    throw new ApiError(401, publicMessage);
   }
 }
 

@@ -8,11 +8,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, User, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import AuthModal from '@/components/AuthModal';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { user, profile } = useAuth();
@@ -103,12 +101,12 @@ const Navbar = () => {
                   </Link>
                 </div>
               ) : (
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="bg-primary hover:bg-primary/90 text-brand-bg px-5 2xl:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] transition-all hover:scale-105 active:scale-95 border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10"
+                <Link
+                  href="/login"
+                  className="bg-primary hover:bg-primary/90 text-brand-bg px-5 2xl:px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.14em] transition-all hover:scale-105 active:scale-95 border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10 inline-flex items-center justify-center"
                 >
                   Login
-                </button>
+                </Link>
               )}
             </div>
           </div>
@@ -165,19 +163,19 @@ const Navbar = () => {
                     </Link>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { setIsAuthModalOpen(true); setIsOpen(false); }}
-                    className="w-full bg-primary text-brand-bg py-5 rounded-xl font-black uppercase tracking-widest text-sm border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10"
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full bg-primary text-brand-bg py-5 rounded-xl font-black uppercase tracking-widest text-sm border-b-4 border-[#FF8C2A] shadow-lg shadow-primary/10 inline-flex items-center justify-center"
                   >
                     Login
-                  </button>
+                  </Link>
                 )}
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </nav>
   );
 };

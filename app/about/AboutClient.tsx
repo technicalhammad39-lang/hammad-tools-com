@@ -1,21 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Sparkles, Send, Globe, Users, Award, PlaySquare, Store, Ghost, Music } from 'lucide-react';
 import { FaFacebook, FaInstagram, FaWhatsapp, FaTiktok, FaSnapchat, FaYoutube, FaGoogle } from 'react-icons/fa6';
 import Image from 'next/image';
 import { useSettings } from '@/context/SettingsContext';
+import { useGsapReveal } from '@/hooks/useGsapReveal';
 
 export default function AboutClient() {
   const { settings } = useSettings();
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  useGsapReveal(pageRef);
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
+    <div ref={pageRef} className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Header Section */}
-        <div className="text-center mb-12 md:mb-24">
+        <div data-gsap-reveal className="text-center mb-12 md:mb-24">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -40,7 +43,7 @@ export default function AboutClient() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-32">
+        <div data-gsap-reveal className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-32">
           {/* CEO Message Block */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
@@ -105,7 +108,7 @@ export default function AboutClient() {
         </div>
 
         {/* Oversized Interactive Social Links */}
-        <div className="text-center mb-10">
+        <div data-gsap-reveal className="text-center mb-10">
           <h2 className="text-2xl font-black uppercase text-brand-text mb-10 tracking-widest">Connect with our Ecosystem</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
              {[

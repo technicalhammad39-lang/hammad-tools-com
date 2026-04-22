@@ -2,7 +2,6 @@
 
 import React from 'react';
 import ServicesSection from '@/components/ServicesSection';
-import { motion } from 'motion/react';
 
 const ToolsPage = () => {
   return (

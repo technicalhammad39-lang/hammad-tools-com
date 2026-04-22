@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import Hero from '@/components/Hero';
 import ServicesSection from '@/components/ServicesSection';
 import GoogleBusinessReviews from '@/components/GoogleBusinessReviews';
@@ -9,6 +9,7 @@ import Testimonials from '@/components/Testimonials';
 import { motion } from 'motion/react';
 import { Users, Globe, Award, Heart, Zap, Shield, Headphones, Layers, HelpCircle } from 'lucide-react';
 import Marquee from 'react-fast-marquee';
+import { useGsapReveal } from '@/hooks/useGsapReveal';
 
 const stats = [
   { label: 'Active Users', value: '10K+', icon: <Users className="w-5 h-5" /> },
@@ -20,12 +21,15 @@ const stats = [
 ];
 
 export default function Home() {
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  useGsapReveal(pageRef);
+
   return (
-    <div className="relative bg-brand-bg">
+    <div ref={pageRef} className="relative bg-brand-bg">
       <Hero />
       
       {/* Logo Marquee Section */}
-      <section className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
+      <section data-gsap-reveal className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
         <Marquee gradient={true} gradientColor="black" gradientWidth={100} speed={40} pauseOnHover={true}>
           {[
             { name: 'Netflix', color: '#E50914' },
@@ -53,7 +57,7 @@ export default function Home() {
       <ServicesSection />
       
       {/* Why Choose Us Section - Premium Cards */}
-      <section className="py-12 md:py-32 relative overflow-hidden">
+      <section data-gsap-reveal className="py-12 md:py-32 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 -z-10" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -112,16 +116,16 @@ export default function Home() {
               return (
               <motion.div
                 key={feature.title}
-                initial={typeof window !== 'undefined' && window.innerWidth < 768 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                whileHover={typeof window !== 'undefined' && window.innerWidth >= 768 ? { 
+                whileHover={{ 
                   y: -10, 
                   rotateX: 10, 
                   rotateY: -5,
                   transition: { duration: 0.3 }
-                } : {}}
+                }}
                 className={`rounded-2xl md:rounded-[2rem] p-4 md:p-10 border border-white/40 group relative overflow-hidden transition-all duration-500 perspective-1000 flex flex-row items-center md:items-start md:flex-col gap-4 md:gap-0 shadow-[0_20px_50px_rgba(255,214,0,0.18)] ${
                   isWhiteCard
                     ? 'bg-[linear-gradient(135deg,#FFFFFF_0%,#FFF9E6_55%,#FFFFFF_100%)]'
@@ -147,14 +151,20 @@ export default function Home() {
         </div>
       </section>
 
-      <GoogleBusinessReviews />
+      <div data-gsap-reveal>
+        <GoogleBusinessReviews />
+      </div>
 
-      <PartnerSection />
+      <div data-gsap-reveal>
+        <PartnerSection />
+      </div>
 
-      <Testimonials />
+      <div data-gsap-reveal>
+        <Testimonials />
+      </div>
 
       {/* FAQ Section with Animated Icons */}
-      <section className="py-14 md:py-40 relative overflow-hidden">
+      <section data-gsap-reveal className="py-14 md:py-40 relative overflow-hidden">
         {/* Large Background Question Marks */}
         <motion.div 
           animate={{ 

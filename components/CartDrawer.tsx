@@ -8,9 +8,13 @@ import { useRouter } from 'next/navigation';
 import { createOrderPublicId } from '@/lib/order-system';
 import { normalizeImageUrl } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ToastProvider';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, totalPrice, isCartOpen, setIsCartOpen, totalItems } = useCart();
+  const { user } = useAuth();
+  const toast = useToast();
   const router = useRouter();
 
   return (
@@ -116,7 +120,14 @@ const CartDrawer = () => {
                       mode: 'cart',
                       orderId: createOrderPublicId(),
                     });
-                    router.push(`/checkout?${params.toString()}`);
+                    const checkoutPath = `/checkout?${params.toString()}`;
+                    if (!user) {
+                      toast.error('Login required', 'Please login for a safe purchase.');
+                      router.push(`/login?next=${encodeURIComponent(checkoutPath)}`);
+                      setIsCartOpen(false);
+                      return;
+                    }
+                    router.push(checkoutPath);
                     setIsCartOpen(false);
                   }}
                   className="w-full bg-primary text-black py-4 rounded-xl font-black flex items-center justify-center space-x-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform text-xs uppercase tracking-widest border-b-4 border-secondary"

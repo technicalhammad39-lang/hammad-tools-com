@@ -295,6 +295,10 @@ function CheckoutPageContent() {
     () => paymentMethods.find((method) => method.id === selectedPaymentMethodId) || null,
     [paymentMethods, selectedPaymentMethodId]
   );
+  const checkoutPathWithQuery = useMemo(() => {
+    const query = params.toString();
+    return query ? `/checkout?${query}` : '/checkout';
+  }, [params]);
   const selectedPaymentMethodIsManual = useMemo(
     () => isManualChatPaymentMethod(selectedPaymentMethod),
     [selectedPaymentMethod]
@@ -610,14 +614,22 @@ function CheckoutPageContent() {
         <div className="max-w-2xl mx-auto glass rounded-[2rem] border border-white/5 p-10 text-center">
           <h1 className="text-3xl font-black uppercase text-brand-text">Login Required</h1>
           <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest mt-4">
-            Please login to complete your order securely.
+            Please login for a safe purchase.
           </p>
-          <Link
-            href="/"
-            className="inline-flex mt-8 bg-primary text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary"
-          >
-            Return Home
-          </Link>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href={`/login?next=${encodeURIComponent(checkoutPathWithQuery)}`}
+              className="inline-flex bg-primary text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary"
+            >
+              Login To Continue
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex bg-white/5 border border-white/10 text-brand-text px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px]"
+            >
+              Return Home
+            </Link>
+          </div>
         </div>
       </main>
     );
