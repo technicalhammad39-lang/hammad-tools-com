@@ -151,7 +151,7 @@ export default function AgencyServicesPage() {
                       src={thumbnailSrc}
                       fallbackSrc="/services-card.webp"
                       alt={title}
-                      className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-1000 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-cover md:object-contain group-hover:scale-105 transition-transform duration-1000 p-0 md:p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75" />

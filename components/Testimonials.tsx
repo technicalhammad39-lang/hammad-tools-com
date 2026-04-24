@@ -94,7 +94,7 @@ const Testimonials = () => {
   const row2 = testimonials.slice(3, 6);
 
   return (
-    <section className="py-12 md:py-32 relative bg-white/[0.01] overflow-hidden">
+    <section className="pt-10 pb-6 md:pt-20 md:pb-12 relative bg-white/[0.01] overflow-hidden">
       <div className="site-container">
         <div className="text-center mb-8 md:mb-20">
           <motion.h2 

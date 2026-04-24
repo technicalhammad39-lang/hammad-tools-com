@@ -230,7 +230,7 @@ const ServicesSection = () => {
                       src={image}
                       fallbackSrc="/services-card.webp"
                       alt={title}
-                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-cover md:object-contain transition-transform duration-1000 group-hover:scale-105 p-0 md:p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />

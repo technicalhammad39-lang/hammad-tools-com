@@ -90,20 +90,20 @@ const Hero = () => {
             className="relative z-20 md:w-full md:max-w-4xl md:mx-auto md:flex md:flex-col md:items-center md:text-center lg:items-start lg:text-left lg:mx-0 lg:max-w-none"
           >
             <h1 className="mb-4 md:mb-6 text-brand-text text-left md:text-center lg:text-left">
-              <span className="block text-[clamp(1.45rem,4.4vw,4.25rem)] font-serif font-extrabold italic text-white leading-[1.06]">
+              <span className="block text-[clamp(1.7rem,7.4vw,2.5rem)] md:text-[clamp(1.45rem,4.4vw,4.25rem)] font-serif font-bold md:font-extrabold italic text-white leading-[1.06]">
                 Unlock The
               </span>
               <span className="relative mt-1 sm:mt-2 block min-h-[1.16em] overflow-visible">
                 <span
                   aria-hidden="true"
                   style={{ fontFamily: 'var(--font-display)' }}
-                  className="invisible block w-max md:mx-auto lg:mx-0 text-[clamp(2.2rem,6.9vw,6.4rem)] font-black uppercase leading-[1.02] tracking-[0.01em] whitespace-nowrap"
+                  className="invisible block w-max md:mx-auto lg:mx-0 text-[clamp(2.8rem,13vw,4.95rem)] sm:text-[clamp(3.05rem,11.8vw,5.35rem)] md:text-[clamp(2.2rem,6.9vw,6.4rem)] font-black uppercase leading-[1.01] tracking-[0.006em] whitespace-nowrap"
                 >
                   {LONGEST_HERO_PHRASE}
                 </span>
                 <span
                   style={{ fontFamily: 'var(--font-display)' }}
-                  className="absolute inset-0 inline-flex w-max items-end md:mx-auto lg:mx-0 text-[clamp(2.2rem,6.9vw,6.4rem)] font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-[1.02] tracking-[0.01em] whitespace-nowrap"
+                  className="absolute inset-0 inline-flex w-max items-end md:mx-auto lg:mx-0 text-[clamp(2.8rem,13vw,4.95rem)] sm:text-[clamp(3.05rem,11.8vw,5.35rem)] md:text-[clamp(2.2rem,6.9vw,6.4rem)] font-black bg-gradient-to-b from-[#FFEA00] to-[#FF9500] bg-clip-text text-transparent uppercase leading-[1.01] tracking-[0.006em] whitespace-nowrap"
                 >
                   {typedPhrase || '\u00A0'}
                   <span aria-hidden="true" className="typing-caret ml-1 inline-block h-[0.86em] w-[0.07em] rounded-full bg-[#FFEA00]" />
@@ -115,12 +115,35 @@ const Hero = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="text-[15px] md:text-2xl text-gray-300 md:text-brand-text/60 mt-2 md:mt-3 mb-5 md:mb-6 max-w-lg md:max-w-3xl leading-relaxed font-medium relative z-20 text-left md:text-center lg:text-left mx-0 md:mx-auto lg:mx-0"
+              className="text-[12px] sm:text-[13px] md:text-2xl text-gray-300/90 md:text-brand-text/60 mt-1.5 md:mt-3 mb-5 md:mb-6 max-w-md sm:max-w-lg md:max-w-3xl leading-[1.55] md:leading-relaxed font-medium relative z-20 text-left md:text-center lg:text-left mx-0 md:mx-auto lg:mx-0"
             >
               Access Netflix, ChatGPT Plus, Canva Pro, and 50+ other premium content access at unbeatable prices. Fast, secure, and reliable.
             </motion.p>
 
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
+            <div className="md:hidden flex w-full flex-col min-[420px]:flex-row gap-2.5 justify-start">
+              <Link href="/tools" className="w-full min-[420px]:flex-1">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-primary text-brand-bg px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
+                >
+                  <span className="text-xs uppercase tracking-[0.08em]">Explore Tools</span>
+                  <ArrowRight className="w-4 h-4 -rotate-45" />
+                </motion.button>
+              </Link>
+              <Link href="/services" className="w-full min-[420px]:flex-1">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-[#101010] text-primary px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-primary/35"
+                >
+                  <span className="text-xs uppercase tracking-[0.08em]">Services</span>
+                  <ArrowRight className="w-4 h-4 -rotate-45" />
+                </motion.button>
+              </Link>
+            </div>
+
+            <div className="hidden md:flex flex-col sm:flex-row gap-3 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
               <Link href="/tools" className="w-full md:w-auto">
                 <motion.button 
                   whileHover={{ scale: 1.02 }}

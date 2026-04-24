@@ -37,7 +37,7 @@ const Navbar = () => {
   if (isAdminRoute) return null;
 
   return (
-    <nav className="fixed top-[var(--promo-ticker-height)] left-0 right-0 z-[100] glass py-2.5">
+    <nav className="fixed top-[var(--promo-ticker-height)] left-0 right-0 z-[100] glass mobile-nav-clean py-2.5">
       <div className="site-container">
         <div className="flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3 transition-transform hover:scale-105 active:scale-95 group">

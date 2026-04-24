@@ -3,7 +3,6 @@
 import React from 'react';
 import Hero from '@/components/Hero';
 import ServicesSection from '@/components/ServicesSection';
-import GoogleBusinessReviews from '@/components/GoogleBusinessReviews';
 import PartnerSection from '@/components/PartnerSection';
 import Testimonials from '@/components/Testimonials';
 import BackToTopButton from '@/components/BackToTopButton';
@@ -154,14 +153,6 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-100px' }}
       >
-        <GoogleBusinessReviews />
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-100px' }}
-      >
         <PartnerSection />
       </motion.div>
 
@@ -174,7 +165,7 @@ export default function Home() {
       </motion.div>
 
       {/* FAQ Section with Animated Icons */}
-      <section className="py-14 md:py-40 relative overflow-hidden">
+      <section className="pt-8 pb-14 md:pt-16 md:pb-28 relative overflow-hidden">
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] max-w-[780px] max-h-[780px] rounded-full bg-primary/8 blur-[140px] -z-10 pointer-events-none" />
         <div className="absolute -bottom-24 left-[8%] w-56 h-56 rounded-full bg-secondary/12 blur-[90px] -z-10 pointer-events-none" />
         <div className="absolute -top-20 right-[8%] w-56 h-56 rounded-full bg-primary/12 blur-[90px] -z-10 pointer-events-none" />
@@ -252,14 +243,14 @@ export default function Home() {
                 { q: "Can I cancel my subscription?", a: "Yes, you can cancel your monthly plans at any time from your dashboard settings." },
                 { q: "What payment methods do you accept?", a: "Checkout shows all active payment methods configured by admin, including wallet, bank, and transfer options with live account details." }
               ].map((item, i) => (
-                <details key={i} className="glass rounded-2xl md:rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500 hover:border-primary/25">
-                  <summary className="px-4 py-3.5 md:px-6 md:py-5 cursor-pointer font-black text-[11px] md:text-xs uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
+                <details key={i} className="rounded-2xl md:rounded-3xl border border-white/12 md:border-white/5 bg-[#1A1A1A]/70 md:bg-transparent backdrop-blur-xl group overflow-hidden transition-all duration-300 md:duration-500 hover:border-white/25 md:hover:border-primary/25">
+                  <summary className="px-4 py-2.5 md:px-6 md:py-5 cursor-pointer font-black text-[11px] md:text-xs uppercase flex justify-between items-center list-none hover:bg-white/[0.04] md:hover:bg-white/5 transition-colors text-brand-text">
                     <span>{item.q}</span>
                     <span className="flex items-center justify-center transition-transform duration-500 group-open:rotate-180">
-                      <ChevronDown className="w-4 h-4 text-primary faq-arrow-flash" />
+                      <ChevronDown className="w-4 h-4 text-brand-text/60 md:text-primary faq-arrow-flash" />
                     </span>
                   </summary>
-                  <div className="px-4 pb-4 pt-3 md:px-6 md:pb-5 md:pt-4 text-brand-text/55 border-t border-white/5 font-medium leading-relaxed text-[11px] md:text-xs">
+                  <div className="px-4 pb-3 pt-2.5 md:px-6 md:pb-5 md:pt-4 text-brand-text/55 border-t border-white/10 md:border-white/5 font-medium leading-relaxed text-[11px] md:text-xs">
                     {item.a}
                   </div>
                 </details>

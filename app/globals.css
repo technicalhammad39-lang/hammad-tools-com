@@ -193,6 +193,12 @@ select option:checked {
   animation: faqArrowFlash 1.6s ease-in-out infinite;
 }
 
+@media (max-width: 1279px) {
+  .mobile-nav-clean {
+    border: none;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -225,6 +231,11 @@ select option:checked {
 }
 
 @media (max-width: 767px) {
+  .faq-arrow-flash {
+    animation: none;
+    filter: none;
+  }
+
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
