@@ -7,14 +7,15 @@ import { Shield } from 'lucide-react';
 const PrivacyPage = () => {
   return (
     <div className="pt-32 pb-24 min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div data-gsap-reveal className="text-center mb-16">
+      <div className="site-container-readable">
+        <div className="text-center mb-16">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
             <Shield className="w-8 h-8" />
           </div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="text-5xl font-bold mb-4"
           >
             Privacy <span className="text-primary">Policy</span>
@@ -22,7 +23,12 @@ const PrivacyPage = () => {
           <p className="text-brand-text/40">Last Updated: March 12, 2026</p>
         </div>
 
-        <div data-gsap-reveal className="glass rounded-[2.5rem] p-12 border-white/10 prose prose-invert max-w-none">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="glass rounded-[2.5rem] p-12 border-white/10 prose prose-invert max-w-none"
+        >
           <p className="text-lg text-brand-text/60 leading-relaxed mb-8">
             At SubHammad, we take your privacy seriously. This policy describes how we collect, use, and protect your personal information when you use our services.
           </p>
@@ -51,7 +57,7 @@ const PrivacyPage = () => {
           <p className="text-brand-text/60 mb-6">
             We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

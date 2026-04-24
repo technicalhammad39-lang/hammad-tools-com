@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
@@ -25,13 +25,7 @@ const AdminSocials = () => {
     tiktok: ''
   });
 
-  useEffect(() => {
-    if (isAdmin) {
-      fetchSocials();
-    }
-  }, [isAdmin]);
-
-  const fetchSocials = async () => {
+  const fetchSocials = useCallback(async () => {
     try {
       const docSnap = await getDoc(doc(db, 'settings', 'socials'));
       if (docSnap.exists()) {
@@ -43,7 +37,13 @@ const AdminSocials = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      void fetchSocials();
+    }
+  }, [isAdmin, fetchSocials]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

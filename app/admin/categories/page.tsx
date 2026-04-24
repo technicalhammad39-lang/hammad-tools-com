@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -81,7 +81,7 @@ export default function AdminCategoriesPage() {
     );
 
     return () => unsubscribe();
-  }, [isStaff]);
+  }, [isStaff, toast]);
 
   const modeLabel = useMemo(() => (editingId ? 'Edit Category' : 'Create Category'), [editingId]);
   const formImageSrc = resolveImageSource(form, {
@@ -286,7 +286,7 @@ export default function AdminCategoriesPage() {
                     {formImageSrc ? (
                       <UploadedImage
                         src={formImageSrc}
-                        fallbackSrc="/services-card.png"
+                        fallbackSrc="/services-card.webp"
                         alt="Category"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
@@ -353,7 +353,7 @@ export default function AdminCategoriesPage() {
                   {categoryImageSrc ? (
                     <UploadedImage
                       src={categoryImageSrc}
-                      fallbackSrc="/services-card.png"
+                      fallbackSrc="/services-card.webp"
                       alt={category.name}
                       className="absolute inset-0 w-full h-full object-cover"
                     />

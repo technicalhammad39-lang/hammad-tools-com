@@ -69,7 +69,7 @@ export default function AdminPaymentMethodsPage() {
     );
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [isAdmin, toast]);
 
   if (!isAdmin) {
     return <div className="p-10 text-center font-black uppercase tracking-widest">Access Denied</div>;

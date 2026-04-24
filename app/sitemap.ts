@@ -13,6 +13,29 @@ type CollectionDoc = {
   createdAt?: { toDate?: () => Date } | Date | string | null;
 };
 
+const SITEMAP_FIRESTORE_TIMEOUT_MS = Number(process.env.SITEMAP_FIRESTORE_TIMEOUT_MS || 5000);
+
+function hasFirebaseAdminCredentials() {
+  const projectId = (process.env.FIREBASE_PROJECT_ID || '').trim();
+  const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || '').trim();
+  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim();
+  const privateKeyBase64 = (process.env.FIREBASE_PRIVATE_KEY_BASE64 || '').trim();
+  const googleCloudProject = (process.env.GOOGLE_CLOUD_PROJECT || '').trim();
+  return Boolean(projectId && clientEmail && googleCloudProject && (privateKey || privateKeyBase64));
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  const safeTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 5000;
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${label} timed out after ${safeTimeout}ms`));
+      }, safeTimeout);
+    }),
+  ]);
+}
+
 function asDate(value: CollectionDoc['updatedAt']) {
   if (!value) return new Date();
   if (typeof (value as any)?.toDate === 'function') {
@@ -41,8 +64,16 @@ function slugFromDoc(doc: CollectionDoc) {
 }
 
 async function getToolEntries() {
+  if (!hasFirebaseAdminCredentials()) {
+    return [] as Array<{ slug: string; lastModified: Date }>;
+  }
+
   try {
-    const snapshot = await adminDb.collection('services').get();
+    const snapshot = await withTimeout(
+      adminDb.collection('services').get(),
+      SITEMAP_FIRESTORE_TIMEOUT_MS,
+      'sitemap/services fetch'
+    );
     return snapshot.docs
       .map((entry) => entry.data() as CollectionDoc)
       .filter((item) => (item.type || 'tools') === 'tools' && item.active !== false)
@@ -54,8 +85,16 @@ async function getToolEntries() {
 }
 
 async function getBlogEntries() {
+  if (!hasFirebaseAdminCredentials()) {
+    return [] as Array<{ slug: string; lastModified: Date }>;
+  }
+
   try {
-    const snapshot = await adminDb.collection('blogPosts').get();
+    const snapshot = await withTimeout(
+      adminDb.collection('blogPosts').get(),
+      SITEMAP_FIRESTORE_TIMEOUT_MS,
+      'sitemap/blogPosts fetch'
+    );
     return snapshot.docs
       .map((entry) => entry.data() as CollectionDoc)
       .filter((item) => item.published !== false)

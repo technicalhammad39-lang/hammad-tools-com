@@ -54,7 +54,7 @@ const BlogCMS = () => {
     });
 
     return () => unsubscribe();
-  }, [isStaff]);
+  }, [isStaff, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

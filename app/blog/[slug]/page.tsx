@@ -121,7 +121,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     mediaPaths: ['thumbnailMedia'],
     stringPaths: ['thumbnail'],
   });
-  const metadataImage = toMetadataImageUrl(thumbnailSrc) || '/services-card.png';
+  const metadataImage = toMetadataImageUrl(thumbnailSrc) || '/services-card.webp';
 
   return createPageMetadata({
     title: `${post.title} | Hammad Tools Blog`,
@@ -151,7 +151,7 @@ export default async function BlogPage({ params }: { params: Promise<{ slug: str
   const thumbnailSrc = resolveImageSource(post, {
     mediaPaths: ['thumbnailMedia'],
     stringPaths: ['thumbnail'],
-    placeholder: '/services-card.png',
+    placeholder: '/services-card.webp',
   });
   const imageUrl = thumbnailSrc.startsWith('http') ? thumbnailSrc : toAbsoluteSiteUrl(thumbnailSrc);
   const articleUrl = toAbsoluteSiteUrl(`/blog/${postSlug}`);

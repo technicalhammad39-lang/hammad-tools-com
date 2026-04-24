@@ -119,8 +119,8 @@ const BlogPage = () => {
 
   if (loading) {
     return (
-      <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg">
-        <div className="max-w-7xl mx-auto">
+      <main className="min-h-screen pt-24 md:pt-32 pb-20 bg-brand-bg">
+        <div className="site-container">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="glass rounded-2xl overflow-hidden border border-white/10 h-[500px] animate-pulse">
@@ -140,20 +140,22 @@ const BlogPage = () => {
   }
 
   return (
-    <main className="min-h-screen pt-16 md:pt-24 pb-16 md:pb-20 px-4 bg-brand-bg">
-    <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen pt-16 md:pt-24 pb-16 md:pb-20 bg-brand-bg">
+    <div className="site-container">
         {/* Header */}
-        <div data-gsap-reveal className="text-center mb-6 md:mb-12">
+        <div className="text-center mb-6 md:mb-12">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-3 md:mb-4 text-brand-text leading-none sm:whitespace-nowrap"
           >
             <span className="font-serif italic text-white normal-case">Latest</span> <span className="internal-gradient">Blogs</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ delay: 0.1 }}
             className="text-brand-text/60 max-w-2xl mx-auto text-sm md:text-lg mt-1 md:mt-2"
           >
@@ -162,7 +164,12 @@ const BlogPage = () => {
         </div>
 
         {/* Search & Filter */}
-        <div data-gsap-reveal className="flex flex-col md:flex-row gap-3 md:gap-6 mb-7 md:mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="flex flex-col md:flex-row gap-3 md:gap-6 mb-7 md:mb-12"
+        >
           <div className="relative flex-1">
             <Search className="absolute left-3.5 md:left-4 top-1/2 -translate-y-1/2 text-brand-text/40 w-4 h-4 md:w-5 md:h-5" />
             <input 
@@ -184,10 +191,10 @@ const BlogPage = () => {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Blog Grid */}
-        <div data-gsap-reveal className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredPosts.map((post, index) => {
             const thumbnailSrc = resolveImageSource(post, {
               mediaPaths: ['thumbnailMedia'],
@@ -198,7 +205,8 @@ const BlogPage = () => {
             <motion.article
               key={post.id}
               initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
               transition={{ delay: index * 0.1 }}
               className="group glass rounded-[2.5rem] overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-500 flex flex-col relative"
             >
@@ -258,11 +266,16 @@ const BlogPage = () => {
         </div>
 
         {/* Pagination */}
-        <div data-gsap-reveal className="mt-16 flex justify-center gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="mt-16 flex justify-center gap-4"
+        >
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all text-brand-text">1</button>
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all opacity-50 text-brand-text">2</button>
           <button className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center font-black hover:border-primary/50 transition-all opacity-50 text-brand-text">3</button>
-        </div>
+        </motion.div>
       </div>
     </main>
   );

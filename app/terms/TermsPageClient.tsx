@@ -7,14 +7,15 @@ import { FileText } from 'lucide-react';
 const TermsPage = () => {
   return (
     <div className="pt-32 pb-24 min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div data-gsap-reveal className="text-center mb-16">
+      <div className="site-container-readable">
+        <div className="text-center mb-16">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
             <FileText className="w-8 h-8" />
           </div>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="text-5xl font-bold mb-4"
           >
             Terms of <span className="text-primary">Service</span>
@@ -22,7 +23,12 @@ const TermsPage = () => {
           <p className="text-brand-text/40">Last Updated: March 12, 2026</p>
         </div>
 
-        <div data-gsap-reveal className="glass rounded-[2.5rem] p-12 border-white/10 prose prose-invert max-w-none">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="glass rounded-[2.5rem] p-12 border-white/10 prose prose-invert max-w-none"
+        >
           <p className="text-lg text-brand-text/60 leading-relaxed mb-8">
             By accessing or using SubHammad, you agree to be bound by these Terms of Service. Please read them carefully.
           </p>
@@ -51,7 +57,7 @@ const TermsPage = () => {
           <p className="text-brand-text/60 mb-6">
             SubHammad shall not be liable for any direct, indirect, incidental, special, or consequential damages resulting from the use or inability to use our services.
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

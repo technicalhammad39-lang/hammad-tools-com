@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/firebase';
@@ -22,13 +22,7 @@ const AdminSettings = () => {
     seoDescription: 'Unlock premium digital tools and pro courses at the best prices.',
   });
 
-  useEffect(() => {
-    if (isAdmin) {
-      fetchSettings();
-    }
-  }, [isAdmin]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const docSnap = await getDoc(doc(db, 'settings', 'general'));
       if (docSnap.exists()) {
@@ -40,7 +34,13 @@ const AdminSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      void fetchSettings();
+    }
+  }, [isAdmin, fetchSettings]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

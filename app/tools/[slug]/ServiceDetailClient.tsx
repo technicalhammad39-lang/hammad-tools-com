@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import {
   Award,
   CheckCircle2,
   ArrowLeft,
+  ChevronRight,
   MessageCircle,
   Minus,
   Plus,
@@ -26,7 +27,6 @@ import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import UploadedImage from '@/components/UploadedImage';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/components/ToastProvider';
 
 interface Plan {
   planName: string;
@@ -114,9 +114,12 @@ function formatPriceLabel(amount: number) {
 export default function ServiceDetailClient({ service, loading }: { service: Service | null, loading: boolean }) {
   const router = useRouter();
   const { user, profile } = useAuth();
-  const toast = useToast();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [showPlanScrollHint, setShowPlanScrollHint] = useState(false);
+  const planScrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const reviewsSectionRef = React.useRef<HTMLDivElement | null>(null);
+  const [showReviewQuickJump, setShowReviewQuickJump] = useState(true);
 
   // Reviews State
   const [reviews, setReviews] = useState<ReviewRecord[]>([]);
@@ -131,7 +134,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const heroImageSrc = resolveImageSource(service, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['thumbnail', 'image'],
-    placeholder: '/services-card.png',
+    placeholder: '/services-card.webp',
   });
 
   useEffect(() => {
@@ -235,6 +238,37 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     }
   }, [displayPlans]);
 
+  useEffect(() => {
+    const node = planScrollerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const updateHint = () => {
+      const remaining = node.scrollWidth - (node.scrollLeft + node.clientWidth);
+      setShowPlanScrollHint(remaining > 8);
+    };
+
+    updateHint();
+    node.addEventListener('scroll', updateHint, { passive: true });
+    window.addEventListener('resize', updateHint);
+
+    return () => {
+      node.removeEventListener('scroll', updateHint);
+      window.removeEventListener('resize', updateHint);
+    };
+  }, [displayPlans.length, selectedPlan?.planName]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setShowReviewQuickJump(window.scrollY < 420);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-brand-bg"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-2xl shadow-primary/20" /></div>;
   if (!service) return <div className="min-h-screen flex flex-col items-center justify-center text-brand-text bg-brand-bg">
     <Shield className="w-20 h-20 text-accent mb-6 opacity-20" />
@@ -271,20 +305,33 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
     });
     const checkoutPath = `/checkout?${params.toString()}`;
     if (!user) {
-      toast.error('Login required', 'Please login for a safe purchase.');
       router.push(`/login?next=${encodeURIComponent(checkoutPath)}`);
       return;
     }
     router.push(checkoutPath);
   };
 
+  const handleScrollToReviews = () => {
+    reviewsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="min-h-screen pt-32 pb-20 px-4 bg-brand-bg relative overflow-hidden">
+    <div className="min-h-screen pt-32 pb-20 bg-brand-bg relative overflow-hidden">
       {/* Background Glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 blur-[120px] rounded-full -z-10" />
 
-      <div className="max-w-7xl mx-auto">
+      {showReviewQuickJump ? (
+        <button
+          type="button"
+          onClick={handleScrollToReviews}
+          className="fixed right-3 sm:right-4 bottom-24 md:bottom-8 z-[70] rounded-xl border border-primary/40 bg-primary/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-black shadow-[0_12px_28px_rgba(255,214,0,0.35)]"
+        >
+          Write Review
+        </button>
+      ) : null}
+
+      <div className="site-container">
         <button 
           onClick={() => router.back()} 
           className="group inline-flex items-center space-x-3 text-brand-text/40 hover:text-primary mb-4 sm:mb-12 transition-all p-1 sm:p-2 rounded-xl hover:bg-white/5"
@@ -304,7 +351,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             >
               <UploadedImage
                 src={heroImageSrc}
-                fallbackSrc="/services-card.png"
+                fallbackSrc="/services-card.webp"
                 alt={service.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 referrerPolicy="no-referrer"
@@ -402,23 +449,30 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
               </div>
 
               {/* Horizontal Scrollable Row */}
-              <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar">
+              <div className="relative">
+              <div ref={planScrollerRef} className="flex overflow-x-auto gap-3 sm:gap-4 pb-4 pr-10 snap-x hide-scrollbar">
                 {displayPlans.map((plan: Plan, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedPlan(plan)}
-                    className={`snap-center shrink-0 relative px-8 py-4 rounded-2xl border text-center transition-all ${
+                    className={`snap-center shrink-0 relative min-w-[9rem] sm:min-w-[11rem] max-w-[72vw] sm:max-w-none px-4 sm:px-6 py-3 rounded-2xl border text-center transition-all ${
                       selectedPlan?.planName === plan.planName
                         ? 'bg-green-500 text-black font-black shadow-lg shadow-green-500/30 border-green-500'
                         : 'glass text-brand-text font-bold border-white/5 hover:border-white/20'
                     }`}
                   >
-                    <div className="text-xs tracking-widest whitespace-nowrap flex items-center justify-center gap-2">
+                    <div className="text-[10px] sm:text-xs leading-tight tracking-[0.16em] whitespace-normal sm:whitespace-nowrap flex items-center justify-center gap-2">
                        {selectedPlan?.planName === plan.planName && <CheckCircle2 className="w-4 h-4 text-black" />}
                       {plan.planName}
                     </div>
                   </button>
                 ))}
+              </div>
+              {showPlanScrollHint ? (
+                <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/65 border border-white/15 text-primary grid place-items-center">
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              ) : null}
               </div>
 
               {/* Dynamic Benefits Box */}
@@ -467,10 +521,10 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                {/* Mobile Sticky CTA */}
                <div className="fixed bottom-0 left-0 w-full z-[60] p-4 bg-brand-bg/95 backdrop-blur-3xl md:relative md:bg-transparent md:p-0 md:mt-8 md:w-auto border-t border-white/5 md:border-0 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] md:shadow-none">
                  <div className="flex items-center gap-2 md:block">
-                   <div className="md:hidden flex items-center bg-white/5 border border-white/10 rounded-2xl px-2 py-2 gap-1.5">
+                   <div className="md:hidden h-14 flex items-center bg-white/5 border border-white/10 rounded-2xl px-2 gap-1.5">
                      <button
                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                       className="w-9 h-9 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                       className="w-10 h-10 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
                        aria-label="Decrease quantity"
                      >
                        <Minus className="w-4 h-4" />
@@ -478,7 +532,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                      <span className="min-w-[2ch] text-center text-base font-black text-brand-text">{quantity}</span>
                      <button
                        onClick={() => setQuantity(quantity + 1)}
-                       className="w-9 h-9 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
+                       className="w-10 h-10 rounded-xl glass border border-white/5 flex items-center justify-center text-brand-text hover:bg-primary hover:text-black transition-all"
                        aria-label="Increase quantity"
                      >
                        <Plus className="w-4 h-4" />
@@ -488,7 +542,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                      whileHover={{ scale: 1.02 }}
                      whileTap={{ scale: 0.98 }}
                      onClick={handleOrder}
-                     className="flex-1 w-full bg-primary text-brand-bg px-5 md:px-10 py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-sm flex items-center justify-center gap-2.5 md:gap-4 border-b-[6px] md:border-b-8 border-[#FF8C2A] shadow-2xl shadow-primary/20 hover:shadow-primary/40 active:border-b-0 active:translate-y-2 transition-all group"
+                     className="flex-1 w-full h-14 md:h-auto bg-primary text-brand-bg px-5 md:px-10 py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] md:text-sm flex items-center justify-center gap-2.5 md:gap-4 border-b-[6px] md:border-b-8 border-[#FF8C2A] shadow-2xl shadow-primary/20 hover:shadow-primary/40 active:border-b-0 active:translate-y-2 transition-all group"
                    >
                      <span>Buy Now (Rs {totalPrice})</span>
                      <MessageCircle className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
@@ -497,17 +551,33 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                </div>
             </div>
 
-            <div className="p-3 md:p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4">
-              <Shield className="w-4 h-4 md:w-6 md:h-6 text-emerald-400 shrink-0" />
-              <p className="text-[9px] md:text-[10px] font-bold text-emerald-400 uppercase tracking-widest leading-relaxed">
-                Secured checkout with payment proof upload, admin verification, and realtime order tracking in your dashboard.
-              </p>
+            <div className="mt-1 md:mt-2">
+              <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-emerald-500/20 bg-emerald-500/10 py-2.5 md:py-3 px-3">
+                <motion.div
+                  animate={{ x: ['0%', '-50%'] }}
+                  transition={{ duration: 13, repeat: Infinity, ease: 'linear' }}
+                  className="flex w-max items-center gap-10 whitespace-nowrap pr-10"
+                >
+                  <div className="inline-flex items-center gap-2.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <p className="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-[0.12em]">
+                      Secure checkout with payment proof, admin verification, and realtime order tracking.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-2.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <p className="text-[9px] md:text-[10px] font-black text-emerald-400 uppercase tracking-[0.12em]">
+                      Secure checkout with payment proof, admin verification, and realtime order tracking.
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Customer Reviews Section */}
-        <div className="mt-12 pt-12 border-t border-white/5">
+        <div ref={reviewsSectionRef} className="mt-6 pt-6 md:mt-12 md:pt-12 border-t border-white/5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
             <div className="glass p-4 sm:p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/5 shadow-2xl min-h-0 lg:min-h-[520px] flex flex-col">
               <div className="flex items-center justify-between gap-3 mb-4">
@@ -565,7 +635,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                           {review.userPhotoURL ? (
                             <UploadedImage
                               src={review.userPhotoURL}
-                              fallbackSrc="/services-card.png"
+                              fallbackSrc="/services-card.webp"
                               alt={displayName}
                               className="w-9 h-9 md:w-11 md:h-11 rounded-full object-cover border border-white/10 shrink-0"
                               referrerPolicy="no-referrer"

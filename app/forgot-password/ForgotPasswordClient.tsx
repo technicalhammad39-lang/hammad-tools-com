@@ -57,8 +57,9 @@ export default function ForgotPasswordClient() {
   }
 
   return (
-    <main className="min-h-screen pt-32 pb-20 px-4 bg-brand-bg">
-      <div className="max-w-md mx-auto glass rounded-[2rem] border border-white/10 p-6 md:p-8">
+    <main className="min-h-screen pt-32 pb-20 bg-brand-bg">
+      <div className="site-container-readable">
+        <div className="max-w-md mx-auto glass rounded-[2rem] border border-white/10 p-6 md:p-8">
         <h1 className="text-3xl md:text-4xl font-black uppercase text-brand-text">Forgot Password</h1>
         <p className="text-brand-text/45 text-[10px] font-black uppercase tracking-widest mt-2 mb-6">
           Request a secure password reset link
@@ -99,8 +100,8 @@ export default function ForgotPasswordClient() {
             Back to Login
           </Link>
         </div>
+        </div>
       </div>
     </main>
   );
 }
-

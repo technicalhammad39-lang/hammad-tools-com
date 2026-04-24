@@ -75,11 +75,12 @@ export default function AgencyServicesPage() {
 
   return (
     <main className="min-h-screen pt-20 md:pt-24 pb-16 md:pb-20 bg-brand-bg relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div data-gsap-reveal className="flex flex-col items-center text-center mb-6 md:mb-12">
+      <div className="site-container relative z-10">
+        <div className="flex flex-col items-center text-center mb-6 md:mb-12">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-7xl font-black uppercase tracking-tight text-brand-text whitespace-nowrap"
           >
@@ -89,7 +90,8 @@ export default function AgencyServicesPage() {
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ delay: 0.2 }}
             className="text-brand-text/40 text-[11px] md:text-lg font-medium max-w-2xl mx-auto leading-relaxed mt-3 md:mt-4"
           >
@@ -97,8 +99,13 @@ export default function AgencyServicesPage() {
           </motion.p>
         </div>
 
-        <div data-gsap-reveal className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 mb-6 md:mb-10">
-          <div className="relative w-full md:w-96">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-6 md:mb-10"
+        >
+          <div className="relative w-full md:flex-1">
             <input
               type="text"
               value={searchQuery}
@@ -108,7 +115,7 @@ export default function AgencyServicesPage() {
             />
           </div>
           <div className="hidden md:block text-[9px] font-black uppercase tracking-widest text-brand-text/40">{filteredServices.length} services</div>
-        </div>
+        </motion.div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4">
@@ -122,29 +129,29 @@ export default function AgencyServicesPage() {
             <p className="text-brand-text/40 text-[10px] font-black uppercase tracking-widest">Add services from admin panel to show them here.</p>
           </div>
         ) : (
-          <div data-gsap-reveal className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
             {filteredServices.map((service, index) => {
               const title = getTitle(service);
               const thumbnailSrc = resolveImageSource(service, {
                 mediaPaths: ['thumbnailMedia'],
                 stringPaths: ['thumbnail'],
-                placeholder: '/services-card.png',
+                placeholder: '/services-card.webp',
               });
               return (
                 <motion.div
                   key={service.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: '-100px' }}
                   transition={{ delay: index * 0.05 }}
                   className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-700 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1"
                 >
-                  <div className="relative h-52 md:h-64 overflow-hidden bg-white/5">
+                  <div className="relative aspect-[16/10] md:aspect-[4/3] overflow-hidden bg-[#0E0E0E]">
                     <UploadedImage
                       src={thumbnailSrc}
-                      fallbackSrc="/services-card.png"
+                      fallbackSrc="/services-card.webp"
                       alt={title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-1000 p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75" />
@@ -157,11 +164,11 @@ export default function AgencyServicesPage() {
                   </div>
 
                   <div className="p-6 md:p-8 flex flex-col flex-1">
-                    <h3 className="text-2xl md:text-3xl font-black text-brand-text leading-tight mb-4 group-hover:text-primary transition-colors break-words">
+                    <h3 className="text-2xl md:text-3xl font-black text-brand-text leading-tight mb-4 group-hover:text-primary transition-colors break-words line-clamp-2 min-h-[2.3em]">
                       {title}
                     </h3>
 
-                    <p className="text-brand-text/40 text-xs md:text-sm font-medium leading-relaxed mb-6 line-clamp-3 italic">
+                    <p className="text-brand-text/40 text-xs md:text-sm font-medium leading-relaxed mb-6 line-clamp-3 italic min-h-[4.2em]">
                       {service.description || 'Contact us for this service.'}
                     </p>
 

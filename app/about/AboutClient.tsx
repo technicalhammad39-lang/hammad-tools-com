@@ -12,13 +12,14 @@ export default function AboutClient() {
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="site-container relative z-10">
         
         {/* Header Section */}
-        <div data-gsap-reveal className="text-center mb-12 md:mb-24">
+        <div className="text-center mb-12 md:mb-24">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="flex flex-col items-center gap-0 md:gap-2 mb-6 md:mb-10"
           >
             <span className="text-2xl sm:text-3xl md:text-6xl font-serif italic text-white normal-case leading-tight">Welcome to</span> 
@@ -31,7 +32,8 @@ export default function AboutClient() {
           </motion.div>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ delay: 0.1 }}
             className="text-brand-text/50 font-medium max-w-2xl mx-auto leading-relaxed md:text-lg px-4 mt-2 md:mt-0"
           >
@@ -40,7 +42,7 @@ export default function AboutClient() {
           </motion.p>
         </div>
 
-        <div data-gsap-reveal className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-32">
           {/* CEO Message Block */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
@@ -105,7 +107,7 @@ export default function AboutClient() {
         </div>
 
         {/* Oversized Interactive Social Links */}
-        <div data-gsap-reveal className="text-center mb-10">
+        <div className="text-center mb-10">
           <h2 className="text-2xl font-black uppercase text-brand-text mb-10 tracking-widest">Connect with our Ecosystem</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
              {[

@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -11,22 +11,16 @@ import { useCart } from '@/context/CartContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { user, profile } = useAuth();
   const { totalItems, setIsCartOpen } = useCart();
   const isAdminRoute = pathname.startsWith('/admin');
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const desktopNavLinks = [
     { name: 'Home', href: '/' },
     { name: 'Tools', href: '/tools' },
     { name: 'Services', href: '/services' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Giveaway', href: '/giveaway' },
     { name: 'About', href: '/about' },
   ];
@@ -43,8 +37,8 @@ const Navbar = () => {
   if (isAdminRoute) return null;
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? 'glass py-2.5' : 'bg-transparent py-4'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="fixed top-[var(--promo-ticker-height)] left-0 right-0 z-[100] glass py-2.5">
+      <div className="site-container">
         <div className="flex justify-between items-center">
           <Link href="/" className="flex items-center space-x-3 transition-transform hover:scale-105 active:scale-95 group">
             <div className="relative h-10 w-10 sm:h-11 sm:w-11">

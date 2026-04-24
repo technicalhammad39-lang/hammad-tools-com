@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -644,7 +644,7 @@ const AdminProductsPage = () => {
                     {formImageSrc ? (
                       <UploadedImage
                         src={formImageSrc}
-                        fallbackSrc="/services-card.png"
+                        fallbackSrc="/services-card.webp"
                         alt="Preview"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
@@ -854,7 +854,7 @@ const AdminProductsPage = () => {
           const productImage = resolveImageSource(product, {
             mediaPaths: ['imageMedia'],
             stringPaths: ['image', 'thumbnail'],
-            placeholder: '/services-card.png',
+            placeholder: '/services-card.webp',
           });
           return (
           <div key={product.id} className="glass rounded-[2rem] p-8 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/20 transition-all bg-brand-soft/20">
@@ -862,7 +862,7 @@ const AdminProductsPage = () => {
               <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
                 <UploadedImage
                   src={productImage}
-                  fallbackSrc="/services-card.png"
+                  fallbackSrc="/services-card.webp"
                   alt={product.title || product.name || 'Product'}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
@@ -912,7 +912,6 @@ const AdminProductsPage = () => {
         }}
         folder="tools"
         title="Tool Media Library"
-        description="Choose an existing tool image or upload a new one from the same library."
         accept="image/*"
         relatedType="tool"
         relatedId={editingId || ''}

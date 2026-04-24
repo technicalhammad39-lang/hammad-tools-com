@@ -15,8 +15,8 @@ export default function ForgotPasswordPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen pt-32 pb-20 px-4 bg-brand-bg">
-          <div className="max-w-md mx-auto py-20 flex justify-center">
+        <main className="min-h-screen pt-32 pb-20 bg-brand-bg">
+          <div className="site-container-readable py-20 flex justify-center">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         </main>
@@ -26,4 +26,3 @@ export default function ForgotPasswordPage() {
     </Suspense>
   );
 }
-

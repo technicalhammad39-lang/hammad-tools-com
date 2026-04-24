@@ -108,7 +108,7 @@ const ServicesSection = () => {
   if (loading) {
     return (
       <section className="py-16 md:py-32 relative overflow-hidden bg-brand-bg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="site-container">
           <div className="flex justify-center">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
@@ -119,12 +119,13 @@ const ServicesSection = () => {
 
   return (
     <section className="py-8 md:py-16 relative overflow-hidden bg-brand-bg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div data-gsap-reveal className="flex flex-col items-center text-center mb-6 md:mb-12 gap-3 md:gap-6">
+      <div className="site-container">
+        <div className="flex flex-col items-center text-center mb-6 md:mb-12 gap-3 md:gap-6">
           <div className="max-w-4xl flex flex-col items-center">
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
               className="text-[32px] sm:text-5xl md:text-6xl lg:text-7xl font-black mb-4 md:mb-6 text-brand-text uppercase leading-none text-center md:whitespace-nowrap"
             >
               <span className="font-serif italic text-white normal-case">Premium </span>
@@ -153,9 +154,9 @@ const ServicesSection = () => {
 
         {pathname === '/tools' && (
           <motion.div
-            data-gsap-reveal
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-16 items-center"
           >
             <div className="lg:col-span-4 relative group">
@@ -204,13 +205,12 @@ const ServicesSection = () => {
               const image = resolveImageSource(service, {
                 mediaPaths: ['imageMedia'],
                 stringPaths: ['image', 'thumbnail'],
-                placeholder: '/services-card.png',
+                placeholder: '/services-card.webp',
               });
               const categoryName = service.categoryName || service.category || 'General';
 
               return (
                 <motion.div
-                  data-gsap-reveal
                   key={service.id}
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -225,12 +225,12 @@ const ServicesSection = () => {
                     aria-label={`View ${title}`}
                   />
 
-                  <div className="relative h-48 md:h-72 overflow-hidden bg-white/5">
+                  <div className="relative aspect-[16/10] md:aspect-[4/3] overflow-hidden bg-[#0E0E0E]">
                     <UploadedImage
                       src={image}
-                      fallbackSrc="/services-card.png"
+                      fallbackSrc="/services-card.webp"
                       alt={title}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-1000 group-hover:scale-105 p-4 rounded-[2.5rem]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />
@@ -244,8 +244,8 @@ const ServicesSection = () => {
                   </div>
 
                   <div className="p-6 md:p-10 flex flex-col flex-1 relative z-20">
-                    <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors leading-none whitespace-pre-wrap break-words">{title}</h3>
-                    <p className="text-brand-text/40 mb-6 md:mb-10 line-clamp-2 text-xs md:sm font-medium leading-relaxed italic">{service.description}</p>
+                    <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-4 text-brand-text group-hover:text-primary transition-colors leading-none whitespace-pre-wrap break-words line-clamp-2 min-h-[2.2em] md:min-h-[2.1em]">{title}</h3>
+                    <p className="text-brand-text/40 mb-6 md:mb-10 line-clamp-3 text-xs md:text-sm font-medium leading-relaxed italic min-h-[3.8em]">{service.description}</p>
 
                     <div className="mt-auto">
                       <div className="flex items-end justify-between mb-6 md:mb-8">

@@ -14,7 +14,7 @@ const PartnerSection = () => {
       name: 'DailyHayat',
       desc: 'Premier network for digital trends and global news updates.',
       url: 'https://dailyhayat.net',
-      logo: '/dailyhayat.png',
+      logo: '/dailyhayat.webp',
       tag: 'Strategic Partner'
     },
     {
@@ -32,7 +32,7 @@ const PartnerSection = () => {
       <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[100px] rounded-full -z-10" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10" />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="site-container">
         <div className="text-center mb-10 md:mb-20">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -45,7 +45,7 @@ const PartnerSection = () => {
           <p className="text-brand-text/40 text-sm font-black uppercase tracking-widest max-w-xl mx-auto">Verified partners empowering the Hammad Tools platform.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 w-full xl:max-w-[92rem] mx-auto">
           {partners.map((partner, index) => (
             <motion.div
               key={partner.name}

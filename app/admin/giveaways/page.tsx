@@ -68,7 +68,7 @@ const AdminGiveaways = () => {
     });
 
     return () => unsubscribe();
-  }, [isStaff]);
+  }, [isStaff, toast]);
 
   const handleSave = async () => {
     if (!form.title || !form.prize) return;
@@ -204,7 +204,7 @@ const AdminGiveaways = () => {
                   {formImageSrc ? (
                     <UploadedImage
                       src={formImageSrc}
-                      fallbackSrc="/services-card.png"
+                      fallbackSrc="/services-card.webp"
                       alt="Preview"
                       className="absolute inset-0 w-full h-full object-cover"
                     />

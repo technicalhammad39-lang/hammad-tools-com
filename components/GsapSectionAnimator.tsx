@@ -51,16 +51,12 @@ function isVisibleElement(element: HTMLElement) {
 }
 
 function collectAnimationTargets(main: HTMLElement) {
-  const topLevel = Array.from(main.children).filter(
-    (node): node is HTMLElement => node instanceof HTMLElement
-  );
-  const semanticBlocks = Array.from(main.querySelectorAll<HTMLElement>('section, article'));
-  const explicit = Array.from(main.querySelectorAll<HTMLElement>('[data-gsap-reveal]'));
+  const explicit = Array.from(main.querySelectorAll<HTMLElement>('[data-gsap-reveal="gsap"]'));
 
   const uniqueTargets: HTMLElement[] = [];
   const seen = new Set<HTMLElement>();
 
-  for (const candidate of [...topLevel, ...semanticBlocks, ...explicit]) {
+  for (const candidate of explicit) {
     if (seen.has(candidate)) {
       continue;
     }
@@ -127,4 +123,3 @@ export default function GsapSectionAnimator() {
 
   return null;
 }
-

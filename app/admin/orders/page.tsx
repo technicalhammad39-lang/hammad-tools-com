@@ -24,6 +24,7 @@ import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
+import UploadedImage from '@/components/UploadedImage';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -703,7 +704,7 @@ export default function AdminOrdersPage() {
                           onClick={() => setReceiptViewerUrl(attachmentUrl)}
                           className="mt-2 block w-full text-left"
                         >
-                          <img
+                          <UploadedImage
                             src={attachmentUrl}
                             alt={attachment.name}
                             className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
@@ -963,7 +964,7 @@ export default function AdminOrdersPage() {
                         onClick={() => setReceiptViewerUrl(selectedScreenshotUrl)}
                         className="w-full h-full text-left"
                       >
-                        <img
+                        <UploadedImage
                           src={selectedScreenshotUrl}
                           alt="Payment receipt preview"
                           className="w-full h-full max-h-[320px] object-cover rounded-lg border border-white/20"
@@ -1139,7 +1140,7 @@ export default function AdminOrdersPage() {
             <X className="w-5 h-5" />
           </button>
           <div className="w-full h-full grid place-items-center">
-            <img
+            <UploadedImage
               src={receiptViewerUrl}
               alt="Payment receipt"
               className="max-w-full max-h-full object-contain rounded-xl border border-white/15"

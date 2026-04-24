@@ -82,7 +82,7 @@ const ManageAgencyServices = () => {
     });
 
     return () => unsubscribe();
-  }, [isStaff]);
+  }, [isStaff, toast]);
 
   const handleEdit = (service: AgencyService) => {
     setEditingId(service.id);
@@ -284,7 +284,7 @@ const ManageAgencyServices = () => {
                       <>
                         <UploadedImage
                           src={formThumbnailSrc}
-                          fallbackSrc="/services-card.png"
+                          fallbackSrc="/services-card.webp"
                           alt="Preview"
                           className="absolute inset-0 w-full h-full object-cover"
                         />
@@ -344,7 +344,7 @@ const ManageAgencyServices = () => {
             const serviceThumbnailSrc = resolveImageSource(service, {
               mediaPaths: ['thumbnailMedia'],
               stringPaths: ['thumbnail'],
-              placeholder: '/services-card.png',
+              placeholder: '/services-card.webp',
             });
             return (
             <div key={service.id} className="glass rounded-3xl p-6 md:p-8 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8 hover:border-primary/20 transition-all group bg-white/[0.02]">
@@ -352,7 +352,7 @@ const ManageAgencyServices = () => {
                   <div className="relative w-full md:w-40 aspect-video rounded-2xl overflow-hidden border border-white/10 flex-shrink-0">
                     <UploadedImage
                       src={serviceThumbnailSrc}
-                      fallbackSrc="/services-card.png"
+                      fallbackSrc="/services-card.webp"
                       alt={service.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />

@@ -59,7 +59,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 blur-[120px] -z-10 rounded-full" />
       <div className="absolute top-1/4 left-0 w-full h-[1px] bg-white/5 cyber-grid h-96 -z-10" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="site-container-readable">
         <Link href="/blog" className="inline-flex items-center space-x-3 text-brand-text/40 hover:text-primary transition-all mb-12 group">
           <div className="w-10 h-10 glass rounded-xl flex items-center justify-center group-hover:-translate-x-1 transition-transform border border-white/5">
             <ArrowLeft className="w-4 h-4" />

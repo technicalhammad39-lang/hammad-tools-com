@@ -35,6 +35,7 @@ import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
+import UploadedImage from '@/components/UploadedImage';
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
@@ -457,7 +458,7 @@ function DashboardPageContent() {
               onClick={() => setReceiptViewerUrl(attachmentUrl)}
               className="mt-2 block w-full text-left"
             >
-              <img
+              <UploadedImage
                 src={attachmentUrl}
                 alt={attachment.name}
                 className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
@@ -494,8 +495,8 @@ function DashboardPageContent() {
   const mobileQuickMenuItems = sidebarItems.filter((item) => item.id !== 'notifications');
 
   return (
-    <main className="min-h-screen pt-24 pb-40 md:pb-12 px-4 bg-brand-bg">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
+    <main className="min-h-screen pt-24 pb-40 md:pb-12 bg-brand-bg">
+      <div className="site-container flex flex-col lg:flex-row gap-10">
         <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
           <div className="glass rounded-[2rem] p-6 border border-white/5 sticky top-28 bg-brand-soft/10 backdrop-blur-3xl overflow-hidden">
             <div className="mb-8 pb-8 border-b border-white/5">
@@ -751,7 +752,7 @@ function DashboardPageContent() {
                               }
                               className="w-full rounded-xl border border-white/10 bg-white/[0.02] p-3 text-left"
                             >
-                              <img
+                              <UploadedImage
                                 src={withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)}
                                 alt="Payment proof"
                                 className="w-full max-h-[280px] object-cover rounded-lg"
@@ -1040,7 +1041,7 @@ function DashboardPageContent() {
             <XCircle className="w-5 h-5" />
           </button>
           <div className="w-full h-full grid place-items-center">
-            <img
+            <UploadedImage
               src={receiptViewerUrl}
               alt="Payment receipt"
               className="max-w-full max-h-full object-contain rounded-xl border border-white/20"

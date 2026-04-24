@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
 
@@ -33,8 +33,15 @@ const SNOW_PARTICLES: SnowParticleConfig[] = Array.from(
   }
 );
 
+const subscribe = () => () => {};
+
+function useHydrated() {
+  return useSyncExternalStore(subscribe, () => true, () => false);
+}
+
 const AnimatedBackground = () => {
   const pathname = usePathname();
+  const isHydrated = useHydrated();
   const showParticles = ['/', '/about', '/services', '/blog', '/giveaway'].includes(pathname);
 
   return (
@@ -69,7 +76,7 @@ const AnimatedBackground = () => {
       />
 
       {/* Snowfall/Particle Animation - Only render on specific routes */}
-      {showParticles && (
+      {isHydrated && showParticles && (
         <div className="absolute inset-0 pointer-events-none">
           {SNOW_PARTICLES.map((particle, i) => (
             <motion.div

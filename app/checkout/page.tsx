@@ -1,9 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Loader2, ShieldCheck, Upload } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, HelpCircle, Loader2, ShieldCheck, Upload, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { db } from '@/firebase';
@@ -12,9 +11,20 @@ import type { PaymentMethod, ProductItem } from '@/lib/types/domain';
 import { createOrderPublicId } from '@/lib/order-system';
 import { toStorageMetadata, uploadMediaFile } from '@/lib/storage-utils';
 import { useToast } from '@/components/ToastProvider';
+import UploadedImage from '@/components/UploadedImage';
+import {
+  getCouponEligibleSubtotal,
+  isCouponExpired,
+  normalizeCoupon,
+  normalizeCouponScope,
+  type CouponScope,
+} from '@/lib/coupons';
 
 interface CheckoutItem {
   productId: string;
+  productSlug?: string;
+  categoryId?: string;
+  categoryName?: string;
   title: string;
   quantity: number;
   selectedPlanName?: string | null;
@@ -28,10 +38,24 @@ interface CheckoutItem {
 interface AppliedCoupon {
   code: string;
   discountPercentage: number;
+  scope: CouponScope;
+  categoryId?: string;
+  categoryName?: string;
+  productId?: string;
+  productName?: string;
+  productSlug?: string;
+  eligibleSubtotal: number;
 }
 
 const MAX_PROOF_SIZE_BYTES = 5 * 1024 * 1024;
 const MANUAL_WHATSAPP_NUMBER = '923209310656';
+const CHECKOUT_TUTORIAL_DISMISSED_KEY = 'checkout_tutorial_dismissed_v1';
+
+type CheckoutTutorialStep = {
+  id: 'order-summary' | 'contact-fields' | 'payment-method' | 'payment-proof' | 'submit-order';
+  title: string;
+  description: string;
+};
 
 function toCurrency(amount: number) {
   return `Rs ${amount.toFixed(2)}`;
@@ -131,7 +155,7 @@ function extractPlanPrice(product: ProductItem, selectedPlanName?: string | null
 function CheckoutPageContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { cart, clearCart } = useCart();
   const toast = useToast();
 
@@ -163,6 +187,54 @@ function CheckoutPageContent() {
   const [couponFeedback, setCouponFeedback] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [tutorialOpen, setTutorialOpen] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return window.localStorage.getItem(CHECKOUT_TUTORIAL_DISMISSED_KEY) !== '1';
+  });
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+  const [mobileSummaryVisible, setMobileSummaryVisible] = useState(true);
+  const [mobileSummaryClosed, setMobileSummaryClosed] = useState(false);
+
+  const contactSectionRef = useRef<HTMLElement | null>(null);
+  const paymentMethodSectionRef = useRef<HTMLElement | null>(null);
+  const paymentProofSectionRef = useRef<HTMLElement | null>(null);
+  const orderSummarySectionRef = useRef<HTMLElement | null>(null);
+  const mobileSummaryRef = useRef<HTMLDivElement | null>(null);
+  const submitOrderButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lastMobileScrollYRef = useRef(0);
+
+  const tutorialSteps = useMemo<CheckoutTutorialStep[]>(
+    () => [
+      {
+        id: 'order-summary',
+        title: 'Order Summary',
+        description: 'Review selected item, plan, quantity, payment method, and final total before submitting.',
+      },
+      {
+        id: 'contact-fields',
+        title: 'Delivery Contact',
+        description: 'Enter target delivery email and phone number so admin can verify and deliver correctly.',
+      },
+      {
+        id: 'payment-method',
+        title: 'Select Payment Method',
+        description: 'Choose a payment method and confirm account details or manual WhatsApp checkout.',
+      },
+      {
+        id: 'payment-proof',
+        title: 'Payment Proof Details',
+        description: 'Add sender account, transaction ID, and optional screenshot proof for quick review.',
+      },
+      {
+        id: 'submit-order',
+        title: 'Submit Order',
+        description: 'Submit once all required fields are complete. Your order appears in dashboard instantly.',
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     const q = query(collection(db, 'payment_methods'), where('active', '==', true));
@@ -210,6 +282,9 @@ function CheckoutPageContent() {
               const unitPrice = Number(product.price ?? product.salePrice ?? cartItem.price ?? 0);
               return {
                 productId: product.id,
+                productSlug: String(product.slug || getProductTitle(product)).toLowerCase().replace(/\s+/g, '-'),
+                categoryId: String(product.categoryId || ''),
+                categoryName: String(product.categoryName || product.category || ''),
                 title: getProductTitle(product),
                 quantity: Math.max(1, Number(cartItem.quantity || 1)),
                 unitPrice,
@@ -251,6 +326,9 @@ function CheckoutPageContent() {
           setItems([
             {
               productId: product.id,
+              productSlug: String(product.slug || getProductTitle(product)).toLowerCase().replace(/\s+/g, '-'),
+              categoryId: String(product.categoryId || ''),
+              categoryName: String(product.categoryName || product.category || ''),
               title: getProductTitle(product),
               quantity,
               selectedPlanName,
@@ -300,6 +378,95 @@ function CheckoutPageContent() {
     }
   }, [appliedCoupon, couponCode]);
 
+  useEffect(() => {
+    if (!appliedCoupon) {
+      return;
+    }
+
+    const couponForCheck = {
+      ...appliedCoupon,
+      scope: normalizeCouponScope(appliedCoupon.scope),
+    };
+    const eligibleSubtotal = getCouponEligibleSubtotal(couponForCheck, items);
+    if (eligibleSubtotal <= 0) {
+      setAppliedCoupon(null);
+      setCouponFeedback('Coupon no longer matches selected items.');
+      return;
+    }
+
+    if (Math.abs(eligibleSubtotal - Number(appliedCoupon.eligibleSubtotal || 0)) > 0.001) {
+      setAppliedCoupon((prev) => (prev ? { ...prev, eligibleSubtotal } : prev));
+    }
+  }, [appliedCoupon, items]);
+
+  useEffect(() => {
+    if (mobileSummaryClosed) {
+      return;
+    }
+
+    const onScroll = () => {
+      if (window.innerWidth >= 1024) {
+        return;
+      }
+      const current = Math.max(0, window.scrollY || 0);
+      const delta = current - lastMobileScrollYRef.current;
+      if (Math.abs(delta) > 10) {
+        setMobileSummaryVisible(delta < 0 || current < 120);
+      }
+      lastMobileScrollYRef.current = current;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [mobileSummaryClosed]);
+
+  const currentTutorialStep = tutorialSteps[tutorialStepIndex] || tutorialSteps[0];
+
+  useEffect(() => {
+    if (!tutorialOpen || !currentTutorialStep) {
+      return;
+    }
+
+    const isDesktop = typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
+    let target: HTMLElement | null = null;
+    if (currentTutorialStep.id === 'order-summary') {
+      target = isDesktop
+        ? orderSummarySectionRef.current
+        : (mobileSummaryRef.current || orderSummarySectionRef.current);
+    } else if (currentTutorialStep.id === 'contact-fields') {
+      target = contactSectionRef.current;
+    } else if (currentTutorialStep.id === 'payment-method') {
+      target = paymentMethodSectionRef.current;
+    } else if (currentTutorialStep.id === 'payment-proof') {
+      target = paymentProofSectionRef.current;
+    } else if (currentTutorialStep.id === 'submit-order') {
+      target = submitOrderButtonRef.current;
+    }
+
+    if (target) {
+      window.setTimeout(() => {
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    }
+  }, [tutorialOpen, tutorialStepIndex, currentTutorialStep]);
+
+  function dismissTutorial() {
+    setTutorialOpen(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CHECKOUT_TUTORIAL_DISMISSED_KEY, '1');
+    }
+  }
+
+  function handleTutorialNext() {
+    if (tutorialStepIndex >= tutorialSteps.length - 1) {
+      dismissTutorial();
+      return;
+    }
+    setTutorialStepIndex((prev) => Math.min(prev + 1, tutorialSteps.length - 1));
+  }
+
   const selectedPaymentMethod = useMemo(
     () => paymentMethods.find((method) => method.id === selectedPaymentMethodId) || null,
     [paymentMethods, selectedPaymentMethodId]
@@ -308,6 +475,12 @@ function CheckoutPageContent() {
     const query = params.toString();
     return query ? `/checkout?${query}` : '/checkout';
   }, [params]);
+  useEffect(() => {
+    if (authLoading || user) {
+      return;
+    }
+    router.replace(`/login?next=${encodeURIComponent(checkoutPathWithQuery)}`);
+  }, [authLoading, user, router, checkoutPathWithQuery]);
   const selectedPaymentMethodIsManual = useMemo(
     () => isManualChatPaymentMethod(selectedPaymentMethod),
     [selectedPaymentMethod]
@@ -319,9 +492,10 @@ function CheckoutPageContent() {
     if (!appliedCoupon) {
       return 0;
     }
-    const raw = (subtotal * appliedCoupon.discountPercentage) / 100;
+    const discountBase = Math.max(0, Number(appliedCoupon.eligibleSubtotal || 0));
+    const raw = (discountBase * appliedCoupon.discountPercentage) / 100;
     return Number(raw.toFixed(2));
-  }, [appliedCoupon, subtotal]);
+  }, [appliedCoupon]);
   const finalTotal = useMemo(
     () => Number(Math.max(0, subtotal - discountAmount).toFixed(2)),
     [discountAmount, subtotal]
@@ -383,7 +557,7 @@ function CheckoutPageContent() {
         return;
       }
 
-      const couponData = snapshot.docs[0].data() as Record<string, any>;
+      const couponData = normalizeCoupon(snapshot.docs[0].data() as Record<string, any>, snapshot.docs[0].id);
       const discountPercentage = Math.max(0, Number(couponData.discountPercentage || 0));
       if (!discountPercentage) {
         setAppliedCoupon(null);
@@ -391,24 +565,35 @@ function CheckoutPageContent() {
         return;
       }
 
-      const expiryDateRaw = typeof couponData.expiryDate === 'string' ? couponData.expiryDate : '';
-      if (expiryDateRaw) {
-        const expiryDate = new Date(expiryDateRaw);
-        if (!Number.isNaN(expiryDate.getTime())) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          expiryDate.setHours(0, 0, 0, 0);
-          if (expiryDate < today) {
-            setAppliedCoupon(null);
-            setCouponFeedback('Coupon is expired.');
-            return;
-          }
+      if (isCouponExpired(couponData)) {
+        setAppliedCoupon(null);
+        setCouponFeedback('Coupon is expired.');
+        return;
+      }
+
+      const eligibleSubtotal = getCouponEligibleSubtotal(couponData, items);
+      if (eligibleSubtotal <= 0) {
+        setAppliedCoupon(null);
+        if (couponData.scope === 'category') {
+          setCouponFeedback('Coupon is not valid for this category.');
+        } else if (couponData.scope === 'product') {
+          setCouponFeedback('Coupon is not valid for this product.');
+        } else {
+          setCouponFeedback('Coupon is not valid for selected items.');
         }
+        return;
       }
 
       setAppliedCoupon({
         code: couponData.code || normalizedCode,
         discountPercentage,
+        scope: couponData.scope,
+        categoryId: couponData.categoryId || '',
+        categoryName: couponData.categoryName || '',
+        productId: couponData.productId || '',
+        productName: couponData.productName || '',
+        productSlug: couponData.productSlug || '',
+        eligibleSubtotal,
       });
       setCouponFeedback(`Coupon applied: ${discountPercentage}% discount.`);
     } catch (error) {
@@ -425,8 +610,7 @@ function CheckoutPageContent() {
     setSuccessMessage('');
 
     if (!user) {
-      setErrorMessage('Please login first to place your order.');
-      toast.error('Login required', 'Please login to place your order.');
+      router.push(`/login?next=${encodeURIComponent(checkoutPathWithQuery)}`);
       return;
     }
 
@@ -528,6 +712,12 @@ function CheckoutPageContent() {
           ? {
               code: appliedCoupon.code,
               discountPercentage: appliedCoupon.discountPercentage,
+              scope: appliedCoupon.scope,
+              categoryId: appliedCoupon.categoryId || '',
+              categoryName: appliedCoupon.categoryName || '',
+              productId: appliedCoupon.productId || '',
+              productName: appliedCoupon.productName || '',
+              productSlug: appliedCoupon.productSlug || '',
             }
           : null,
 
@@ -618,36 +808,66 @@ function CheckoutPageContent() {
     }
   }
 
-  if (!user) {
+  if (authLoading) {
     return (
-      <main className="min-h-screen pt-32 pb-20 px-4 bg-brand-bg">
-        <div className="max-w-2xl mx-auto glass rounded-[2rem] border border-white/5 p-10 text-center">
-          <h1 className="text-3xl font-black uppercase text-brand-text">Login Required</h1>
-          <p className="text-brand-text/40 text-xs font-black uppercase tracking-widest mt-4">
-            Please login for a safe purchase.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href={`/login?next=${encodeURIComponent(checkoutPathWithQuery)}`}
-              className="inline-flex bg-primary text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] border-b-4 border-secondary"
-            >
-              Login To Continue
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex bg-white/5 border border-white/10 text-brand-text px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px]"
-            >
-              Return Home
-            </Link>
-          </div>
+      <main className="min-h-screen pt-28 pb-20 bg-brand-bg">
+        <div className="site-container-readable py-20 flex justify-center">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
         </div>
       </main>
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
-    <main className="min-h-screen pt-28 pb-20 px-4 bg-brand-bg">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <main className="relative min-h-screen pt-28 pb-20 bg-brand-bg">
+      {!loading && items.length > 0 && !mobileSummaryClosed ? (
+        <div
+          ref={mobileSummaryRef}
+          className={`lg:hidden fixed left-3 right-3 top-[calc(var(--user-order-offset)+8px)] z-[96] transition-transform duration-300 ${
+            mobileSummaryVisible ? 'translate-y-0' : '-translate-y-[140%]'
+          }`}
+        >
+          <div className="rounded-2xl border border-primary/20 bg-[#101010]/95 backdrop-blur-xl px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,0.5)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="text-[8px] font-black uppercase tracking-[0.16em] text-primary">Order Summary</div>
+                <div className="text-[11px] font-black text-brand-text truncate">{items[0]?.title || 'Item'}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/50">
+                  {items[0]?.selectedPlanName || 'Standard'} - Qty {totalQuantity}
+                </div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/45 truncate">
+                  Payment: {selectedPaymentMethod ? getPaymentMethodDisplayName(selectedPaymentMethod) : 'Select one'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSummaryClosed(true)}
+                className="w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-brand-text/70 flex items-center justify-center"
+                aria-label="Hide mobile order summary"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="mt-2.5 flex items-end justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-[8px] font-black uppercase tracking-[0.16em] text-brand-text/35">Order ID</div>
+                <div className="text-[9px] font-black text-brand-text/60 truncate max-w-[44vw]">{orderId}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[8px] font-black uppercase tracking-[0.16em] text-brand-text/35">Total</div>
+                <div className="text-xs font-black text-primary">{toCurrency(finalTotal)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="site-container-readable space-y-8">
+        {!loading && items.length > 0 && !mobileSummaryClosed ? <div className="lg:hidden h-20" /> : null}
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-brand-text/40 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest"
@@ -675,7 +895,7 @@ function CheckoutPageContent() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <section className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
+              <section ref={contactSectionRef} className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-xl font-black uppercase text-brand-text">Delivery Email / Contact Number</h2>
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary">Required</span>
@@ -707,7 +927,7 @@ function CheckoutPageContent() {
                 </div>
               </section>
 
-              <section className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
+              <section ref={paymentMethodSectionRef} className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
                 <h2 className="text-xl font-black uppercase text-brand-text">Payment Method</h2>
 
                 {paymentMethods.length === 0 ? (
@@ -764,7 +984,7 @@ function CheckoutPageContent() {
                 )}
               </section>
 
-              <section className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
+              <section ref={paymentProofSectionRef} className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 md:p-8 space-y-5">
                 <h2 className="text-xl font-black uppercase text-brand-text">
                   {selectedPaymentMethodIsManual ? 'Manual WhatsApp Checkout' : 'Payment Proof'}
                 </h2>
@@ -817,7 +1037,7 @@ function CheckoutPageContent() {
 
                     {proofPreview ? (
                       <div className="border border-white/10 rounded-xl md:rounded-2xl overflow-hidden max-w-sm">
-                        <img src={proofPreview} alt="Payment proof preview" className="w-full h-auto" />
+                        <UploadedImage src={proofPreview} alt="Payment proof preview" className="w-full h-auto" />
                       </div>
                     ) : null}
                   </>
@@ -843,6 +1063,7 @@ function CheckoutPageContent() {
                 ) : null}
 
                 <button
+                  ref={submitOrderButtonRef}
                   onClick={() => {
                     void handleSubmit();
                   }}
@@ -856,7 +1077,7 @@ function CheckoutPageContent() {
             </div>
 
             <div className="space-y-6">
-              <section className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 space-y-5 sticky top-28">
+              <section ref={orderSummarySectionRef} className="glass rounded-2xl md:rounded-[2rem] border border-white/5 p-6 space-y-5 sticky top-28">
                 <h3 className="text-lg font-black uppercase text-brand-text">Order Summary</h3>
 
                 <div className="space-y-4">
@@ -920,6 +1141,16 @@ function CheckoutPageContent() {
                       {couponFeedback}
                     </div>
                   ) : null}
+                  {appliedCoupon ? (
+                    <div className="text-[9px] font-black uppercase tracking-widest text-brand-text/35">
+                      Applies to:{' '}
+                      {appliedCoupon.scope === 'global'
+                        ? 'All items'
+                        : appliedCoupon.scope === 'category'
+                          ? appliedCoupon.categoryName || 'Selected category'
+                          : appliedCoupon.productName || 'Selected product'}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="h-px bg-white/10" />
@@ -957,6 +1188,47 @@ function CheckoutPageContent() {
           </div>
         )}
       </div>
+
+      {tutorialOpen && !loading && items.length > 0 ? (
+        <div className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:bottom-4 z-[110] sm:w-[22rem]">
+          <div className="rounded-2xl border border-primary/30 bg-[#0F0F10]/95 backdrop-blur-xl p-4 shadow-[0_18px_46px_rgba(0,0,0,0.6)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.16em] text-primary">
+                <HelpCircle className="w-3 h-3" />
+                Step {tutorialStepIndex + 1} of {tutorialSteps.length}
+              </div>
+              <button
+                type="button"
+                onClick={dismissTutorial}
+                className="w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-brand-text/70 flex items-center justify-center"
+                aria-label="Close checkout tutorial"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="mt-3">
+              <h4 className="text-sm font-black uppercase tracking-[0.1em] text-brand-text">{currentTutorialStep.title}</h4>
+              <p className="mt-1 text-[11px] leading-relaxed text-brand-text/70">{currentTutorialStep.description}</p>
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={dismissTutorial}
+                className="px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-[9px] font-black uppercase tracking-[0.14em] text-brand-text/70"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={handleTutorialNext}
+                className="px-3 py-2 rounded-lg border border-primary/45 bg-primary text-black text-[9px] font-black uppercase tracking-[0.14em]"
+              >
+                {tutorialStepIndex >= tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -965,8 +1237,8 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen pt-28 pb-20 px-4 bg-brand-bg">
-          <div className="max-w-6xl mx-auto py-20 flex justify-center">
+        <main className="min-h-screen pt-28 pb-20 bg-brand-bg">
+          <div className="site-container-readable py-20 flex justify-center">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
           </div>
         </main>

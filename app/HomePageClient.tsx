@@ -6,6 +6,7 @@ import ServicesSection from '@/components/ServicesSection';
 import GoogleBusinessReviews from '@/components/GoogleBusinessReviews';
 import PartnerSection from '@/components/PartnerSection';
 import Testimonials from '@/components/Testimonials';
+import BackToTopButton from '@/components/BackToTopButton';
 import { motion } from 'motion/react';
 import { Users, Globe, Award, Heart, Zap, Shield, Headphones, Layers, HelpCircle, ChevronDown } from 'lucide-react';
 import Marquee from 'react-fast-marquee';
@@ -22,10 +23,11 @@ const stats = [
 export default function Home() {
   return (
     <div className="relative bg-brand-bg">
+      <BackToTopButton />
       <Hero />
       
       {/* Logo Marquee Section */}
-      <section data-gsap-reveal className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
+      <section data-gsap-reveal="gsap" className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
         <Marquee gradient={true} gradientColor="black" gradientWidth={100} speed={40} pauseOnHover={true}>
           {[
             { name: 'Netflix', color: '#E50914' },
@@ -53,10 +55,10 @@ export default function Home() {
       <ServicesSection />
       
       {/* Why Choose Us Section - Premium Cards */}
-      <section data-gsap-reveal className="py-12 md:py-32 relative overflow-hidden">
+      <section className="py-12 md:py-32 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/5 -z-10" />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="site-container">
           <div className="text-center mb-10 md:mb-20">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
@@ -147,20 +149,32 @@ export default function Home() {
         </div>
       </section>
 
-      <div data-gsap-reveal>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+      >
         <GoogleBusinessReviews />
-      </div>
+      </motion.div>
 
-      <div data-gsap-reveal>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+      >
         <PartnerSection />
-      </div>
+      </motion.div>
 
-      <div data-gsap-reveal>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+      >
         <Testimonials />
-      </div>
+      </motion.div>
 
       {/* FAQ Section with Animated Icons */}
-      <section data-gsap-reveal className="py-14 md:py-40 relative overflow-hidden">
+      <section className="py-14 md:py-40 relative overflow-hidden">
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] max-w-[780px] max-h-[780px] rounded-full bg-primary/8 blur-[140px] -z-10 pointer-events-none" />
         <div className="absolute -bottom-24 left-[8%] w-56 h-56 rounded-full bg-secondary/12 blur-[90px] -z-10 pointer-events-none" />
         <div className="absolute -top-20 right-[8%] w-56 h-56 rounded-full bg-primary/12 blur-[90px] -z-10 pointer-events-none" />
@@ -174,6 +188,7 @@ export default function Home() {
           }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -left-32 top-0 opacity-[0.05] -z-10 pointer-events-none"
+          style={{ willChange: 'transform' }}
         >
           <HelpCircle className="w-[800px] h-[800px] text-primary" strokeWidth={0.5} />
         </motion.div>
@@ -186,6 +201,7 @@ export default function Home() {
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           className="absolute -right-32 bottom-0 opacity-[0.05] -z-10 pointer-events-none"
+          style={{ willChange: 'transform' }}
         >
           <HelpCircle className="w-[800px] h-[800px] text-secondary" strokeWidth={0.5} />
         </motion.div>
@@ -199,6 +215,7 @@ export default function Home() {
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           className="absolute left-[10%] bottom-[20%] opacity-[0.1] -z-10"
+          style={{ willChange: 'transform' }}
         >
           <HelpCircle className="w-24 h-24 text-primary" strokeWidth={1} />
         </motion.div>
@@ -211,17 +228,23 @@ export default function Home() {
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
           className="absolute right-[10%] top-[20%] opacity-[0.1] -z-10"
+          style={{ willChange: 'transform' }}
         >
           <HelpCircle className="w-32 h-32 text-secondary" strokeWidth={1} />
         </motion.div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="site-container"
+        >
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10 md:mb-16">
               <h2 className="text-4xl md:text-7xl font-black mb-3 md:mb-4 text-brand-text uppercase">Got <span className="internal-gradient">Questions</span>?</h2>
               <p className="text-brand-text/40 font-black uppercase tracking-widest text-[10px]">Everything you need to know about Hammad Tools.</p>
             </div>
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-2.5 md:space-y-3.5">
               {[ 
                 { q: "How do I receive my subscription?", a: "After payment proof verification, your credentials are delivered inside your dashboard and linked to your account automatically." },
                 { q: "Are these subscriptions legal?", a: "Yes, we provide legitimate access to premium services through official channels and bulk enterprise accounts." },
@@ -229,23 +252,21 @@ export default function Home() {
                 { q: "Can I cancel my subscription?", a: "Yes, you can cancel your monthly plans at any time from your dashboard settings." },
                 { q: "What payment methods do you accept?", a: "Checkout shows all active payment methods configured by admin, including wallet, bank, and transfer options with live account details." }
               ].map((item, i) => (
-                <details key={i} className="glass rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500 hover:border-primary/25">
-                  <summary className="p-5 md:p-8 cursor-pointer font-black text-xs md:text-sm uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
+                <details key={i} className="glass rounded-2xl md:rounded-3xl border border-white/5 group overflow-hidden transition-all duration-500 hover:border-primary/25">
+                  <summary className="px-4 py-3.5 md:px-6 md:py-5 cursor-pointer font-black text-[11px] md:text-xs uppercase flex justify-between items-center list-none hover:bg-white/5 transition-colors text-brand-text">
                     <span>{item.q}</span>
-                    <span className="relative w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-500 group-open:rotate-180">
-                      <span className="absolute inset-0 rounded-full bg-primary/20 blur-[1px]" />
-                      <span className="absolute inset-0 rounded-full border border-primary/35 bg-primary/10" />
-                      <ChevronDown className="relative w-5 h-5 text-primary faq-arrow-flash" />
+                    <span className="flex items-center justify-center transition-transform duration-500 group-open:rotate-180">
+                      <ChevronDown className="w-4 h-4 text-primary faq-arrow-flash" />
                     </span>
                   </summary>
-                  <div className="px-5 pb-5 pt-4 md:px-8 md:pb-8 md:pt-6 text-brand-text/50 border-t border-white/5 font-medium leading-relaxed text-xs md:text-sm">
+                  <div className="px-4 pb-4 pt-3 md:px-6 md:pb-5 md:pt-4 text-brand-text/55 border-t border-white/5 font-medium leading-relaxed text-[11px] md:text-xs">
                     {item.a}
                   </div>
                 </details>
               ))}
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   );

@@ -13,20 +13,22 @@ const ContactPage = () => {
   const cleanPhone = settings.supportPhone.replace(/\D/g, '');
   const waLink = `https://wa.me/${cleanPhone}`;
   return (
-    <main className="min-h-screen pt-20 md:pt-24 pb-20 px-4 bg-brand-bg">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen pt-20 md:pt-24 pb-20 bg-brand-bg">
+      <div className="site-container">
         {/* Header */}
-        <div data-gsap-reveal className="text-center mb-8 md:mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-4 text-brand-text md:whitespace-nowrap"
           >
             <span className="font-serif italic text-white normal-case">Get</span> In <span className="internal-gradient">Touch</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ delay: 0.1 }}
             className="text-brand-text/60 max-w-2xl mx-auto text-base md:text-lg mt-2"
           >
@@ -34,7 +36,7 @@ const ContactPage = () => {
           </motion.p>
         </div>
 
-        <div data-gsap-reveal className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Contact Info */}
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -47,7 +49,8 @@ const ContactPage = () => {
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-100px' }}
                   transition={{ delay: i * 0.1 }}
                   className="glass p-4 rounded-xl border border-white/10 group hover:border-primary/30 transition-all flex items-center space-x-4"
                 >
@@ -107,7 +110,8 @@ const ContactPage = () => {
           {/* Contact Form */}
           <motion.div 
             initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
             className="glass p-10 rounded-[2rem] border border-white/10"
           >
             <form className="space-y-6">

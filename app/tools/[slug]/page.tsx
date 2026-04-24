@@ -166,7 +166,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     mediaPaths: ['imageMedia'],
     stringPaths: ['thumbnail', 'image'],
   });
-  const metadataImage = toMetadataImageUrl(imageSrc) || '/services-card.png';
+  const metadataImage = toMetadataImageUrl(imageSrc) || '/services-card.webp';
   const description = getSeoDescription(service, planLabel, minPrice);
   const title = `${service.name} ${planLabel} - Rs ${minPrice || service.price} | Cheap ${service.name} Pakistan`;
 
@@ -205,7 +205,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   const imageSrc = resolveImageSource(service, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['thumbnail', 'image'],
-    placeholder: '/services-card.png',
+    placeholder: '/services-card.webp',
   });
   const minPrice = getMinPrice(service);
   const absoluteToolUrl = toAbsoluteSiteUrl(`/tools/${getServiceSlug(service) || slug}`);

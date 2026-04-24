@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,12 +9,10 @@ import { createOrderPublicId } from '@/lib/order-system';
 import { normalizeImageUrl } from '@/lib/image-display';
 import UploadedImage from '@/components/UploadedImage';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/components/ToastProvider';
 
 const CartDrawer = () => {
   const { cart, removeFromCart, totalPrice, isCartOpen, setIsCartOpen, totalItems } = useCart();
   const { user } = useAuth();
-  const toast = useToast();
   const router = useRouter();
 
   return (
@@ -75,13 +73,13 @@ const CartDrawer = () => {
                 </div>
               ) : (
                 cart.map((item) => {
-                  const itemImageSrc = normalizeImageUrl(item.image) || '/services-card.png';
+                  const itemImageSrc = normalizeImageUrl(item.image) || '/services-card.webp';
                   return (
                   <div key={item.id} className="flex space-x-4 group">
                     <div className="w-20 h-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 relative">
                       <UploadedImage
                         src={itemImageSrc}
-                        fallbackSrc="/services-card.png"
+                        fallbackSrc="/services-card.webp"
                         alt={item.name}
                         className="absolute inset-0 w-full h-full object-cover"
                         referrerPolicy="no-referrer"
@@ -122,7 +120,6 @@ const CartDrawer = () => {
                     });
                     const checkoutPath = `/checkout?${params.toString()}`;
                     if (!user) {
-                      toast.error('Login required', 'Please login for a safe purchase.');
                       router.push(`/login?next=${encodeURIComponent(checkoutPath)}`);
                       setIsCartOpen(false);
                       return;

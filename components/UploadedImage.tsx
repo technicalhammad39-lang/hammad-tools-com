@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ImgHTMLAttributes } from 'react';
@@ -15,14 +16,14 @@ function resolvePreferredSource(value: string, fallback: string) {
 
 export default function UploadedImage({
   src,
-  fallbackSrc = '/services-card.png',
+  fallbackSrc = '/services-card.webp',
   alt,
   className,
   loading,
   decoding,
   ...rest
 }: UploadedImageProps) {
-  const normalizedFallback = useMemo(() => normalizeImageUrl(fallbackSrc) || '/services-card.png', [fallbackSrc]);
+  const normalizedFallback = useMemo(() => normalizeImageUrl(fallbackSrc) || '/services-card.webp', [fallbackSrc]);
   const preferred = useMemo(
     () => resolvePreferredSource(src, normalizedFallback),
     [src, normalizedFallback]

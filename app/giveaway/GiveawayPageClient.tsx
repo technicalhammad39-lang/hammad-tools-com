@@ -35,6 +35,7 @@ import { db } from '@/firebase';
 import { useAuth } from '@/context/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
@@ -58,12 +59,19 @@ interface Giveaway {
 
 const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const { user, profile } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const liked = user ? (giveaway.likedBy || []).includes(user.uid) : false;
   const [showComments, setShowComments] = useState(false);
   const [localComments, setLocalComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState('');
   const [joining, setJoining] = useState(false);
+
+  const redirectToLogin = () => {
+    const nextPath = pathname || '/giveaway';
+    router.push(`/login?next=${encodeURIComponent(nextPath)}`);
+  };
 
   useEffect(() => {
     const commentsQ = query(
@@ -77,7 +85,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
   const handleLike = async () => {
     if (!user) {
-      toast.error('Login required', 'Please login to like this post.');
+      redirectToLogin();
       return;
     }
 
@@ -100,7 +108,9 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim() || !user) {
-      if (!user) toast.error('Login required', 'Please login to comment.');
+      if (!user) {
+        redirectToLogin();
+      }
       return;
     }
 
@@ -121,7 +131,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
   const handleJoin = async () => {
     if (!user) {
-      toast.error('Login required', 'Please login to join this giveaway.');
+      redirectToLogin();
       return;
     }
     if (joining) {
@@ -192,7 +202,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const giveawayImageSrc = resolveImageSource(giveaway, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['image'],
-    placeholder: '/services-card.png',
+    placeholder: '/services-card.webp',
   });
 
   return (
@@ -250,7 +260,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
       <div className="relative aspect-[1.91/1] w-full border-y border-white/5 bg-black/20 overflow-hidden">
         <UploadedImage
           src={giveawayImageSrc}
-          fallbackSrc="/services-card.png"
+          fallbackSrc="/services-card.webp"
           alt={giveaway.title}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           referrerPolicy="no-referrer"
@@ -422,7 +432,12 @@ export default function GiveawayPageClient() {
   return (
     <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg relative overflow-hidden">
       <div className="max-w-3xl mx-auto">
-        <div data-gsap-reveal className="flex items-center justify-between mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="flex items-center justify-between mb-10"
+        >
           <div>
             <h1 className="text-4xl font-black uppercase text-brand-text">Mission <span className="internal-gradient">Feed</span></h1>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/30">Hammad Tools Reward Protocol v2.0</p>
@@ -437,17 +452,27 @@ export default function GiveawayPageClient() {
               +12k
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div data-gsap-reveal className="space-y-4 mt-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="space-y-4 mt-4"
+        >
           {giveaways.map((item) => (
             <GiveawayPost key={item.id} giveaway={item} />
           ))}
-        </div>
+        </motion.div>
 
-        <div data-gsap-reveal className="text-center mt-20 opacity-20 hover:opacity-100 transition-opacity">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          className="text-center mt-20 opacity-20 hover:opacity-100 transition-opacity"
+        >
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-text">End of Secure Feed</p>
-        </div>
+        </motion.div>
       </div>
     </main>
   );

@@ -95,7 +95,7 @@ const Testimonials = () => {
 
   return (
     <section className="py-12 md:py-32 relative bg-white/[0.01] overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="site-container">
         <div className="text-center mb-8 md:mb-20">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
