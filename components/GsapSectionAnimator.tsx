@@ -10,7 +10,7 @@ const PUBLIC_ANIMATED_PATH_PREFIXES = [
   '/about',
   '/tools',
   '/services',
-  '/blog',
+  '/blogs',
   '/contact',
   '/privacy',
   '/terms',

@@ -20,7 +20,7 @@ const Navbar = () => {
     { name: 'Home', href: '/' },
     { name: 'Tools', href: '/tools' },
     { name: 'Services', href: '/services' },
-    { name: 'Blog', href: '/blog' },
+    { name: 'Blog', href: '/blogs' },
     { name: 'Giveaway', href: '/giveaway' },
     { name: 'About', href: '/about' },
   ];
@@ -29,7 +29,7 @@ const Navbar = () => {
     { name: 'Home', href: '/' },
     { name: 'Tools', href: '/tools' },
     { name: 'Services', href: '/services' },
-    { name: 'Blog', href: '/blog' },
+    { name: 'Blog', href: '/blogs' },
     { name: 'Giveaway', href: '/giveaway' },
     { name: 'About', href: '/about' },
   ];

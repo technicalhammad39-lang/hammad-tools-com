@@ -42,7 +42,7 @@ function useHydrated() {
 const AnimatedBackground = () => {
   const pathname = usePathname();
   const isHydrated = useHydrated();
-  const showParticles = ['/', '/about', '/services', '/blog', '/giveaway'].includes(pathname);
+  const showParticles = ['/', '/about', '/services', '/blogs', '/giveaway'].includes(pathname);
 
   return (
     <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none bg-[#0A0A0A]">

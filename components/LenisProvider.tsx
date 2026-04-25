@@ -11,7 +11,7 @@ const LENIS_PUBLIC_PREFIXES = [
   '/tools',
   '/services',
   '/about',
-  '/blog',
+  '/blogs',
   '/contact',
   '/privacy',
   '/terms',

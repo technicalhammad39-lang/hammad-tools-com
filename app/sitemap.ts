@@ -7,7 +7,9 @@ type CollectionDoc = {
   title?: string;
   name?: string;
   active?: boolean;
+  status?: string;
   published?: boolean;
+  publishedAt?: { toDate?: () => Date } | Date | string | null;
   type?: string;
   updatedAt?: { toDate?: () => Date } | Date | string | null;
   createdAt?: { toDate?: () => Date } | Date | string | null;
@@ -50,6 +52,17 @@ function asDate(value: CollectionDoc['updatedAt']) {
     date = new Date();
   }
   return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function isPublishedBlog(item: CollectionDoc) {
+  const status = (item.status || '').toString().toLowerCase();
+  const published = status === 'published' || item.published === true;
+  if (!published) {
+    return false;
+  }
+
+  const publishedAt = asDate(item.publishedAt || item.createdAt || null);
+  return publishedAt.getTime() <= Date.now();
 }
 
 function withSite(path: string) {
@@ -97,8 +110,8 @@ async function getBlogEntries() {
     );
     return snapshot.docs
       .map((entry) => entry.data() as CollectionDoc)
-      .filter((item) => item.published !== false)
-      .map((item) => ({ slug: slugFromDoc(item), lastModified: asDate(item.updatedAt || item.createdAt) }))
+      .filter((item) => isPublishedBlog(item))
+      .map((item) => ({ slug: slugFromDoc(item), lastModified: asDate(item.updatedAt || item.publishedAt || item.createdAt) }))
       .filter((item) => Boolean(item.slug));
   } catch {
     return [] as Array<{ slug: string; lastModified: Date }>;
@@ -111,7 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: withSite('/'), lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: withSite('/tools'), lastModified: now, changeFrequency: 'daily', priority: 0.95 },
     { url: withSite('/services'), lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: withSite('/blog'), lastModified: now, changeFrequency: 'daily', priority: 0.85 },
+    { url: withSite('/blogs'), lastModified: now, changeFrequency: 'daily', priority: 0.85 },
     { url: withSite('/giveaway'), lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: withSite('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: withSite('/contact'), lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
@@ -127,7 +140,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   }));
   const blogRoutes: MetadataRoute.Sitemap = blogEntries.map((entry) => ({
-    url: withSite(`/blog/${entry.slug}`),
+    url: withSite(`/blogs/${entry.slug}`),
     lastModified: entry.lastModified,
     changeFrequency: 'weekly',
     priority: 0.75,

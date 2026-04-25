@@ -23,7 +23,9 @@ import {
 interface CheckoutItem {
   productId: string;
   productSlug?: string;
+  slug?: string;
   categoryId?: string;
+  categorySlug?: string;
   categoryName?: string;
   title: string;
   quantity: number;
@@ -40,8 +42,12 @@ interface AppliedCoupon {
   discountPercentage: number;
   scope: CouponScope;
   categoryId?: string;
+  categorySlug?: string;
   categoryName?: string;
   productId?: string;
+  itemId?: string;
+  toolId?: string;
+  slug?: string;
   productName?: string;
   productSlug?: string;
   eligibleSubtotal: number;
@@ -59,6 +65,10 @@ type CheckoutTutorialStep = {
 
 function toCurrency(amount: number) {
   return `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 2 }).format(amount)}`;
+}
+
+function toTokenSlug(value: string) {
+  return value.toLowerCase().trim().replace(/\s+/g, '-');
 }
 
 function isManualChatPaymentMethod(method: PaymentMethod | null) {
@@ -280,11 +290,16 @@ function CheckoutPageContent() {
               }
               const product = { id: snap.id, ...(snap.data() as Omit<ProductItem, 'id'>) };
               const unitPrice = Number(product.price ?? product.salePrice ?? cartItem.price ?? 0);
+              const productSlug = toTokenSlug(String(product.slug || getProductTitle(product)));
+              const categoryName = String(product.categoryName || product.category || '');
+              const categorySlug = toTokenSlug(String((product as any).categorySlug || categoryName));
               return {
                 productId: product.id,
-                productSlug: String(product.slug || getProductTitle(product)).toLowerCase().replace(/\s+/g, '-'),
+                productSlug,
+                slug: productSlug,
                 categoryId: String(product.categoryId || ''),
-                categoryName: String(product.categoryName || product.category || ''),
+                categorySlug,
+                categoryName,
                 title: getProductTitle(product),
                 quantity: Math.max(1, Number(cartItem.quantity || 1)),
                 unitPrice,
@@ -321,14 +336,19 @@ function CheckoutPageContent() {
         const product = { id: snap.id, ...(snap.data() as Omit<ProductItem, 'id'>) };
         const quantity = Math.max(1, Number.isFinite(quantityParam) ? quantityParam : 1);
         const unitPrice = extractPlanPrice(product, selectedPlanName);
+        const productSlug = toTokenSlug(String(product.slug || getProductTitle(product)));
+        const categoryName = String(product.categoryName || product.category || '');
+        const categorySlug = toTokenSlug(String((product as any).categorySlug || categoryName));
 
         if (mounted) {
           setItems([
             {
               productId: product.id,
-              productSlug: String(product.slug || getProductTitle(product)).toLowerCase().replace(/\s+/g, '-'),
+              productSlug,
+              slug: productSlug,
               categoryId: String(product.categoryId || ''),
-              categoryName: String(product.categoryName || product.category || ''),
+              categorySlug,
+              categoryName,
               title: getProductTitle(product),
               quantity,
               selectedPlanName,
@@ -589,9 +609,13 @@ function CheckoutPageContent() {
         discountPercentage,
         scope: couponData.scope,
         categoryId: couponData.categoryId || '',
+        categorySlug: couponData.categorySlug || '',
         categoryName: couponData.categoryName || '',
         productId: couponData.productId || '',
+        itemId: couponData.productId || '',
+        toolId: couponData.productId || '',
         productName: couponData.productName || '',
+        slug: couponData.productSlug || '',
         productSlug: couponData.productSlug || '',
         eligibleSubtotal,
       });
@@ -714,9 +738,13 @@ function CheckoutPageContent() {
               discountPercentage: appliedCoupon.discountPercentage,
               scope: appliedCoupon.scope,
               categoryId: appliedCoupon.categoryId || '',
+              categorySlug: appliedCoupon.categorySlug || '',
               categoryName: appliedCoupon.categoryName || '',
               productId: appliedCoupon.productId || '',
+              itemId: appliedCoupon.itemId || appliedCoupon.productId || '',
+              toolId: appliedCoupon.toolId || appliedCoupon.productId || '',
               productName: appliedCoupon.productName || '',
+              slug: appliedCoupon.slug || appliedCoupon.productSlug || '',
               productSlug: appliedCoupon.productSlug || '',
             }
           : null,

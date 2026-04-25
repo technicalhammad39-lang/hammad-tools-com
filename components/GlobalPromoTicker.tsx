@@ -1,62 +1,70 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, onSnapshot, query, where } from 'firebase/firestore';
 import { Copy, X } from 'lucide-react';
 import { db } from '@/firebase';
 import { useToast } from '@/components/ToastProvider';
+import {
+  getCouponDisplayTitle,
+  normalizeCoupon,
+  normalizeCouponCode,
+  pickBestCouponForRoute,
+  toMillis,
+  type CouponRecord,
+  type CouponRouteContext,
+} from '@/lib/coupons';
 
-const SESSION_HIDE_KEY = 'global_promo_ticker_hidden_v1';
+const SESSION_HIDE_KEY = 'global_promo_ticker_hidden_v2';
 const FIRE = '\uD83D\uDD25';
 
-type CouponType = 'tool' | 'category';
-
 export interface PromoCouponData {
-  code: string;
-  type: CouponType;
-  targetName: string;
-  expiryTime?: unknown;
-  expiry_timestamp?: unknown;
-}
-
-function toMillis(value: unknown) {
-  if (!value) {
-    return 0;
-  }
-  if (typeof (value as any)?.toMillis === 'function') {
-    return Number((value as any).toMillis() || 0);
-  }
-  if (typeof (value as any)?.toDate === 'function') {
-    const date = (value as any).toDate();
-    return date instanceof Date ? date.getTime() : 0;
-  }
-  if (value instanceof Date) {
-    return value.getTime();
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
-  }
-  if (typeof value === 'string') {
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
-  }
-  return 0;
+  [key: string]: unknown;
+  code?: string;
 }
 
 function normalizeText(value: unknown) {
   return String(value || '').trim();
 }
 
-function normalizeType(value: unknown): CouponType | null {
-  const raw = normalizeText(value).toLowerCase();
-  if (raw === 'tool' || raw === 'product') {
-    return 'tool';
+function normalizeSlug(value: unknown) {
+  return normalizeText(value).toLowerCase().replace(/\s+/g, '-');
+}
+
+function normalizePath(pathname: string) {
+  const value = pathname || '/';
+  if (value === '/') {
+    return '/';
   }
-  if (raw === 'category') {
-    return 'category';
+  return value.replace(/\/+$/, '');
+}
+
+function getToolSlugFromPath(pathname: string) {
+  const normalizedPath = normalizePath(pathname);
+  const prefix = '/tools/';
+  if (!normalizedPath.startsWith(prefix) || normalizedPath.startsWith('/tools/category/')) {
+    return '';
   }
-  return null;
+  const segment = decodeURIComponent(normalizedPath.slice(prefix.length));
+  return normalizeSlug(segment);
+}
+
+function buildCategoryContextFromQuery(searchParams: URLSearchParams) {
+  const fromCategoryId = normalizeText(searchParams.get('categoryId'));
+  const fromCategorySlug = normalizeSlug(searchParams.get('categorySlug'));
+  const fromCategoryName = normalizeText(searchParams.get('categoryName'));
+  const genericCategory = normalizeText(searchParams.get('category'));
+
+  const categoryName = fromCategoryName || (fromCategoryId ? '' : genericCategory);
+  const categorySlug = fromCategorySlug || normalizeSlug(genericCategory || categoryName);
+  const categoryId = fromCategoryId || (!fromCategorySlug && !fromCategoryName ? genericCategory : '');
+
+  return {
+    categoryId: categoryId || '',
+    categorySlug: categorySlug || '',
+    categoryName: categoryName || '',
+  };
 }
 
 function formatCountdown(msRemaining: number) {
@@ -76,48 +84,109 @@ function formatCountdown(msRemaining: number) {
   return [`${hh}h`, `${mm}m`, `${ss}s`].join(' | ');
 }
 
-function normalizeCategoryTarget(name: string) {
-  const value = normalizeText(name);
+function buildPromoText(coupon: CouponRecord) {
+  const code = normalizeCouponCode(coupon.code);
+  const title = getCouponDisplayTitle(coupon);
+  const percentage = Math.max(0, Number(coupon.discountPercentage || 0));
+
+  if (coupon.scope === 'product') {
+    return `${FIRE} Exclusive Deal: ${title} ${percentage}% OFF. Use: ${code}`;
+  }
+
+  if (coupon.scope === 'category') {
+    return `${FIRE} Category Sale: ${title} items ${percentage}% OFF. Use: ${code}`;
+  }
+
+  return `${FIRE} Global Deal: ${percentage}% OFF on all products. Use: ${code}`;
+}
+
+function toCouponRecordFromProp(value: PromoCouponData | null | undefined) {
   if (!value) {
-    return 'Selected Category';
-  }
-  return value.replace(/\s+tools?\s*$/i, '').trim() || value;
-}
-
-function getPromoText(data: PromoCouponData) {
-  if (data.type === 'tool') {
-    return `${FIRE} Exclusive Deal: Get ${data.targetName} Pro now! Use: ${data.code}`;
-  }
-  const categoryTarget = normalizeCategoryTarget(data.targetName);
-  return `${FIRE} Category Sale: All ${categoryTarget} tools are discounted! Use: ${data.code}`;
-}
-
-function mapBackendCoupon(raw: Record<string, unknown>): PromoCouponData | null {
-  const code = normalizeText(raw.code).toUpperCase();
-  const type = normalizeType(raw.type ?? raw.scope ?? raw.couponType);
-  if (!code || !type) {
     return null;
   }
 
-  const targetName =
-    type === 'tool'
-      ? normalizeText(raw.targetName || raw.productName || raw.productSlug || 'Featured Tool')
-      : normalizeText(raw.targetName || raw.categoryName || 'Selected Category');
+  const normalized = normalizeCoupon(value as Record<string, any>, normalizeText(value.code));
+  if (!normalized.code) {
+    return null;
+  }
+  return normalized;
+}
 
-  const expiryTime = raw.expiry_timestamp ?? raw.expiryTime ?? raw.expiryDate ?? null;
-  return {
-    code,
-    type,
-    targetName: targetName || (type === 'tool' ? 'Featured Tool' : 'Selected Category'),
-    expiryTime,
-    expiry_timestamp: raw.expiry_timestamp,
-  };
+async function resolveToolRouteContext(toolSlug: string) {
+  if (!toolSlug) {
+    return null;
+  }
+
+  try {
+    const directSnapshot = await getDocs(
+      query(collection(db, 'services'), where('slug', '==', toolSlug), limit(1))
+    );
+
+    if (!directSnapshot.empty) {
+      const entry = directSnapshot.docs[0];
+      const data = entry.data() as Record<string, unknown>;
+      const categoryName = normalizeText(data.categoryName || data.category);
+      const categorySlug = normalizeSlug((data as any).categorySlug || categoryName);
+      const productSlug = normalizeSlug(data.slug || toolSlug);
+      return {
+        productId: entry.id,
+        itemId: entry.id,
+        toolId: entry.id,
+        productSlug,
+        slug: productSlug,
+        categoryId: normalizeText(data.categoryId),
+        categorySlug,
+        categoryName,
+      };
+    }
+  } catch (error) {
+    console.error('Promo ticker direct tool context lookup failed:', error);
+  }
+
+  try {
+    const snapshot = await getDocs(collection(db, 'services'));
+    const fallbackDoc = snapshot.docs.find((entry) => {
+      const data = entry.data() as Record<string, unknown>;
+      const source = normalizeText(data.slug || data.title || data.name || entry.id);
+      return normalizeSlug(source) === toolSlug && normalizeText(data.type || 'tools') === 'tools';
+    });
+
+    if (!fallbackDoc) {
+      return {
+        productSlug: toolSlug,
+        slug: toolSlug,
+      };
+    }
+
+    const data = fallbackDoc.data() as Record<string, unknown>;
+    const categoryName = normalizeText(data.categoryName || data.category);
+    const categorySlug = normalizeSlug((data as any).categorySlug || categoryName);
+    const productSlug = normalizeSlug(data.slug || data.title || data.name || toolSlug);
+    return {
+      productId: fallbackDoc.id,
+      itemId: fallbackDoc.id,
+      toolId: fallbackDoc.id,
+      productSlug,
+      slug: productSlug,
+      categoryId: normalizeText(data.categoryId),
+      categorySlug,
+      categoryName,
+    };
+  } catch (error) {
+    console.error('Promo ticker fallback tool context lookup failed:', error);
+    return {
+      productSlug: toolSlug,
+      slug: toolSlug,
+    };
+  }
 }
 
 export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCouponData | null }) {
   const pathname = usePathname();
   const toast = useToast();
-  const [liveCoupon, setLiveCoupon] = useState<PromoCouponData | null>(null);
+
+  const [routeContext, setRouteContext] = useState<CouponRouteContext>({ pathname });
+  const [liveCoupons, setLiveCoupons] = useState<CouponRecord[]>([]);
   const [hiddenForSession, setHiddenForSession] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -126,10 +195,62 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
   });
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const copiedTimeoutRef = useRef<number | null>(null);
-
   const isAdminRoute = pathname.startsWith('/admin');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateRouteContext() {
+      const normalizedPath = normalizePath(pathname || '/');
+      const queryString = typeof window !== 'undefined' ? window.location.search : '';
+      const queryContext = buildCategoryContextFromQuery(new URLSearchParams(queryString));
+      let nextContext: CouponRouteContext = {
+        pathname: normalizedPath,
+        ...queryContext,
+      };
+
+      if (normalizedPath.startsWith('/tools/category/')) {
+        const categorySlugFromPath = normalizeSlug(normalizedPath.slice('/tools/category/'.length));
+        nextContext = {
+          ...nextContext,
+          categorySlug: categorySlugFromPath || nextContext.categorySlug || '',
+        };
+      }
+
+      const toolSlug = getToolSlugFromPath(normalizedPath);
+      if (toolSlug) {
+        const toolContext = await resolveToolRouteContext(toolSlug);
+        if (cancelled) {
+          return;
+        }
+        const resolvedProductSlug = normalizeSlug(
+          (toolContext as Record<string, unknown> | null)?.productSlug || toolSlug
+        );
+        const resolvedSlug = normalizeSlug(
+          (toolContext as Record<string, unknown> | null)?.slug || resolvedProductSlug || toolSlug
+        );
+        nextContext = {
+          ...nextContext,
+          ...(toolContext || {}),
+          productSlug: resolvedProductSlug,
+          slug: resolvedSlug,
+        };
+      }
+
+      if (!cancelled) {
+        setRouteContext(nextContext);
+      }
+    }
+
+    void hydrateRouteContext();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (isAdminRoute || couponData) {
@@ -141,53 +262,20 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
       couponsQuery,
       (snapshot) => {
         const options = snapshot.docs
-          .map((docSnap) => mapBackendCoupon(docSnap.data() as Record<string, unknown>))
-          .filter((entry): entry is PromoCouponData => Boolean(entry))
-          .map((entry) => ({
-            ...entry,
-            expiryMs: toMillis(entry.expiry_timestamp ?? entry.expiryTime),
-          }))
-          .filter((entry) => entry.expiryMs > Date.now())
-          .sort((a, b) => a.expiryMs - b.expiryMs);
-
-        if (!options.length) {
-          setLiveCoupon(null);
-          return;
-        }
-
-        setLiveCoupon({
-          code: options[0].code,
-          type: options[0].type,
-          targetName: options[0].targetName,
-          expiryTime: options[0].expiryMs,
-        });
+          .map((docSnap) =>
+            normalizeCoupon(docSnap.data() as Record<string, any>, docSnap.id)
+          )
+          .filter((entry) => Boolean(entry.code));
+        setLiveCoupons(options);
       },
       (error) => {
         console.error('Failed to load promo ticker coupon:', error);
-        setLiveCoupon(null);
+        setLiveCoupons([]);
       }
     );
 
     return () => unsubscribe();
   }, [isAdminRoute, couponData]);
-
-  const activeCoupon = couponData || liveCoupon;
-  const shouldTick = !isAdminRoute && !hiddenForSession && Boolean(activeCoupon);
-  const expiryMs = toMillis(activeCoupon?.expiry_timestamp ?? activeCoupon?.expiryTime);
-  const msRemaining = expiryMs - nowMs;
-  const isExpired = !activeCoupon || !expiryMs || msRemaining <= 0;
-  const shouldRender = !isAdminRoute && !hiddenForSession && !isExpired;
-
-  useEffect(() => {
-    if (!shouldTick) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [shouldTick]);
 
   useEffect(() => {
     return () => {
@@ -196,6 +284,36 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
       }
     };
   }, []);
+
+  const externalCoupon = useMemo(() => toCouponRecordFromProp(couponData), [couponData]);
+  const bestLiveCoupon = useMemo(
+    () => pickBestCouponForRoute(liveCoupons, routeContext, nowMs),
+    [liveCoupons, routeContext, nowMs]
+  );
+
+  const activeCoupon = useMemo(() => {
+    if (externalCoupon) {
+      return pickBestCouponForRoute([externalCoupon], routeContext, nowMs);
+    }
+    return bestLiveCoupon;
+  }, [bestLiveCoupon, externalCoupon, routeContext, nowMs]);
+
+  const expiryMs = toMillis(activeCoupon?.expiryDate);
+  const hasExpiry = Boolean(expiryMs);
+  const msRemaining = expiryMs - nowMs;
+  const isExpired = Boolean(activeCoupon && hasExpiry && msRemaining <= 0);
+  const shouldRender = !isAdminRoute && !hiddenForSession && Boolean(activeCoupon) && !isExpired;
+
+  useEffect(() => {
+    if (!shouldRender || !hasExpiry) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [hasExpiry, shouldRender]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -214,16 +332,16 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
     return () => {
       window.removeEventListener('resize', updateHeight);
     };
-  }, [shouldRender, activeCoupon?.code, activeCoupon?.type, activeCoupon?.targetName]);
+  }, [shouldRender, activeCoupon?.code, activeCoupon?.scope, activeCoupon?.productSlug, activeCoupon?.categoryId]);
 
   if (!shouldRender || !activeCoupon) {
     return null;
   }
 
-  const couponCode = activeCoupon.code;
-  const promoText = getPromoText(activeCoupon);
-  const countdown = formatCountdown(msRemaining);
-  const urgencyText = 'Hurry, grab now';
+  const couponCode = normalizeCouponCode(activeCoupon.code);
+  const promoText = buildPromoText(activeCoupon);
+  const countdown = hasExpiry ? formatCountdown(msRemaining) : 'LIVE NOW';
+  const urgencyText = hasExpiry ? 'Hurry, grab now' : 'Limited time offer';
 
   async function handleCopyCode() {
     try {
@@ -260,7 +378,7 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
             <div className="hidden md:flex items-center justify-center gap-3 text-center">
               <p className="truncate text-[14px] font-black text-black lg:text-[16px]">{promoText}</p>
               <span className="shrink-0 rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black text-[#FFCC00] lg:text-[12px]">
-                {FIRE} Ends in
+                {hasExpiry ? `${FIRE} Ends in` : `${FIRE} Live`}
               </span>
               <span className="shrink-0 rounded-md bg-black/90 px-3 py-1 text-[11px] font-black tabular-nums text-[#FFCC00] lg:text-[12px]">
                 {countdown}
@@ -272,7 +390,7 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
               <div className="promo-marquee-track inline-flex items-center gap-6 pr-6">
                 <span className="text-[13px] font-black text-black">{promoText}</span>
                 <span className="rounded-md bg-black/90 px-2 py-1 text-[10px] font-black text-[#FFCC00]">
-                  {FIRE} Ends in
+                  {hasExpiry ? `${FIRE} Ends in` : `${FIRE} Live`}
                 </span>
                 <span className="rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black tabular-nums text-[#FFCC00]">
                   {countdown}
@@ -280,7 +398,7 @@ export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCo
                 <span className="text-[13px] font-black text-black/80">{urgencyText}</span>
                 <span className="text-[13px] font-black text-black">{promoText}</span>
                 <span className="rounded-md bg-black/90 px-2 py-1 text-[10px] font-black text-[#FFCC00]">
-                  {FIRE} Ends in
+                  {hasExpiry ? `${FIRE} Ends in` : `${FIRE} Live`}
                 </span>
                 <span className="rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black tabular-nums text-[#FFCC00]">
                   {countdown}

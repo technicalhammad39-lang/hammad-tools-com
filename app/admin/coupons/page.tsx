@@ -21,7 +21,7 @@ import {
 import Link from 'next/link';
 import { useToast } from '@/components/ToastProvider';
 import type { Category, ProductItem } from '@/lib/types/domain';
-import { normalizeCouponScope, type CouponScope } from '@/lib/coupons';
+import { normalizeCoupon, normalizeCouponScope, type CouponScope } from '@/lib/coupons';
 
 interface Coupon {
   id: string;
@@ -31,6 +31,7 @@ interface Coupon {
   expiryDate?: string;
   scope?: CouponScope;
   categoryId?: string;
+  categorySlug?: string;
   categoryName?: string;
   productId?: string;
   productSlug?: string;
@@ -52,6 +53,7 @@ const defaultCouponForm = {
   expiryDate: '',
   scope: 'global' as CouponScope,
   categoryId: '',
+  categorySlug: '',
   categoryName: '',
   productId: '',
   productName: '',
@@ -77,18 +79,20 @@ const AdminCoupons = () => {
       (snapshot) => {
         const data = snapshot.docs.map((entry) => {
           const raw = entry.data() as Record<string, any>;
+          const normalized = normalizeCoupon(raw, entry.id);
           return {
             id: entry.id,
-            code: String(raw.code || '').toUpperCase(),
-            discountPercentage: Math.max(0, Number(raw.discountPercentage || 0)),
-            active: raw.active !== false,
-            expiryDate: String(raw.expiryDate || ''),
-            scope: normalizeCouponScope(raw.scope ?? raw.type),
-            categoryId: String(raw.categoryId || ''),
-            categoryName: String(raw.categoryName || ''),
-            productId: String(raw.productId || ''),
-            productName: String(raw.productName || ''),
-            productSlug: String(raw.productSlug || ''),
+            code: normalized.code,
+            discountPercentage: normalized.discountPercentage,
+            active: normalized.active,
+            expiryDate: String(normalized.expiryDate || ''),
+            scope: normalized.scope,
+            categoryId: String(normalized.categoryId || ''),
+            categorySlug: String(normalized.categorySlug || ''),
+            categoryName: String(normalized.categoryName || ''),
+            productId: String(normalized.productId || ''),
+            productName: String(normalized.productName || ''),
+            productSlug: String(normalized.productSlug || ''),
           } as Coupon;
         });
         setCoupons(data);
@@ -135,6 +139,7 @@ const AdminCoupons = () => {
       categories.map((category) => ({
         id: category.id,
         name: category.name || 'Unnamed Category',
+        slug: category.slug || toSlug(category.name || 'Unnamed Category'),
       })),
     [categories]
   );
@@ -163,6 +168,7 @@ const AdminCoupons = () => {
       ...prev,
       scope,
       categoryId: '',
+      categorySlug: '',
       categoryName: '',
       productId: '',
       productName: '',
@@ -175,6 +181,7 @@ const AdminCoupons = () => {
     setNewCoupon((prev) => ({
       ...prev,
       categoryId,
+      categorySlug: selected?.slug || '',
       categoryName: selected?.name || '',
     }));
   };
@@ -219,11 +226,21 @@ const AdminCoupons = () => {
         expiryDate: newCoupon.expiryDate || '',
         scope: newCoupon.scope,
         type: newCoupon.scope,
+        couponType:
+          newCoupon.scope === 'product'
+            ? 'specific_item'
+            : newCoupon.scope === 'category'
+              ? 'category'
+              : 'all_products',
         categoryId: newCoupon.scope === 'category' ? newCoupon.categoryId : '',
+        categorySlug: newCoupon.scope === 'category' ? newCoupon.categorySlug : '',
         categoryName: newCoupon.scope === 'category' ? newCoupon.categoryName : '',
         productId: newCoupon.scope === 'product' ? newCoupon.productId : '',
+        toolId: newCoupon.scope === 'product' ? newCoupon.productId : '',
+        itemId: newCoupon.scope === 'product' ? newCoupon.productId : '',
         productName: newCoupon.scope === 'product' ? newCoupon.productName : '',
         productSlug: newCoupon.scope === 'product' ? newCoupon.productSlug : '',
+        slug: newCoupon.scope === 'product' ? newCoupon.productSlug : '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -390,7 +407,7 @@ const AdminCoupons = () => {
                 >
                   <option value="global">Global (All Products)</option>
                   <option value="category">Category Specific</option>
-                  <option value="product">Product Specific</option>
+                  <option value="product">Specific Item / Tool</option>
                 </select>
               </div>
 
@@ -469,10 +486,10 @@ const AdminCoupons = () => {
           coupons.map((coupon) => {
             const scope = normalizeCouponScope(coupon.scope);
             const scopeLabel =
-              scope === 'global' ? 'Global' : scope === 'category' ? 'Category' : 'Product';
+              scope === 'global' ? 'Global' : scope === 'category' ? 'Category' : 'Specific Item';
             const targetLabel =
               scope === 'category'
-                ? coupon.categoryName || 'Unknown Category'
+                ? coupon.categoryName || coupon.categorySlug || 'Unknown Category'
                 : scope === 'product'
                   ? coupon.productName || coupon.productSlug || 'Unknown Product'
                   : 'All Products';
