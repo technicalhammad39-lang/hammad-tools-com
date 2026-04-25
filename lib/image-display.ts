@@ -4,6 +4,8 @@ const ABSOLUTE_HTTP_REGEX = /^https?:\/\//i;
 const PROTOCOL_RELATIVE_REGEX = /^\/\//;
 const LEADING_SLASH_ABSOLUTE_REGEX = /^\/+https?:\/\//i;
 const UNSAFE_SCHEME_REGEX = /^[a-z][a-z0-9+.-]*:/i;
+const BLOB_SCHEME_REGEX = /^blob:/i;
+const DATA_IMAGE_SCHEME_REGEX = /^data:image\//i;
 
 interface ResolveImageSourceOptions {
   mediaPaths?: string[];
@@ -39,24 +41,55 @@ function getMediaUrl(media: unknown): string {
   }
 
   const dictionary = media as Dictionary;
+  const access = toTrimmedString(dictionary.access).toLowerCase();
+  const folder = toTrimmedString(dictionary.folder).toLowerCase();
+  const isProtectedMedia =
+    access === 'protected' || folder === 'payment-proofs' || folder === 'chat-attachments';
+
+  const explicitPublicPath =
+    toTrimmedString(dictionary.publicUrl) || toTrimmedString(dictionary.publicPath);
+  const explicitProtectedPath =
+    toTrimmedString(dictionary.protectedPath) || toTrimmedString(dictionary.apiPath);
+  const explicitUrl =
+    toTrimmedString(dictionary.fileUrl) ||
+    toTrimmedString(dictionary.url) ||
+    toTrimmedString(dictionary.attachmentUrl) ||
+    toTrimmedString(dictionary.imageUrl) ||
+    toTrimmedString(dictionary.thumbnailUrl) ||
+    toTrimmedString(dictionary.src);
+
+  if (explicitPublicPath) {
+    return explicitPublicPath;
+  }
+
+  if (explicitProtectedPath) {
+    return explicitProtectedPath;
+  }
+
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
   const mediaId = toTrimmedString(dictionary.mediaId);
   if (mediaId) {
     return `/api/upload/${encodeURIComponent(mediaId)}`;
   }
 
-  return (
-    toTrimmedString(dictionary.fileUrl) ||
-    toTrimmedString(dictionary.url) ||
-    toTrimmedString(dictionary.imageUrl) ||
-    toTrimmedString(dictionary.thumbnailUrl) ||
-    toTrimmedString(dictionary.src)
-  );
+  if (isProtectedMedia) {
+    return '';
+  }
+
+  return explicitUrl;
 }
 
 export function normalizeImageUrl(input: unknown): string {
   let value = toTrimmedString(input);
   if (!value) {
     return '';
+  }
+
+  if (BLOB_SCHEME_REGEX.test(value) || DATA_IMAGE_SCHEME_REGEX.test(value)) {
+    return value;
   }
 
   if (LEADING_SLASH_ABSOLUTE_REGEX.test(value)) {
@@ -70,7 +103,7 @@ export function normalizeImageUrl(input: unknown): string {
   if (ABSOLUTE_HTTP_REGEX.test(value)) {
     try {
       const parsed = new URL(value);
-      if (parsed.pathname.startsWith('/uploads/')) {
+      if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/api/upload/')) {
         return `${parsed.pathname}${parsed.search}${parsed.hash}`;
       }
       return parsed.toString();

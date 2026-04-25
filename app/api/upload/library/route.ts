@@ -45,6 +45,35 @@ function sanitizeText(value: unknown, maxLength = 300) {
   return value.trim().slice(0, maxLength);
 }
 
+function normalizeMediaUrl(value: string) {
+  const raw = sanitizeText(value, 2000);
+  if (!raw) {
+    return '';
+  }
+
+  if (raw.startsWith('/uploads/') || raw.startsWith('/api/upload/')) {
+    return raw;
+  }
+
+  if (raw.startsWith('uploads/')) {
+    return `/${raw}`;
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/api/upload/')) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return parsed.toString();
+    } catch {
+      return '';
+    }
+  }
+
+  return raw.startsWith('/') ? raw : `/${raw}`;
+}
+
 function normalizeLimit(raw: string | null) {
   const parsed = Number(raw || '');
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -99,6 +128,14 @@ function normalizeRecordAccess(value: unknown, folder: UploadFolder) {
 function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadFolder) {
   const folder = normalizeRecordFolder(data.folder, fallbackFolder);
   const access = normalizeRecordAccess(data.access, folder);
+  const publicPath = normalizeMediaUrl(sanitizeText(data.publicPath, 600));
+  const protectedPath = normalizeMediaUrl(sanitizeText(data.protectedPath, 600));
+  const fileUrl = normalizeMediaUrl(sanitizeText(data.fileUrl, 2000));
+
+  const url =
+    access === 'protected'
+      ? protectedPath || fileUrl || publicPath
+      : publicPath || fileUrl || protectedPath;
 
   return {
     id: sanitizeText(data.id, 220) || docId,
@@ -110,8 +147,8 @@ function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadF
     mimeType: sanitizeText(data.mimeType, 160),
     sizeBytes: Number(data.sizeBytes || 0),
     storagePath: sanitizeText(data.storagePath, 600),
-    publicPath: sanitizeText(data.publicPath, 400),
-    url: sanitizeText(data.fileUrl || data.protectedPath || data.publicPath, 2000),
+    publicPath,
+    url,
     relatedType: sanitizeText(data.relatedType, 120),
     relatedId: sanitizeText(data.relatedId, 220),
     relatedUserId: sanitizeText(data.relatedUserId, 220),

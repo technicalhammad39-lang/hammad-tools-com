@@ -34,6 +34,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
+import { normalizeImageUrl } from '@/lib/image-display';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
 import UploadedImage from '@/components/UploadedImage';
 
@@ -114,13 +115,59 @@ function getTransactionId(order: OrderRecord) {
   return proof?.transactionId || '-';
 }
 
+function resolveStoredMediaUrl(media: any) {
+  if (!media || typeof media !== 'object') {
+    return '';
+  }
+
+  const mediaId = typeof media.mediaId === 'string' ? media.mediaId.trim() : '';
+  const access = typeof media.access === 'string' ? media.access.trim().toLowerCase() : '';
+  const folder = typeof media.folder === 'string' ? media.folder.trim().toLowerCase() : '';
+  const isProtected = access === 'protected' || folder === 'payment-proofs' || folder === 'chat-attachments';
+
+  const direct = normalizeImageUrl(
+    media.fileUrl ||
+      media.url ||
+      media.publicUrl ||
+      media.publicPath ||
+      media.protectedPath ||
+      media.imageUrl ||
+      ''
+  );
+
+  if (isProtected && mediaId) {
+    return `/api/upload/${encodeURIComponent(mediaId)}`;
+  }
+
+  if (direct) {
+    return direct;
+  }
+
+  if (mediaId) {
+    return `/api/upload/${encodeURIComponent(mediaId)}`;
+  }
+
+  return '';
+}
+
 function getScreenshotUrl(order: OrderRecord) {
   const proof = order.paymentProof as any;
-  return proof?.screenshotMedia?.fileUrl || proof?.screenshotUrl || '';
+  return (
+    resolveStoredMediaUrl(proof?.screenshotMedia) ||
+    normalizeImageUrl(proof?.fileUrl || proof?.screenshotUrl || proof?.paymentProofUrl || '')
+  );
 }
 
 function getMessageAttachment(entry: any) {
-  const url = entry?.attachmentUrl || entry?.attachmentMedia?.fileUrl || '';
+  const url =
+    resolveStoredMediaUrl(entry?.attachmentMedia) ||
+    normalizeImageUrl(
+      entry?.attachmentUrl ||
+        entry?.attachment?.fileUrl ||
+        entry?.attachment?.url ||
+        ''
+    );
+
   if (!url) {
     return null;
   }
@@ -142,6 +189,23 @@ function isImageAttachment(attachment: { url: string; mimeType?: string; name?: 
   }
 
   return /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(attachment.name || '');
+}
+
+function toDownloadableMediaUrl(url: string) {
+  if (!url.includes('/api/upload/')) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url, 'http://localhost');
+    parsed.searchParams.set('download', '1');
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return parsed.toString();
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
 }
 
 function isUserOutgoingMessage(entry: any, userId: string) {
@@ -460,6 +524,8 @@ function DashboardPageContent() {
             >
               <UploadedImage
                 src={attachmentUrl}
+                fallbackSrc={null}
+                fallbackOnError={false}
                 alt={attachment.name}
                 className="w-full max-h-[220px] object-cover rounded-xl border border-white/20"
               />
@@ -469,7 +535,7 @@ function DashboardPageContent() {
             </button>
           ) : (
             <a
-              href={attachmentUrl}
+              href={toDownloadableMediaUrl(attachmentUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className={`mt-2 inline-flex items-center gap-1.5 underline ${
@@ -754,6 +820,8 @@ function DashboardPageContent() {
                             >
                               <UploadedImage
                                 src={withProtectedFileToken(getScreenshotUrl(selectedOrder), fileAccessToken)}
+                                fallbackSrc={null}
+                                fallbackOnError={false}
                                 alt="Payment proof"
                                 className="w-full max-h-[280px] object-cover rounded-lg"
                               />
@@ -1043,6 +1111,8 @@ function DashboardPageContent() {
           <div className="w-full h-full grid place-items-center">
             <UploadedImage
               src={receiptViewerUrl}
+              fallbackSrc={null}
+              fallbackOnError={false}
               alt="Payment receipt"
               className="max-w-full max-h-full object-contain rounded-xl border border-white/20"
             />

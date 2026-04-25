@@ -645,6 +645,7 @@ const AdminProductsPage = () => {
                       <UploadedImage
                         src={formImageSrc}
                         fallbackSrc="/services-card.webp"
+                        fallbackOnError={false}
                         alt="Preview"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
@@ -863,6 +864,7 @@ const AdminProductsPage = () => {
                 <UploadedImage
                   src={productImage}
                   fallbackSrc="/services-card.webp"
+                  fallbackOnError={false}
                   alt={product.title || product.name || 'Product'}
                   className="absolute inset-0 w-full h-full object-cover"
                 />

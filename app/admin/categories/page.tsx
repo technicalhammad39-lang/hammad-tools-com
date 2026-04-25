@@ -287,6 +287,7 @@ export default function AdminCategoriesPage() {
                       <UploadedImage
                         src={formImageSrc}
                         fallbackSrc="/services-card.webp"
+                        fallbackOnError={false}
                         alt="Category"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
@@ -354,6 +355,7 @@ export default function AdminCategoriesPage() {
                     <UploadedImage
                       src={categoryImageSrc}
                       fallbackSrc="/services-card.webp"
+                      fallbackOnError={false}
                       alt={category.name}
                       className="absolute inset-0 w-full h-full object-cover"
                     />

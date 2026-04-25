@@ -19,7 +19,6 @@ import {
   normalizeOptionalText,
   normalizeUploadFolder,
   resolveAccessForMedia,
-  toPublicUrl,
   validateUploadFile,
 } from '@/lib/server/local-upload';
 import { sanitizeForFirestore } from '@/lib/firestore-sanitize';
@@ -234,8 +233,7 @@ export async function POST(request: Request) {
     const storagePath = getRelativeStoragePath(folder, fileName);
     const publicPath = folderAccess === 'public' ? getPublicFilePath(folder, fileName) : '';
     const protectedPath = folderAccess === 'protected' ? getProtectedMediaPath(mediaRef.id) : '';
-    const apiPath = getProtectedMediaPath(mediaRef.id);
-    const fileUrl = toPublicUrl(request, apiPath);
+    const fileUrl = folderAccess === 'public' ? publicPath : protectedPath;
 
     if (debugEnabled) {
       console.info('[upload] saving file', {
@@ -248,6 +246,8 @@ export async function POST(request: Request) {
         sizeBytes: incomingFile.size,
         absoluteFilePath,
         storagePath,
+        publicPath,
+        protectedPath,
         fileUrl,
       });
     }
@@ -290,6 +290,7 @@ export async function POST(request: Request) {
         id: mediaRef.id,
         url: fileUrl,
         publicPath,
+        protectedPath,
         storagePath,
         fileName,
         mimeType: mediaRecord.mimeType,

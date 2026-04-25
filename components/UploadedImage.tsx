@@ -7,7 +7,8 @@ import { normalizeImageUrl } from '@/lib/image-display';
 
 type UploadedImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> & {
   src: string;
-  fallbackSrc?: string;
+  fallbackSrc?: string | null;
+  fallbackOnError?: boolean;
 };
 
 function resolvePreferredSource(value: string, fallback: string) {
@@ -17,15 +18,21 @@ function resolvePreferredSource(value: string, fallback: string) {
 export default function UploadedImage({
   src,
   fallbackSrc = '/services-card.webp',
+  fallbackOnError = true,
   alt,
   className,
   loading,
   decoding,
   ...rest
 }: UploadedImageProps) {
-  const normalizedFallback = useMemo(() => normalizeImageUrl(fallbackSrc) || '/services-card.webp', [fallbackSrc]);
+  const normalizedFallback = useMemo(() => {
+    if (fallbackSrc === null) {
+      return '';
+    }
+    return normalizeImageUrl(fallbackSrc) || '/services-card.webp';
+  }, [fallbackSrc]);
   const preferred = useMemo(
-    () => resolvePreferredSource(src, normalizedFallback),
+    () => resolvePreferredSource(src, normalizedFallback || ''),
     [src, normalizedFallback]
   );
 
@@ -45,6 +52,9 @@ export default function UploadedImage({
       loading={resolvedLoading}
       decoding={decoding || 'async'}
       onError={() => {
+        if (!fallbackOnError || !normalizedFallback) {
+          return;
+        }
         if (currentSrc !== normalizedFallback) {
           setCurrentSrc(normalizedFallback);
         }

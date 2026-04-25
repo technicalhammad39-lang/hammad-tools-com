@@ -1,5 +1,6 @@
 import { auth } from '@/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { normalizeImageUrl } from '@/lib/image-display';
 
 export type UploadFolder =
   | 'tools'
@@ -270,7 +271,14 @@ export async function uploadMediaFile(options: UploadMediaOptions) {
     throw new Error(toApiErrorMessage(payload, fallback));
   }
 
-  return payload.media;
+  const normalizedUrl = normalizeImageUrl(payload.media.url) || payload.media.url;
+  const normalizedPublicPath = normalizeImageUrl(payload.media.publicPath) || payload.media.publicPath;
+
+  return {
+    ...payload.media,
+    url: normalizedUrl,
+    publicPath: normalizedPublicPath,
+  };
 }
 
 export async function fetchMediaLibrary(options: FetchMediaLibraryOptions) {
@@ -317,7 +325,13 @@ export async function fetchMediaLibrary(options: FetchMediaLibraryOptions) {
     throw new Error(toApiErrorMessage(payload, fallback));
   }
 
-  return Array.isArray(payload.items) ? payload.items : [];
+  return Array.isArray(payload.items)
+    ? payload.items.map((item) => ({
+        ...item,
+        url: normalizeImageUrl(item.url) || item.url,
+        publicPath: normalizeImageUrl(item.publicPath) || item.publicPath,
+      }))
+    : [];
 }
 
 /**
@@ -361,9 +375,10 @@ export function toStorageMetadata(
   access: 'public' | 'protected';
   uploadedBy?: string;
 } {
+  const normalizedUrl = normalizeImageUrl(media.url) || media.url;
   const metadata = {
     mediaId: media.id,
-    fileUrl: media.url,
+    fileUrl: normalizedUrl,
     storagePath: media.storagePath,
     fileName: media.fileName,
     mimeType: media.mimeType,
@@ -413,8 +428,14 @@ export function toStorageMetadataFromLibrary(
 }
 
 export function withProtectedFileToken(url: string, token: string) {
-  if (!url || !token || !url.includes('/api/upload/')) {
-    return url;
+  const normalizedUrl = normalizeImageUrl(url) || url;
+
+  if (!normalizedUrl) {
+    return normalizedUrl;
+  }
+
+  if (!token || !normalizedUrl.includes('/api/upload/')) {
+    return normalizedUrl;
   }
 
   try {
@@ -422,14 +443,14 @@ export function withProtectedFileToken(url: string, token: string) {
       typeof window !== 'undefined' && window.location?.origin
         ? window.location.origin
         : 'http://localhost';
-    const parsed = new URL(url, base);
+    const parsed = new URL(normalizedUrl, base);
     parsed.searchParams.set('token', token);
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
       return parsed.toString();
     }
     return `${parsed.pathname}${parsed.search}`;
   } catch {
-    return url;
+    return normalizedUrl;
   }
 }
 

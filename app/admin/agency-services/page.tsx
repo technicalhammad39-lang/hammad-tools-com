@@ -285,6 +285,7 @@ const ManageAgencyServices = () => {
                         <UploadedImage
                           src={formThumbnailSrc}
                           fallbackSrc="/services-card.webp"
+                          fallbackOnError={false}
                           alt="Preview"
                           className="absolute inset-0 w-full h-full object-cover"
                         />
@@ -353,6 +354,7 @@ const ManageAgencyServices = () => {
                     <UploadedImage
                       src={serviceThumbnailSrc}
                       fallbackSrc="/services-card.webp"
+                      fallbackOnError={false}
                       alt={service.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
