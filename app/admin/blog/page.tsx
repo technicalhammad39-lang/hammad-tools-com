@@ -18,7 +18,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  Timestamp,
   addDoc,
   collection,
   deleteDoc,
@@ -44,7 +43,6 @@ import {
   normalizeBlogPostDocument,
   normalizeBlogSlug,
   type BlogPostDocument,
-  type BlogStatus,
 } from '@/lib/blog';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 
@@ -55,35 +53,7 @@ type BlogFormState = {
   content: string;
   coverImageUrl: string;
   coverImageMedia: StoredFileMetadata | null;
-  category: string;
-  tags: string;
-  publishedAt: string;
-  status: BlogStatus;
 };
-
-function toInputDateTime(value: Date | null) {
-  if (!value) {
-    return '';
-  }
-  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-
-function currentInputDateTime() {
-  return toInputDateTime(new Date());
-}
-
-function parseInputDateTime(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-  return Timestamp.fromDate(parsed);
-}
 
 const INITIAL_FORM: BlogFormState = {
   title: '',
@@ -92,10 +62,6 @@ const INITIAL_FORM: BlogFormState = {
   content: '',
   coverImageUrl: '',
   coverImageMedia: null,
-  category: '',
-  tags: '',
-  publishedAt: currentInputDateTime(),
-  status: 'draft',
 };
 
 export default function BlogCMSPage() {
@@ -141,10 +107,7 @@ export default function BlogCMSPage() {
   }, [formData.coverImageMedia, formData.coverImageUrl]);
 
   function resetEditor() {
-    setFormData({
-      ...INITIAL_FORM,
-      publishedAt: currentInputDateTime(),
-    });
+    setFormData(INITIAL_FORM);
     setEditingPost(null);
     setSlugManuallyEdited(false);
     setShowMarkdownPreview(false);
@@ -152,10 +115,7 @@ export default function BlogCMSPage() {
   }
 
   function openCreateEditor() {
-    setFormData({
-      ...INITIAL_FORM,
-      publishedAt: currentInputDateTime(),
-    });
+    setFormData(INITIAL_FORM);
     setEditingPost(null);
     setSlugManuallyEdited(false);
     setShowMarkdownPreview(false);
@@ -171,10 +131,6 @@ export default function BlogCMSPage() {
       content: post.content,
       coverImageUrl: post.coverImageUrl,
       coverImageMedia: post.coverImageMedia || null,
-      category: post.category || '',
-      tags: post.tags.join(', '),
-      publishedAt: toInputDateTime(post.publishedAt || post.createdAt) || currentInputDateTime(),
-      status: post.status,
     });
     setSlugManuallyEdited(true);
     setShowMarkdownPreview(false);
@@ -182,11 +138,7 @@ export default function BlogCMSPage() {
   }
 
   async function isSlugAvailable(slug: string, currentPostId = '') {
-    const checkQuery = query(
-      collection(db, 'blogPosts'),
-      where('slug', '==', slug),
-      limit(3)
-    );
+    const checkQuery = query(collection(db, 'blogPosts'), where('slug', '==', slug), limit(3));
     const snapshot = await getDocs(checkQuery);
     return snapshot.docs.every((entry) => entry.id === currentPostId);
   }
@@ -202,12 +154,7 @@ export default function BlogCMSPage() {
     const shortDescription = formData.shortDescription.trim();
     const content = formData.content.trim();
     const coverImageUrl = formData.coverImageUrl.trim();
-    const category = formData.category.trim();
-    const tags = formData.tags
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-    const publishedAt = parseInputDateTime(formData.publishedAt);
+    const resolvedCoverImage = coverImageUrl || formData.coverImageMedia?.fileUrl || '';
 
     if (!title) {
       toast.error('Title is required');
@@ -225,12 +172,8 @@ export default function BlogCMSPage() {
       toast.error('Content is required');
       return;
     }
-    if (!coverImageUrl && !formData.coverImageMedia?.fileUrl) {
+    if (!resolvedCoverImage) {
       toast.error('Cover image is required');
-      return;
-    }
-    if (!publishedAt) {
-      toast.error('Published date is required');
       return;
     }
 
@@ -247,27 +190,25 @@ export default function BlogCMSPage() {
         return;
       }
 
-      const status = formData.status;
-      const authorName = profile?.displayName?.trim() || 'Admin';
-
+      const authorName = profile?.displayName?.trim() || editingPost?.authorName || 'Admin';
       const payload = {
         title,
         slug,
         shortDescription,
         excerpt: shortDescription,
         content,
-        category,
-        tags,
-        status,
-        published: status === 'published',
-        publishedAt,
-        coverImageUrl: coverImageUrl || formData.coverImageMedia?.fileUrl || '',
+        status: 'published',
+        published: true,
+        publishedAt: serverTimestamp(),
+        category: editingPost?.category || 'General',
+        tags: editingPost?.tags || [],
+        coverImageUrl: resolvedCoverImage,
         coverImageMedia: formData.coverImageMedia || null,
-        thumbnail: coverImageUrl || formData.coverImageMedia?.fileUrl || '',
+        thumbnail: resolvedCoverImage,
         thumbnailMedia: formData.coverImageMedia || null,
         authorName,
         author: authorName,
-        authorId: profile?.uid || '',
+        authorId: profile?.uid || editingPost?.authorId || '',
         updatedAt: serverTimestamp(),
       };
       rawPayloadForDebug = payload as Record<string, unknown>;
@@ -277,7 +218,7 @@ export default function BlogCMSPage() {
 
       if (editingPost) {
         await updateDoc(doc(db, 'blogPosts', editingPost.id), sanitizedPayload);
-        toast.success('Blog post updated');
+        toast.success('Blog post updated and published');
       } else {
         await addDoc(
           collection(db, 'blogPosts'),
@@ -286,7 +227,7 @@ export default function BlogCMSPage() {
             createdAt: serverTimestamp(),
           })
         );
-        toast.success('Blog post created');
+        toast.success('Blog post created and published');
       }
 
       resetEditor();
@@ -337,7 +278,7 @@ export default function BlogCMSPage() {
               Blog <span className="text-primary">CMS</span>
             </h1>
             <p className="text-brand-text/40 text-[10px] md:text-sm font-black uppercase tracking-widest mt-2 px-6">
-              Production-ready content publishing for public blog pages
+              Simplified editor: auto publish + auto publish date
             </p>
           </div>
 
@@ -372,7 +313,7 @@ export default function BlogCMSPage() {
                     {editingPost ? 'Edit Blog Post' : 'Create Blog Post'}
                   </h2>
                   <p className="text-xs text-brand-text/40 mt-2 uppercase tracking-widest font-black">
-                    Markdown supported for rich content formatting
+                    Only essential fields - published automatically
                   </p>
                 </div>
 
@@ -429,38 +370,6 @@ export default function BlogCMSPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Status*
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(event) => {
-                        const status = event.target.value === 'published' ? 'published' : 'draft';
-                        setFormData((prev) => ({ ...prev, status }));
-                      }}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Published At*
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={formData.publishedAt}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, publishedAt: event.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                      required
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
                     Short Description*
@@ -477,36 +386,6 @@ export default function BlogCMSPage() {
                   <p className="mt-2 text-[11px] text-brand-text/40">
                     {formData.shortDescription.length}/240 characters
                   </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Category
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.category}
-                      onChange={(event) =>
-                        setFormData((prev) => ({ ...prev, category: event.target.value }))
-                      }
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                      placeholder="Guides, Tools, News..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Tags
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.tags}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, tags: event.target.value }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                      placeholder="chatgpt, canva, productivity"
-                    />
-                  </div>
                 </div>
 
                 <div className="pt-2">
@@ -561,7 +440,14 @@ export default function BlogCMSPage() {
                       Live Markdown Preview
                     </h3>
                     <div className="prose prose-invert max-w-none prose-headings:text-brand-text prose-headings:font-black prose-p:text-brand-text/80 prose-li:text-brand-text/80 prose-a:text-primary">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ children }) => (
+                            <p className="whitespace-pre-wrap leading-7 text-brand-text/80">{children}</p>
+                          ),
+                        }}
+                      >
                         {formData.content || 'Start writing markdown content...'}
                       </ReactMarkdown>
                     </div>
@@ -582,7 +468,7 @@ export default function BlogCMSPage() {
                     className="order-1 md:order-2 bg-primary text-brand-bg px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{saving ? 'Saving...' : editingPost ? 'Update Post' : 'Publish Post'}</span>
+                    <span>{saving ? 'Saving...' : editingPost ? 'Update & Publish' : 'Publish Post'}</span>
                   </button>
                 </div>
               </form>
@@ -596,14 +482,11 @@ export default function BlogCMSPage() {
               <div className="text-center py-10 text-brand-text/60">Loading posts...</div>
             ) : posts.length ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-left min-w-[920px]">
+                <table className="w-full text-left min-w-[860px]">
                   <thead>
                     <tr className="border-b border-white/5">
                       <th className="pb-5 text-xs font-bold uppercase tracking-widest text-brand-text/40">
                         Article
-                      </th>
-                      <th className="pb-5 text-xs font-bold uppercase tracking-widest text-brand-text/40">
-                        Status
                       </th>
                       <th className="pb-5 text-xs font-bold uppercase tracking-widest text-brand-text/40">
                         Published
@@ -638,17 +521,6 @@ export default function BlogCMSPage() {
                                 <p className="text-xs text-brand-text/40">/blogs/{post.slug}</p>
                               </div>
                             </div>
-                          </td>
-                          <td className="py-5">
-                            <span
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                post.status === 'published'
-                                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                  : 'bg-white/10 text-brand-text/55 border border-white/15'
-                              }`}
-                            >
-                              {post.status}
-                            </span>
                           </td>
                           <td className="py-5">
                             <span className="inline-flex items-center gap-2 text-sm text-brand-text/75">

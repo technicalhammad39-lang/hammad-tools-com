@@ -38,6 +38,9 @@ type MediaRecord = {
   createdAt?: any;
 };
 
+const HOSTINGER_PUBLIC_UPLOAD_PREFIX = '/public/uploads/';
+const HOSTINGER_PRIVATE_UPLOAD_PREFIX = '/storage/uploads/';
+
 function sanitizeText(value: unknown, maxLength = 300) {
   if (typeof value !== 'string') {
     return '';
@@ -62,6 +65,12 @@ function normalizeMediaUrl(value: string) {
   if (/^https?:\/\//i.test(raw)) {
     try {
       const parsed = new URL(raw);
+      if (parsed.pathname.startsWith(HOSTINGER_PUBLIC_UPLOAD_PREFIX)) {
+        return parsed.pathname.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
+      }
+      if (parsed.pathname.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
+        return parsed.pathname.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+      }
       if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/api/upload/')) {
         return `${parsed.pathname}${parsed.search}${parsed.hash}`;
       }
@@ -69,6 +78,19 @@ function normalizeMediaUrl(value: string) {
     } catch {
       return '';
     }
+  }
+
+  if (raw.startsWith(HOSTINGER_PUBLIC_UPLOAD_PREFIX)) {
+    return raw.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
+  }
+  if (raw.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
+    return raw.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+  }
+  if (raw.startsWith('public/uploads/')) {
+    return `/${raw.slice('public/'.length)}`;
+  }
+  if (raw.startsWith('storage/uploads/')) {
+    return `/uploads/${raw.slice('storage/uploads/'.length)}`;
   }
 
   return raw.startsWith('/') ? raw : `/${raw}`;
@@ -128,17 +150,22 @@ function normalizeRecordAccess(value: unknown, folder: UploadFolder) {
 function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadFolder) {
   const folder = normalizeRecordFolder(data.folder, fallbackFolder);
   const access = normalizeRecordAccess(data.access, folder);
+  const mediaId = sanitizeText(data.id, 220) || docId;
   const publicPath = normalizeMediaUrl(sanitizeText(data.publicPath, 600));
   const protectedPath = normalizeMediaUrl(sanitizeText(data.protectedPath, 600));
   const fileUrl = normalizeMediaUrl(sanitizeText(data.fileUrl, 2000));
+  const storagePath = sanitizeText(data.storagePath, 600);
+  const storageDerivedPublicPath = storagePath.startsWith('uploads/')
+    ? normalizeMediaUrl(`/${storagePath}`)
+    : '';
 
   const url =
     access === 'protected'
-      ? protectedPath || fileUrl || publicPath
-      : publicPath || fileUrl || protectedPath;
+      ? protectedPath || `/api/upload/${encodeURIComponent(mediaId)}` || fileUrl || publicPath
+      : publicPath || fileUrl || storageDerivedPublicPath || protectedPath || `/api/upload/${encodeURIComponent(mediaId)}`;
 
   return {
-    id: sanitizeText(data.id, 220) || docId,
+    id: mediaId,
     ownerId: sanitizeText(data.ownerId, 220),
     folder,
     access,
@@ -146,7 +173,7 @@ function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadF
     originalFileName: sanitizeText(data.originalFileName, 260),
     mimeType: sanitizeText(data.mimeType, 160),
     sizeBytes: Number(data.sizeBytes || 0),
-    storagePath: sanitizeText(data.storagePath, 600),
+    storagePath,
     publicPath,
     url,
     relatedType: sanitizeText(data.relatedType, 120),

@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, CalendarDays } from 'lucide-react';
 import { createPageMetadata } from '@/lib/seo';
-import { formatBlogPublishDate } from '@/lib/blog';
 import { getPublishedBlogPosts } from '@/lib/server/blog-posts';
+import BlogCard from '@/components/blog/BlogCard';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'Blogs - Guides, Updates & Subscription Insights',
@@ -34,54 +31,9 @@ export default async function BlogsPage() {
 
         {posts.length ? (
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-            {posts.map((post) => {
-              const coverImageUrl = post.coverImageUrl || '/services-card.webp';
-              const publishDate = formatBlogPublishDate(post.publishedAt || post.createdAt);
-              return (
-                <article
-                  key={post.id}
-                  className="group rounded-[2rem] overflow-hidden border border-white/10 bg-black/30 backdrop-blur-md h-full flex flex-col"
-                >
-                  <Link href={`/blogs/${post.slug}`} className="block" aria-label={`Read ${post.title}`}>
-                    <div className="relative aspect-[16/10] overflow-hidden bg-black/40">
-                      <Image
-                        src={coverImageUrl}
-                        alt={post.title}
-                        fill
-                        sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        unoptimized={coverImageUrl.startsWith('http')}
-                      />
-                    </div>
-                  </Link>
-
-                  <div className="p-6 md:p-7 flex-1 flex flex-col">
-                    <div className="flex items-center text-[11px] text-brand-text/45 gap-2 font-semibold uppercase tracking-wide">
-                      <CalendarDays className="w-4 h-4 text-primary" />
-                      <span>{publishDate}</span>
-                    </div>
-
-                    <h2 className="mt-4 text-xl md:text-2xl font-black text-brand-text leading-tight group-hover:text-primary transition-colors">
-                      <Link href={`/blogs/${post.slug}`}>{post.title}</Link>
-                    </h2>
-
-                    <p className="mt-3 text-sm md:text-[15px] text-brand-text/60 leading-relaxed line-clamp-3">
-                      {post.shortDescription}
-                    </p>
-
-                    <div className="mt-6">
-                      <Link
-                        href={`/blogs/${post.slug}`}
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-brand-text hover:border-primary/35 hover:text-primary transition-colors"
-                      >
-                        Read More
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {posts.map((post) => (
+              <BlogCard key={post.id} post={post} />
+            ))}
           </section>
         ) : (
           <section className="rounded-[2rem] border border-white/10 bg-black/25 p-10 text-center">

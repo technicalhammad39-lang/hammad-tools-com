@@ -34,7 +34,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
 import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
-import { normalizeImageUrl } from '@/lib/image-display';
+import { normalizeImageUrl, resolveStoredMediaUrl } from '@/lib/image-display';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
 import UploadedImage from '@/components/UploadedImage';
 
@@ -113,41 +113,6 @@ function getSenderAccount(order: OrderRecord) {
 function getTransactionId(order: OrderRecord) {
   const proof = order.paymentProof as any;
   return proof?.transactionId || '-';
-}
-
-function resolveStoredMediaUrl(media: any) {
-  if (!media || typeof media !== 'object') {
-    return '';
-  }
-
-  const mediaId = typeof media.mediaId === 'string' ? media.mediaId.trim() : '';
-  const access = typeof media.access === 'string' ? media.access.trim().toLowerCase() : '';
-  const folder = typeof media.folder === 'string' ? media.folder.trim().toLowerCase() : '';
-  const isProtected = access === 'protected' || folder === 'payment-proofs' || folder === 'chat-attachments';
-
-  const direct = normalizeImageUrl(
-    media.fileUrl ||
-      media.url ||
-      media.publicUrl ||
-      media.publicPath ||
-      media.protectedPath ||
-      media.imageUrl ||
-      ''
-  );
-
-  if (isProtected && mediaId) {
-    return `/api/upload/${encodeURIComponent(mediaId)}`;
-  }
-
-  if (direct) {
-    return direct;
-  }
-
-  if (mediaId) {
-    return `/api/upload/${encodeURIComponent(mediaId)}`;
-  }
-
-  return '';
 }
 
 function getScreenshotUrl(order: OrderRecord) {

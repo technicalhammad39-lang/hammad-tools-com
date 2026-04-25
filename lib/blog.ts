@@ -5,6 +5,15 @@ import type { StoredFileMetadata } from '@/lib/types/domain';
 export type BlogStatus = 'draft' | 'published';
 
 type Dictionary = Record<string, unknown>;
+const DEFAULT_READING_WORDS_PER_MINUTE = 200;
+const TOC_HEADING_PATTERN = /^(#{2,3})\s+(.+)$/;
+
+export interface BlogTocItem {
+  level: 2 | 3;
+  text: string;
+  id: string;
+  line: number;
+}
 
 export interface BlogPostDocument {
   id: string;
@@ -100,6 +109,16 @@ function stripMarkdown(value: string) {
     .replace(/[*_~>#-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function countWords(value: string) {
+  if (!value) {
+    return 0;
+  }
+  return value
+    .split(/\s+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean).length;
 }
 
 export function normalizeBlogSlug(value: string) {
@@ -209,4 +228,71 @@ export function formatBlogPublishDate(value: Date | null) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+export function getBlogReadTimeMinutes(content: string, wordsPerMinute = DEFAULT_READING_WORDS_PER_MINUTE) {
+  const cleanContent = stripMarkdown(readString(content));
+  const totalWords = countWords(cleanContent);
+  const safeWpm = Math.max(80, Number(wordsPerMinute) || DEFAULT_READING_WORDS_PER_MINUTE);
+  return Math.max(1, Math.ceil(totalWords / safeWpm));
+}
+
+export function formatBlogReadTime(minutes: number) {
+  const normalized = Math.max(1, Number(minutes) || 1);
+  return `${normalized} min read`;
+}
+
+export function slugifyBlogHeading(value: string) {
+  return normalizeBlogSlug(value).replace(/^-+|-+$/g, '');
+}
+
+export function extractBlogToc(content: string, maxItems = 12): BlogTocItem[] {
+  const lines = readString(content).split('\n');
+  const entries: BlogTocItem[] = [];
+  const ids = new Set<string>();
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const match = trimmed.match(TOC_HEADING_PATTERN);
+    if (!match) {
+      continue;
+    }
+
+    const level = Number(match[1].length);
+    if (level !== 2 && level !== 3) {
+      continue;
+    }
+
+    const text = match[2].replace(/[#*_`~\[\]()]/g, '').trim();
+    if (!text) {
+      continue;
+    }
+
+    let id = slugifyBlogHeading(text) || `section-${entries.length + 1}`;
+    if (ids.has(id)) {
+      let suffix = 2;
+      while (ids.has(`${id}-${suffix}`)) {
+        suffix += 1;
+      }
+      id = `${id}-${suffix}`;
+    }
+    ids.add(id);
+
+    entries.push({
+      level: level as 2 | 3,
+      text,
+      id,
+      line: index + 1,
+    });
+
+    if (entries.length >= Math.max(1, maxItems)) {
+      break;
+    }
+  }
+
+  return entries;
 }

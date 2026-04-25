@@ -6,6 +6,8 @@ const LEADING_SLASH_ABSOLUTE_REGEX = /^\/+https?:\/\//i;
 const UNSAFE_SCHEME_REGEX = /^[a-z][a-z0-9+.-]*:/i;
 const BLOB_SCHEME_REGEX = /^blob:/i;
 const DATA_IMAGE_SCHEME_REGEX = /^data:image\//i;
+const HOSTINGER_PUBLIC_UPLOAD_PREFIX = '/public/uploads/';
+const HOSTINGER_PRIVATE_UPLOAD_PREFIX = '/storage/uploads/';
 
 interface ResolveImageSourceOptions {
   mediaPaths?: string[];
@@ -41,6 +43,7 @@ function getMediaUrl(media: unknown): string {
   }
 
   const dictionary = media as Dictionary;
+  const mediaId = toTrimmedString(dictionary.mediaId);
   const access = toTrimmedString(dictionary.access).toLowerCase();
   const folder = toTrimmedString(dictionary.folder).toLowerCase();
   const isProtectedMedia =
@@ -58,6 +61,11 @@ function getMediaUrl(media: unknown): string {
     toTrimmedString(dictionary.thumbnailUrl) ||
     toTrimmedString(dictionary.src);
 
+  // For protected records, always prefer the media API when we have the id.
+  if (isProtectedMedia && mediaId) {
+    return `/api/upload/${encodeURIComponent(mediaId)}`;
+  }
+
   if (explicitPublicPath) {
     return explicitPublicPath;
   }
@@ -70,7 +78,6 @@ function getMediaUrl(media: unknown): string {
     return explicitUrl;
   }
 
-  const mediaId = toTrimmedString(dictionary.mediaId);
   if (mediaId) {
     return `/api/upload/${encodeURIComponent(mediaId)}`;
   }
@@ -87,6 +94,7 @@ export function normalizeImageUrl(input: unknown): string {
   if (!value) {
     return '';
   }
+  value = value.replace(/\\/g, '/');
 
   if (BLOB_SCHEME_REGEX.test(value) || DATA_IMAGE_SCHEME_REGEX.test(value)) {
     return value;
@@ -103,6 +111,12 @@ export function normalizeImageUrl(input: unknown): string {
   if (ABSOLUTE_HTTP_REGEX.test(value)) {
     try {
       const parsed = new URL(value);
+      if (parsed.pathname.startsWith(HOSTINGER_PUBLIC_UPLOAD_PREFIX)) {
+        return parsed.pathname.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
+      }
+      if (parsed.pathname.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
+        return parsed.pathname.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+      }
       if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/api/upload/')) {
         return `${parsed.pathname}${parsed.search}${parsed.hash}`;
       }
@@ -116,6 +130,21 @@ export function normalizeImageUrl(input: unknown): string {
     return '';
   }
 
+  // Accept Hostinger filesystem-like paths that may appear in legacy docs.
+  if (value.startsWith(HOSTINGER_PUBLIC_UPLOAD_PREFIX)) {
+    return value.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
+  }
+  if (value.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
+    return value.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+  }
+
+  if (value.startsWith('public/uploads/')) {
+    return `/${value.slice('public/'.length)}`;
+  }
+  if (value.startsWith('storage/uploads/')) {
+    return `/uploads/${value.slice('storage/uploads/'.length)}`;
+  }
+
   if (value.startsWith('uploads/')) {
     return `/${value}`;
   }
@@ -125,6 +154,10 @@ export function normalizeImageUrl(input: unknown): string {
   }
 
   return value;
+}
+
+export function resolveStoredMediaUrl(media: unknown): string {
+  return normalizeImageUrl(getMediaUrl(media));
 }
 
 export function resolveImageSource(
