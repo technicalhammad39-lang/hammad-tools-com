@@ -6,7 +6,7 @@ import { Shield } from 'lucide-react';
 
 const PrivacyPage = () => {
   return (
-    <div className="pt-32 pb-24 min-h-screen">
+    <div className="page-navbar-spacing pb-24 min-h-screen">
       <div className="site-container-readable">
         <div className="text-center mb-16">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">

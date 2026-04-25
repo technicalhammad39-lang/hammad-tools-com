@@ -67,6 +67,10 @@ export default function LenisProvider() {
       clearLenisClasses();
       return;
     }
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      clearLenisClasses();
+      return;
+    }
 
     gsap.registerPlugin(ScrollTrigger);
 

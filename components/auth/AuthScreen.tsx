@@ -79,7 +79,7 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'signup' }) {
   const forgotHref = nextPath === '/dashboard' ? '/forgot-password' : `/forgot-password?next=${encodeURIComponent(nextPath)}`;
 
   return (
-    <main className="min-h-screen pt-28 md:pt-32 pb-16 md:pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-16 md:pb-20 bg-brand-bg">
       <div className="site-container-readable grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-8">
         <section className="hidden lg:flex flex-col justify-between glass rounded-[2.2rem] border border-white/10 p-10 xl:p-12">
           <div>

@@ -10,7 +10,7 @@ import { useSettings } from '@/context/SettingsContext';
 export default function AboutClient() {
   const { settings } = useSettings();
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text pt-32 pb-24 overflow-hidden relative">
+    <div className="min-h-screen bg-brand-bg text-brand-text page-navbar-spacing pb-24 overflow-hidden relative">
       
       <div className="site-container relative z-10">
         

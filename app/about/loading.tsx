@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function AboutLoading() {
   return (
-    <main className="min-h-screen pt-24 pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
       <div className="site-container py-24 flex justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>

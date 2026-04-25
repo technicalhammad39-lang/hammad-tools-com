@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Play, Star, MousePointer2, Quote } from 'lucide-react';
+import { ArrowRight, MoveRight, Play, Star, MousePointer2, Quote } from 'lucide-react';
 import Link from 'next/link';
 import UploadedImage from '@/components/UploadedImage';
 
@@ -13,6 +13,7 @@ const LONGEST_HERO_PHRASE = HERO_PHRASES.reduce((longest, phrase) =>
 
 const Hero = () => {
   const [showDesktopVideo, setShowDesktopVideo] = React.useState(false);
+  const [reduceMotion, setReduceMotion] = React.useState(false);
   const [activePhraseIndex, setActivePhraseIndex] = React.useState(0);
   const [typedPhrase, setTypedPhrase] = React.useState('');
   const [isDeletingPhrase, setIsDeletingPhrase] = React.useState(false);
@@ -25,14 +26,26 @@ const Hero = () => {
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const sync = () => setShowDesktopVideo(mediaQuery.matches);
+    const syncReducedMotion = () => setReduceMotion(reducedMotionQuery.matches);
     sync();
+    syncReducedMotion();
 
     mediaQuery.addEventListener('change', sync);
-    return () => mediaQuery.removeEventListener('change', sync);
+    reducedMotionQuery.addEventListener('change', syncReducedMotion);
+    return () => {
+      mediaQuery.removeEventListener('change', sync);
+      reducedMotionQuery.removeEventListener('change', syncReducedMotion);
+    };
   }, []);
 
   React.useEffect(() => {
+    if (reduceMotion) {
+      setTypedPhrase(HERO_PHRASES[0] || '');
+      return;
+    }
+
     const currentPhrase = HERO_PHRASES[activePhraseIndex] || '';
     const phraseComplete = !isDeletingPhrase && typedPhrase === currentPhrase;
     const phraseCleared = isDeletingPhrase && typedPhrase.length === 0;
@@ -56,10 +69,10 @@ const Hero = () => {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [activePhraseIndex, isDeletingPhrase, typedPhrase]);
+  }, [activePhraseIndex, isDeletingPhrase, typedPhrase, reduceMotion]);
 
   return (
-    <section className="relative min-h-[70svh] sm:min-h-[76svh] lg:min-h-[88dvh] flex flex-col items-center justify-center pt-10 sm:pt-12 lg:pt-16 pb-3 sm:pb-5 lg:pb-2 overflow-hidden w-full">
+    <section className="relative min-h-[70svh] sm:min-h-[76svh] lg:min-h-[88dvh] flex flex-col items-center justify-center pt-[calc(var(--promo-ticker-height)+var(--navbar-height)+0.5rem)] sm:pt-[calc(var(--promo-ticker-height)+var(--navbar-height)+0.8rem)] lg:pt-[calc(var(--promo-ticker-height)+var(--navbar-height)+1rem)] pb-3 sm:pb-5 lg:pb-2 overflow-hidden w-full">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         {showDesktopVideo ? (
@@ -68,6 +81,7 @@ const Hero = () => {
             loop
             muted
             playsInline
+            preload="none"
             className="absolute inset-0 w-full h-full object-cover opacity-20"
           >
             <source src="/web-background.mp4" type="video/mp4" />
@@ -110,6 +124,20 @@ const Hero = () => {
                 </span>
               </span>
             </h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.45 }}
+              className="mb-2 md:mb-3 text-left md:text-center lg:text-left"
+            >
+              <span className="block md:hidden text-white text-[clamp(1.45rem,6.6vw,2.05rem)] sm:text-[clamp(1.6rem,6vw,2.2rem)] font-black leading-[1.1]">
+                At the cheap price
+              </span>
+              <span className="hidden md:block text-white text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.18em]">
+                One Trusted Hub For Premium Digital Access
+              </span>
+            </motion.p>
             
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
@@ -120,50 +148,52 @@ const Hero = () => {
               Access Netflix, ChatGPT Plus, Canva Pro, and 50+ other premium content access at unbeatable prices. Fast, secure, and reliable.
             </motion.p>
 
-            <div className="md:hidden flex w-full flex-col min-[420px]:flex-row gap-2.5 justify-start">
-              <Link href="/tools" className="w-full min-[420px]:flex-1">
+            <div className="w-full md:w-auto space-y-2.5 md:space-y-3">
+              <div className="flex w-full flex-col min-[420px]:flex-row gap-2.5 justify-start md:justify-center lg:justify-start">
+                <Link href="/tools" className="w-full min-[420px]:flex-1 md:flex-initial">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-primary text-brand-bg px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
+                    className="w-full h-12 md:h-14 bg-primary text-brand-bg px-5 md:px-7 rounded-xl font-black flex items-center justify-center gap-2 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
                 >
-                  <span className="text-xs uppercase tracking-[0.08em]">Explore Tools</span>
-                  <ArrowRight className="w-4 h-4 -rotate-45" />
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Explore Tools</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45" />
                 </motion.button>
               </Link>
-              <Link href="/services" className="w-full min-[420px]:flex-1">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-[#101010] text-primary px-5 py-3 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-primary/35"
-                >
-                  <span className="text-xs uppercase tracking-[0.08em]">Services</span>
-                  <ArrowRight className="w-4 h-4 -rotate-45" />
-                </motion.button>
-              </Link>
-            </div>
 
-            <div className="hidden md:flex flex-col sm:flex-row gap-3 md:gap-6 justify-start md:justify-center lg:justify-start w-full md:w-auto">
-              <Link href="/tools" className="w-full md:w-auto">
+                <Link href="/services" className="w-full min-[420px]:flex-1 md:flex-initial">
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full md:w-auto bg-primary text-brand-bg px-8 md:px-12 py-3.5 md:py-6 rounded-xl font-black flex items-center justify-center space-x-3 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
+                    className="w-full h-12 md:h-14 bg-[linear-gradient(135deg,#3B3B3B_0%,#2A2A2A_58%,#242424_100%)] text-brand-text px-5 md:px-7 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-[#727272]/45 shadow-xl shadow-black/25"
                 >
-                  <span className="text-sm md:text-xl">Explore Tools</span>
-                  <ArrowRight className="w-5 h-5 md:w-7 md:h-7" />
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Services</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45 text-brand-text/80" />
                 </motion.button>
               </Link>
-              <Link href="/about" className="w-full md:w-auto">
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full md:w-auto glass hover:bg-white/10 text-white px-8 md:px-12 py-3.5 md:py-6 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all border border-white/20"
-                >
-                  <Play className="w-5 h-5 md:w-7 md:h-7 fill-current" />
-                  <span className="text-sm md:text-xl">How it Works</span>
-                </motion.button>
-              </Link>
+              </div>
+
+              <div className="inline-flex items-center gap-2.5 md:gap-3">
+                <Link href="/about" className="block w-full md:w-auto">
+                  <motion.button 
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full md:w-auto glass hover:bg-white/10 text-white px-6 md:px-10 h-12 md:h-14 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all border border-white/20"
+                  >
+                    <Play className="w-4 h-4 md:w-5 md:h-5 fill-current" />
+                    <span className="text-[11px] md:text-sm uppercase tracking-[0.08em]">How it Works</span>
+                  </motion.button>
+                </Link>
+                <Link href="/about" className="inline-flex" aria-label="Open About page">
+                  <motion.span
+                    whileHover={{ rotate: -32, x: 3, y: -5 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+                    className="inline-flex h-12 md:h-14 items-center justify-center text-primary/90 cursor-pointer"
+                  >
+                    <MoveRight className="w-9 h-9 md:w-10 md:h-10" />
+                  </motion.span>
+                </Link>
+              </div>
             </div>
 
             <div className="mt-6 md:mt-8 flex flex-row items-center justify-start md:justify-center lg:justify-start gap-4 sm:gap-6 text-left md:text-center lg:text-left">

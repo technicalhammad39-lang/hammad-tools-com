@@ -1,66 +1,138 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { AnimatePresence, motion } from 'motion/react';
-import { collection, getDocs, limit, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Copy, X } from 'lucide-react';
 import { db } from '@/firebase';
-import {
-  type CouponRecord,
-  getCouponDisplayTitle,
-  isCouponExpired,
-  isCouponVisibleForRoute,
-  normalizeCoupon,
-  toMillis,
-} from '@/lib/coupons';
+import { useToast } from '@/components/ToastProvider';
 
-type ProductRouteContext = {
-  productId: string;
-  productSlug: string;
-  categoryId: string;
-  categoryName: string;
-};
+const SESSION_HIDE_KEY = 'global_promo_ticker_hidden_v1';
+const FIRE = '\uD83D\uDD25';
+
+type CouponType = 'tool' | 'category';
+
+export interface PromoCouponData {
+  code: string;
+  type: CouponType;
+  targetName: string;
+  expiryTime?: unknown;
+  expiry_timestamp?: unknown;
+}
+
+function toMillis(value: unknown) {
+  if (!value) {
+    return 0;
+  }
+  if (typeof (value as any)?.toMillis === 'function') {
+    return Number((value as any).toMillis() || 0);
+  }
+  if (typeof (value as any)?.toDate === 'function') {
+    const date = (value as any).toDate();
+    return date instanceof Date ? date.getTime() : 0;
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+  }
+  return 0;
+}
+
+function normalizeText(value: unknown) {
+  return String(value || '').trim();
+}
+
+function normalizeType(value: unknown): CouponType | null {
+  const raw = normalizeText(value).toLowerCase();
+  if (raw === 'tool' || raw === 'product') {
+    return 'tool';
+  }
+  if (raw === 'category') {
+    return 'category';
+  }
+  return null;
+}
 
 function formatCountdown(msRemaining: number) {
-  const safeSeconds = Math.max(0, Math.floor(msRemaining / 1000));
-  const days = Math.floor(safeSeconds / 86400);
-  const hours = Math.floor((safeSeconds % 86400) / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
+  const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
 
   if (days > 0) {
-    return `${days} day${days === 1 ? '' : 's'} ${hours}h ${minutes}m ${seconds}s`;
+    return [`${days}d`, `${hh}h`, `${mm}m`, `${ss}s`].join(' | ');
   }
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
+  return [`${hh}h`, `${mm}m`, `${ss}s`].join(' | ');
 }
 
-function toSlug(value: unknown) {
-  return String(value || '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-');
+function normalizeCategoryTarget(name: string) {
+  const value = normalizeText(name);
+  if (!value) {
+    return 'Selected Category';
+  }
+  return value.replace(/\s+tools?\s*$/i, '').trim() || value;
 }
 
-export default function GlobalPromoTicker() {
+function getPromoText(data: PromoCouponData) {
+  if (data.type === 'tool') {
+    return `${FIRE} Exclusive Deal: Get ${data.targetName} Pro now! Use: ${data.code}`;
+  }
+  const categoryTarget = normalizeCategoryTarget(data.targetName);
+  return `${FIRE} Category Sale: All ${categoryTarget} tools are discounted! Use: ${data.code}`;
+}
+
+function mapBackendCoupon(raw: Record<string, unknown>): PromoCouponData | null {
+  const code = normalizeText(raw.code).toUpperCase();
+  const type = normalizeType(raw.type ?? raw.scope ?? raw.couponType);
+  if (!code || !type) {
+    return null;
+  }
+
+  const targetName =
+    type === 'tool'
+      ? normalizeText(raw.targetName || raw.productName || raw.productSlug || 'Featured Tool')
+      : normalizeText(raw.targetName || raw.categoryName || 'Selected Category');
+
+  const expiryTime = raw.expiry_timestamp ?? raw.expiryTime ?? raw.expiryDate ?? null;
+  return {
+    code,
+    type,
+    targetName: targetName || (type === 'tool' ? 'Featured Tool' : 'Selected Category'),
+    expiryTime,
+    expiry_timestamp: raw.expiry_timestamp,
+  };
+}
+
+export default function GlobalPromoTicker({ couponData }: { couponData?: PromoCouponData | null }) {
   const pathname = usePathname();
-  const [coupons, setCoupons] = useState<CouponRecord[]>([]);
+  const toast = useToast();
+  const [liveCoupon, setLiveCoupon] = useState<PromoCouponData | null>(null);
+  const [hiddenForSession, setHiddenForSession] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return sessionStorage.getItem(SESSION_HIDE_KEY) === '1';
+  });
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [rotationIndex, setRotationIndex] = useState(0);
-  const [productContext, setProductContext] = useState<ProductRouteContext | null>(null);
-  const [copiedCode, setCopiedCode] = useState('');
+  const [copied, setCopied] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const copiedTimeoutRef = useRef<number | null>(null);
 
   const isAdminRoute = pathname.startsWith('/admin');
 
   useEffect(() => {
-    if (isAdminRoute) {
+    if (isAdminRoute || couponData) {
       return;
     }
 
@@ -68,148 +140,54 @@ export default function GlobalPromoTicker() {
     const unsubscribe = onSnapshot(
       couponsQuery,
       (snapshot) => {
-        const normalized = snapshot.docs
-          .map((entry) => normalizeCoupon(entry.data() as Record<string, any>, entry.id))
-          .filter((coupon) => coupon.active && coupon.code && coupon.discountPercentage > 0)
-          .filter((coupon) => !isCouponExpired(coupon));
+        const options = snapshot.docs
+          .map((docSnap) => mapBackendCoupon(docSnap.data() as Record<string, unknown>))
+          .filter((entry): entry is PromoCouponData => Boolean(entry))
+          .map((entry) => ({
+            ...entry,
+            expiryMs: toMillis(entry.expiry_timestamp ?? entry.expiryTime),
+          }))
+          .filter((entry) => entry.expiryMs > Date.now())
+          .sort((a, b) => a.expiryMs - b.expiryMs);
 
-        normalized.sort((a, b) => {
-          const discountDiff = Number(b.discountPercentage || 0) - Number(a.discountPercentage || 0);
-          if (discountDiff !== 0) {
-            return discountDiff;
-          }
+        if (!options.length) {
+          setLiveCoupon(null);
+          return;
+        }
 
-          const aExpiry = toMillis(a.expiryDate);
-          const bExpiry = toMillis(b.expiryDate);
-
-          if (aExpiry && bExpiry) {
-            return aExpiry - bExpiry;
-          }
-          if (aExpiry) {
-            return -1;
-          }
-          if (bExpiry) {
-            return 1;
-          }
-          return a.code.localeCompare(b.code);
+        setLiveCoupon({
+          code: options[0].code,
+          type: options[0].type,
+          targetName: options[0].targetName,
+          expiryTime: options[0].expiryMs,
         });
-
-        setCoupons(normalized);
       },
       (error) => {
-        console.error('Failed to load active promo coupons:', error);
-        setCoupons([]);
+        console.error('Failed to load promo ticker coupon:', error);
+        setLiveCoupon(null);
       }
     );
 
     return () => unsubscribe();
-  }, [isAdminRoute]);
+  }, [isAdminRoute, couponData]);
+
+  const activeCoupon = couponData || liveCoupon;
+  const shouldTick = !isAdminRoute && !hiddenForSession && Boolean(activeCoupon);
+  const expiryMs = toMillis(activeCoupon?.expiry_timestamp ?? activeCoupon?.expiryTime);
+  const msRemaining = expiryMs - nowMs;
+  const isExpired = !activeCoupon || !expiryMs || msRemaining <= 0;
+  const shouldRender = !isAdminRoute && !hiddenForSession && !isExpired;
 
   useEffect(() => {
-    if (isAdminRoute) {
+    if (!shouldTick) {
       return;
     }
 
-    const timer = window.setInterval(() => {
+    const interval = window.setInterval(() => {
       setNowMs(Date.now());
     }, 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [isAdminRoute]);
-
-  useEffect(() => {
-    if (isAdminRoute) {
-      return;
-    }
-
-    if (!pathname.startsWith('/tools/')) {
-      return;
-    }
-
-    let cancelled = false;
-    const slug = decodeURIComponent(pathname.replace('/tools/', '').split('/')[0] || '').trim().toLowerCase();
-    if (!slug) {
-      return;
-    }
-
-    async function loadProductContext() {
-      try {
-        const direct = await getDocs(query(collection(db, 'services'), where('slug', '==', slug), limit(1)));
-        if (!cancelled && !direct.empty) {
-          const snap = direct.docs[0];
-          const data = snap.data() as Record<string, any>;
-          setProductContext({
-            productId: snap.id,
-            productSlug: toSlug(data.slug || data.name || data.title || slug),
-            categoryId: String(data.categoryId || ''),
-            categoryName: String(data.categoryName || data.category || ''),
-          });
-          return;
-        }
-
-        const fallback = await getDocs(collection(db, 'services'));
-        if (cancelled) {
-          return;
-        }
-        const found = fallback.docs.find((entry) => {
-          const data = entry.data() as Record<string, any>;
-          const derived = toSlug(data.slug || data.name || data.title || '');
-          return derived === slug;
-        });
-
-        if (!found) {
-          setProductContext(null);
-          return;
-        }
-
-        const data = found.data() as Record<string, any>;
-        setProductContext({
-          productId: found.id,
-          productSlug: toSlug(data.slug || data.name || data.title || slug),
-          categoryId: String(data.categoryId || ''),
-          categoryName: String(data.categoryName || data.category || ''),
-        });
-      } catch (error) {
-        console.error('Failed to resolve route product context for promo ticker:', error);
-        if (!cancelled) {
-          setProductContext(null);
-        }
-      }
-    }
-
-    void loadProductContext();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname, isAdminRoute]);
-
-  const eligibleCoupons = useMemo(() => {
-    const context = {
-      pathname,
-      productId: productContext?.productId || '',
-      productSlug: productContext?.productSlug || '',
-      categoryId: productContext?.categoryId || '',
-      categoryName: productContext?.categoryName || '',
-    };
-    return coupons.filter((coupon) => isCouponVisibleForRoute(coupon, context));
-  }, [coupons, pathname, productContext]);
-
-  useEffect(() => {
-    if (eligibleCoupons.length <= 1) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setRotationIndex((prev) => (prev + 1) % eligibleCoupons.length);
-    }, 6000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [eligibleCoupons.length]);
+    return () => window.clearInterval(interval);
+  }, [shouldTick]);
 
   useEffect(() => {
     return () => {
@@ -219,104 +197,127 @@ export default function GlobalPromoTicker() {
     };
   }, []);
 
-  if (isAdminRoute) {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!shouldRender || !rootRef.current) {
+      root.style.setProperty('--promo-ticker-height', '0px');
+      return;
+    }
+
+    const updateHeight = () => {
+      const height = rootRef.current?.offsetHeight || 0;
+      root.style.setProperty('--promo-ticker-height', `${height}px`);
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => {
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [shouldRender, activeCoupon?.code, activeCoupon?.type, activeCoupon?.targetName]);
+
+  if (!shouldRender || !activeCoupon) {
     return null;
   }
 
-  const activeCoupon = eligibleCoupons.length > 0 ? eligibleCoupons[rotationIndex % eligibleCoupons.length] : null;
-  const hasCountdown = Boolean(activeCoupon?.expiryDate && toMillis(activeCoupon.expiryDate) > nowMs);
-  const countdown = hasCountdown && activeCoupon ? formatCountdown(toMillis(activeCoupon.expiryDate) - nowMs) : '';
-  const title = activeCoupon ? getCouponDisplayTitle(activeCoupon) : 'AI Tools';
-  const discountText = activeCoupon ? `${activeCoupon.discountPercentage}% OFF` : 'HOT DEAL';
-  const couponCode = activeCoupon?.code || 'DEAL';
+  const couponCode = activeCoupon.code;
+  const promoText = getPromoText(activeCoupon);
+  const countdown = formatCountdown(msRemaining);
+  const urgencyText = 'Hurry, grab now';
 
-  async function handleCopyCoupon() {
+  async function handleCopyCode() {
     try {
-      if (typeof window !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(couponCode);
-      } else if (typeof window !== 'undefined') {
-        const temp = document.createElement('textarea');
-        temp.value = couponCode;
-        temp.setAttribute('readonly', '');
-        temp.style.position = 'absolute';
-        temp.style.left = '-9999px';
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-      }
-
-      setCopiedCode(couponCode);
+      await navigator.clipboard.writeText(couponCode);
+      setCopied(true);
+      toast.success('Copied!', `Coupon ${couponCode} copied`);
       if (copiedTimeoutRef.current) {
         window.clearTimeout(copiedTimeoutRef.current);
       }
       copiedTimeoutRef.current = window.setTimeout(() => {
-        setCopiedCode('');
-      }, 1600);
+        setCopied(false);
+      }, 1400);
     } catch (error) {
-      console.error('Failed to copy coupon code:', error);
+      console.error('Failed to copy promo code:', error);
+      toast.error('Copy failed', 'Please copy code manually.');
+    }
+  }
+
+  function handleClose() {
+    setHiddenForSession(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(SESSION_HIDE_KEY, '1');
     }
   }
 
   return (
-    <div className="fixed top-0 inset-x-0 z-[120] border-b border-primary/20 bg-[#070707]/90 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-2.5">
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="rounded-2xl border border-primary/35 bg-gradient-to-r from-[#0F0F10] via-[#161616] to-[#0F0F10] px-2.5 py-2 sm:px-3.5 sm:py-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.45)]"
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeCoupon?.id || 'fallback-left'}
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 6 }}
-                transition={{ duration: 0.25 }}
-                className="min-w-0 flex-1 rounded-xl bg-primary px-3 py-2 text-black"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Image src="/confetti-left.svg" alt="" width={14} height={14} className="w-3.5 h-3.5 shrink-0" />
-                  <p className="truncate text-[10px] sm:text-[11px] md:text-sm font-black uppercase tracking-[0.05em]">
-                    {title} - {discountText}
-                  </p>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+    <div
+      ref={rootRef}
+      className="fixed left-0 right-0 top-0 z-[9999] border-b border-black/25 bg-gradient-to-r from-[#FFD84D] via-[#FFCC00] to-[#FFC20D] px-2 py-2 sm:px-3.5"
+    >
+      <div className="mx-auto w-full">
+        <div className="relative grid grid-cols-[1fr_auto] items-center gap-2">
+          <div className="min-w-0">
+            <div className="hidden md:flex items-center justify-center gap-3 text-center">
+              <p className="truncate text-[14px] font-black text-black lg:text-[16px]">{promoText}</p>
+              <span className="shrink-0 rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black text-[#FFCC00] lg:text-[12px]">
+                {FIRE} Ends in
+              </span>
+              <span className="shrink-0 rounded-md bg-black/90 px-3 py-1 text-[11px] font-black tabular-nums text-[#FFCC00] lg:text-[12px]">
+                {countdown}
+              </span>
+              <span className="shrink-0 text-[14px] font-black text-black/80 lg:text-[16px]">{urgencyText}</span>
+            </div>
 
-            <div className="flex items-center justify-between gap-2 sm:gap-2.5 sm:ml-auto">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  void handleCopyCoupon();
-                }}
-                className="relative shrink-0 rounded-xl border border-primary/50 bg-black/85 px-2.5 py-2 text-center min-w-[96px] sm:min-w-[112px]"
-                aria-label={`Copy coupon code ${couponCode}`}
-              >
-                <span className="block text-[10px] sm:text-xs font-black uppercase tracking-[0.16em] text-primary glow-text">
-                  [ {couponCode} ]
+            <div className="overflow-hidden whitespace-nowrap md:hidden">
+              <div className="promo-marquee-track inline-flex items-center gap-6 pr-6">
+                <span className="text-[13px] font-black text-black">{promoText}</span>
+                <span className="rounded-md bg-black/90 px-2 py-1 text-[10px] font-black text-[#FFCC00]">
+                  {FIRE} Ends in
                 </span>
-                <span className="block mt-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.12em] text-brand-text/50">
-                  {copiedCode === couponCode ? 'Copied' : 'Tap to copy'}
+                <span className="rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black tabular-nums text-[#FFCC00]">
+                  {countdown}
                 </span>
-              </motion.button>
-
-              <div className="min-w-0 max-w-[58vw] sm:max-w-none rounded-xl border border-white/10 bg-[#1A1A1C] px-2.5 py-2">
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs font-black tracking-[0.06em] uppercase whitespace-normal sm:whitespace-nowrap leading-tight">
-                  <span className="text-primary glow-text">Grab it</span>
-                  {hasCountdown ? (
-                    <span className="text-brand-text tabular-nums">{countdown}</span>
-                  ) : null}
-                  <span className="text-primary glow-text">Fast</span>
-                  <Image src="/confetti-right.svg" alt="" width={14} height={14} className="w-3.5 h-3.5 shrink-0" />
-                </div>
+                <span className="text-[13px] font-black text-black/80">{urgencyText}</span>
+                <span className="text-[13px] font-black text-black">{promoText}</span>
+                <span className="rounded-md bg-black/90 px-2 py-1 text-[10px] font-black text-[#FFCC00]">
+                  {FIRE} Ends in
+                </span>
+                <span className="rounded-md bg-black/90 px-2.5 py-1 text-[11px] font-black tabular-nums text-[#FFCC00]">
+                  {countdown}
+                </span>
+                <span className="text-[13px] font-black text-black/80">{urgencyText}</span>
               </div>
             </div>
           </div>
-        </motion.div>
+
+          <div className="relative flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                void handleCopyCode();
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-black/90 px-2.5 py-1.5 text-[11px] font-black text-[#FFCC00] shadow-[0_1px_0_rgba(0,0,0,0.2)]"
+              aria-label={`Copy coupon code ${couponCode}`}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Use Coupon: {couponCode}
+            </button>
+            {copied ? (
+              <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 rounded bg-black px-2 py-1 text-[10px] font-black text-[#FFCC00]">
+                Copied!
+              </span>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleClose}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-black/30 bg-black/10 text-black"
+              aria-label="Close promo ticker"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

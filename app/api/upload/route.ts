@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { writeFile, access, unlink } from 'fs/promises';
 import { constants as fsConstants } from 'fs';
 import { join } from 'path';
@@ -22,6 +22,7 @@ import {
   toPublicUrl,
   validateUploadFile,
 } from '@/lib/server/local-upload';
+import { sanitizeForFirestore } from '@/lib/firestore-sanitize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -233,8 +234,8 @@ export async function POST(request: Request) {
     const storagePath = getRelativeStoragePath(folder, fileName);
     const publicPath = folderAccess === 'public' ? getPublicFilePath(folder, fileName) : '';
     const protectedPath = folderAccess === 'protected' ? getProtectedMediaPath(mediaRef.id) : '';
-    const filePath = folderAccess === 'public' ? publicPath : protectedPath;
-    const fileUrl = toPublicUrl(request, filePath);
+    const apiPath = getProtectedMediaPath(mediaRef.id);
+    const fileUrl = toPublicUrl(request, apiPath);
 
     if (debugEnabled) {
       console.info('[upload] saving file', {
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const mediaRecord = {
+    const mediaRecord = sanitizeForFirestore({
       id: mediaRef.id,
       ownerId: decoded.uid,
       ownerEmail: decoded.email || '',
@@ -275,7 +276,7 @@ export async function POST(request: Request) {
       note: normalizeOptionalText(formData.get('note')) || '',
       createdAt: adminFieldValue.serverTimestamp(),
       updatedAt: adminFieldValue.serverTimestamp(),
-    };
+    });
 
     await mediaRef.set(mediaRecord);
 
@@ -312,9 +313,6 @@ export async function POST(request: Request) {
     if (!(error instanceof ApiError)) {
       const message = error instanceof Error ? error.message : String(error);
       return jsonError(new ApiError(500, `Unexpected upload server error: ${message}`));
-    }
-    if (!debugEnabled && error.status >= 500) {
-      return jsonError(new ApiError(500, 'Upload server failed. Please try again shortly.'));
     }
     return jsonError(error);
   }

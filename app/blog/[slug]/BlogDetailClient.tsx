@@ -53,7 +53,7 @@ export default function BlogDetailClient({ post, loading }: { post: BlogPost | n
   );
 
   return (
-    <div className="pt-32 pb-24 min-h-screen relative overflow-hidden">
+    <div className="page-navbar-spacing pb-24 min-h-screen relative overflow-hidden">
       {/* Background Decorative */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] -z-10 rounded-full" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 blur-[120px] -z-10 rounded-full" />

@@ -1,25 +1,38 @@
 ﻿'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import Hero from '@/components/Hero';
-import ServicesSection from '@/components/ServicesSection';
-import PartnerSection from '@/components/PartnerSection';
-import Testimonials from '@/components/Testimonials';
 import BackToTopButton from '@/components/BackToTopButton';
 import { motion } from 'motion/react';
-import { Users, Globe, Award, Heart, Zap, Shield, Headphones, Layers, HelpCircle, ChevronDown } from 'lucide-react';
+import { Globe, Award, Zap, Shield, Headphones, Layers, HelpCircle, ChevronDown } from 'lucide-react';
 import Marquee from 'react-fast-marquee';
 
-const stats = [
-  { label: 'Active Users', value: '10K+', icon: <Users className="w-5 h-5" /> },
-  { label: 'Services', value: '50+', icon: <Globe className="w-5 h-5" /> },
-  { label: 'Awards Won', value: '12', icon: <Award className="w-5 h-5" /> },
-  { label: 'Happy Clients', value: '99%', icon: <Heart className="w-5 h-5" /> },
-  { label: 'Fast Delivery', value: 'Instant', icon: <Zap className="w-5 h-5" /> },
-  { label: 'Support', value: '24/7', icon: <Headphones className="w-5 h-5" /> },
-];
+const ServicesSection = dynamic(() => import('@/components/ServicesSection'));
+const PartnerSection = dynamic(() => import('@/components/PartnerSection'));
+const Testimonials = dynamic(() => import('@/components/Testimonials'));
 
 export default function Home() {
+  const [enableAmbientMotion, setEnableAmbientMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    const mobileQuery = window.matchMedia('(min-width: 768px)');
+    const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const syncAmbientMotion = () => {
+      setEnableAmbientMotion(mobileQuery.matches && !reducedQuery.matches);
+    };
+
+    syncAmbientMotion();
+    mobileQuery.addEventListener('change', syncAmbientMotion);
+    reducedQuery.addEventListener('change', syncAmbientMotion);
+
+    return () => {
+      mobileQuery.removeEventListener('change', syncAmbientMotion);
+      reducedQuery.removeEventListener('change', syncAmbientMotion);
+    };
+  }, []);
+
   return (
     <div className="relative bg-brand-bg">
       <BackToTopButton />
@@ -172,12 +185,12 @@ export default function Home() {
 
         {/* Large Background Question Marks */}
         <motion.div 
-          animate={{ 
+          animate={enableAmbientMotion ? {
             y: [0, -60, 0],
             rotate: [15, 25, 15],
             scale: [1, 1.1, 1]
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          } : undefined}
+          transition={enableAmbientMotion ? { duration: 8, repeat: Infinity, ease: "easeInOut" } : undefined}
           className="absolute -left-32 top-0 opacity-[0.05] -z-10 pointer-events-none"
           style={{ willChange: 'transform' }}
         >
@@ -185,12 +198,12 @@ export default function Home() {
         </motion.div>
         
         <motion.div 
-          animate={{ 
+          animate={enableAmbientMotion ? {
             y: [0, 60, 0],
             rotate: [-15, -25, -15],
             scale: [1, 1.1, 1]
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          } : undefined}
+          transition={enableAmbientMotion ? { duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 } : undefined}
           className="absolute -right-32 bottom-0 opacity-[0.05] -z-10 pointer-events-none"
           style={{ willChange: 'transform' }}
         >
@@ -198,31 +211,35 @@ export default function Home() {
         </motion.div>
 
         {/* Extra floating icons for detail */}
-        <motion.div 
-          animate={{ 
-            y: [0, -30, 0],
-            x: [0, 20, 0],
-            rotate: [0, 360]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute left-[10%] bottom-[20%] opacity-[0.1] -z-10"
-          style={{ willChange: 'transform' }}
-        >
-          <HelpCircle className="w-24 h-24 text-primary" strokeWidth={1} />
-        </motion.div>
+        {enableAmbientMotion ? (
+          <>
+            <motion.div 
+              animate={{ 
+                y: [0, -30, 0],
+                x: [0, 20, 0],
+                rotate: [0, 360]
+              }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="absolute left-[10%] bottom-[20%] opacity-[0.1] -z-10"
+              style={{ willChange: 'transform' }}
+            >
+              <HelpCircle className="w-24 h-24 text-primary" strokeWidth={1} />
+            </motion.div>
 
-        <motion.div 
-          animate={{ 
-            y: [0, 30, 0],
-            x: [0, -20, 0],
-            rotate: [360, 0]
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute right-[10%] top-[20%] opacity-[0.1] -z-10"
-          style={{ willChange: 'transform' }}
-        >
-          <HelpCircle className="w-32 h-32 text-secondary" strokeWidth={1} />
-        </motion.div>
+            <motion.div 
+              animate={{ 
+                y: [0, 30, 0],
+                x: [0, -20, 0],
+                rotate: [360, 0]
+              }}
+              transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+              className="absolute right-[10%] top-[20%] opacity-[0.1] -z-10"
+              style={{ willChange: 'transform' }}
+            >
+              <HelpCircle className="w-32 h-32 text-secondary" strokeWidth={1} />
+            </motion.div>
+          </>
+        ) : null}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

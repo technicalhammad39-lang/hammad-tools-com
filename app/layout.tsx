@@ -14,6 +14,7 @@ import UserOrderTicker from '@/components/UserOrderTicker';
 import LenisProvider from '@/components/LenisProvider';
 import ChunkLoadRecovery from '@/components/ChunkLoadRecovery';
 import GsapSectionAnimator from '@/components/GsapSectionAnimator';
+import GlobalPromoTicker from '@/components/GlobalPromoTicker';
 import { CORE_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, createPageMetadata, getSiteUrl } from '@/lib/seo';
 
 const brandFont = BrandFont({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
@@ -83,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <LenisProvider />
                   <GsapSectionAnimator />
                   <ChunkLoadRecovery />
+                  <GlobalPromoTicker />
                   <Navbar />
                   <UserOrderTicker />
                   <CartDrawer />

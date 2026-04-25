@@ -1,4 +1,4 @@
-﻿import { randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { constants as fsConstants } from 'fs';
 import { access, mkdir, stat, unlink, writeFile } from 'fs/promises';
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'path';
@@ -23,6 +23,12 @@ const IMAGE_MIME_TYPES = [
   'image/webp',
   'image/avif',
 ] as const;
+const MIME_TYPE_ALIASES: Record<string, string> = {
+  'image/jpg': 'image/jpeg',
+  'image/pjpeg': 'image/jpeg',
+  'image/x-png': 'image/png',
+};
+const LOOSE_MIME_TYPES = new Set(['', 'application/octet-stream', 'binary/octet-stream']);
 
 const FOLDER_ALIASES: Record<string, UploadFolder> = {
   tools: 'tools',
@@ -399,6 +405,22 @@ function normalizeExtension(name: string) {
   return extname(name || '').replace('.', '').toLowerCase();
 }
 
+function inferMimeTypeFromExtension(extension: string) {
+  const normalized = (extension || '').toLowerCase();
+  const table: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    avif: 'image/avif',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+  return table[normalized] || '';
+}
+
 function sanitizeBaseName(name: string) {
   const raw = name.replace(extname(name), '');
   const safe = raw
@@ -446,17 +468,24 @@ export function validateUploadFile(file: File, folder: UploadFolder) {
     );
   }
 
-  const mimeType = (file.type || '').trim().toLowerCase();
-  if (!mimeType || !config.allowedMimeTypes.includes(mimeType)) {
+  const rawMimeType = (file.type || '').trim().toLowerCase();
+  const mimeType = MIME_TYPE_ALIASES[rawMimeType] || rawMimeType;
+  const mimeTypeFromExtension = inferMimeTypeFromExtension(extension);
+  const hasAllowedMime = config.allowedMimeTypes.includes(mimeType);
+  const hasAllowedInferredMime = mimeTypeFromExtension
+    ? config.allowedMimeTypes.includes(mimeTypeFromExtension)
+    : false;
+
+  if (!hasAllowedMime && !hasAllowedInferredMime && !LOOSE_MIME_TYPES.has(mimeType)) {
     throw new ApiError(
       400,
-      `Invalid file type for ${folder}. Allowed: ${config.allowedMimeTypes.join(', ')}.`
+      `Invalid file type for ${folder}. Received: ${mimeType || 'unknown'}. Allowed: ${config.allowedMimeTypes.join(', ')}.`
     );
   }
 
   return {
     extension,
-    mimeType,
+    mimeType: mimeType || mimeTypeFromExtension || 'application/octet-stream',
     maxBytes,
   };
 }

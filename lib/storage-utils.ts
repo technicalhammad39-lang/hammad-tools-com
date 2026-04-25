@@ -1,4 +1,4 @@
-﻿import { auth } from '@/firebase';
+import { auth } from '@/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export type UploadFolder =
@@ -177,10 +177,20 @@ async function getAuthHeader(forceRefresh = false) {
 }
 
 async function parseApiPayload<T>(response: Response): Promise<T | null> {
+  const fallbackResponse = response.clone();
   try {
     return (await response.json()) as T;
   } catch {
-    return null;
+    try {
+      const fallbackText = (await fallbackResponse.text()).trim();
+      if (fallbackText) {
+        const normalized = fallbackText.replace(/\s+/g, ' ').slice(0, 320);
+        return { error: normalized } as T;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 }
 

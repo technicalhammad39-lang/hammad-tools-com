@@ -810,7 +810,7 @@ function CheckoutPageContent() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen pt-28 pb-20 bg-brand-bg">
+      <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
         <div className="site-container-readable py-20 flex justify-center">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
         </div>
@@ -823,7 +823,7 @@ function CheckoutPageContent() {
   }
 
   return (
-    <main className="relative min-h-screen pt-28 pb-20 bg-brand-bg">
+    <main className="relative min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
       {!loading && items.length > 0 && !mobileSummaryClosed ? (
         <div
           ref={mobileSummaryRef}
@@ -1237,7 +1237,7 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen pt-28 pb-20 bg-brand-bg">
+        <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
           <div className="site-container-readable py-20 flex justify-center">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
           </div>

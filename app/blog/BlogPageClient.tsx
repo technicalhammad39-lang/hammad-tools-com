@@ -119,7 +119,7 @@ const BlogPage = () => {
 
   if (loading) {
     return (
-      <main className="min-h-screen pt-24 md:pt-32 pb-20 bg-brand-bg">
+      <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
         <div className="site-container">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
@@ -140,7 +140,7 @@ const BlogPage = () => {
   }
 
   return (
-    <main className="min-h-screen pt-16 md:pt-24 pb-16 md:pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-16 md:pb-20 bg-brand-bg">
     <div className="site-container">
         {/* Header */}
         <div className="text-center mb-6 md:mb-12">

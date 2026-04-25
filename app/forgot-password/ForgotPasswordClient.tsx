@@ -57,7 +57,7 @@ export default function ForgotPasswordClient() {
   }
 
   return (
-    <main className="min-h-screen pt-32 pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
       <div className="site-container-readable">
         <div className="max-w-md mx-auto glass rounded-[2rem] border border-white/10 p-6 md:p-8">
         <h1 className="text-3xl md:text-4xl font-black uppercase text-brand-text">Forgot Password</h1>

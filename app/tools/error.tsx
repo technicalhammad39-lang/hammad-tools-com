@@ -9,7 +9,7 @@ export default function ToolsError({
   reset: () => void;
 }) {
   return (
-    <main className="min-h-screen pt-20 pb-20 px-4 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-20 px-4 bg-brand-bg">
       <div className="max-w-3xl mx-auto glass rounded-2xl border border-white/10 p-8 text-center">
         <h1 className="text-2xl md:text-3xl font-black uppercase text-brand-text">Tools Unavailable</h1>
         <p className="text-brand-text/45 text-xs md:text-sm mt-3">

@@ -5,7 +5,7 @@ import ServicesSection from '@/components/ServicesSection';
 
 const ToolsPage = () => {
   return (
-    <main className="min-h-screen pt-8 md:pt-12 pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
       <ServicesSection />
     </main>
   );

@@ -8,7 +8,6 @@ import {
   Award,
   CheckCircle2,
   ArrowLeft,
-  ChevronRight,
   MessageCircle,
   Minus,
   Plus,
@@ -116,8 +115,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   const { user, profile } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [showPlanScrollHint, setShowPlanScrollHint] = useState(false);
-  const planScrollerRef = React.useRef<HTMLDivElement | null>(null);
   const reviewsSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [showReviewQuickJump, setShowReviewQuickJump] = useState(true);
 
@@ -239,27 +236,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   }, [displayPlans]);
 
   useEffect(() => {
-    const node = planScrollerRef.current;
-    if (!node) {
-      return;
-    }
-
-    const updateHint = () => {
-      const remaining = node.scrollWidth - (node.scrollLeft + node.clientWidth);
-      setShowPlanScrollHint(remaining > 8);
-    };
-
-    updateHint();
-    node.addEventListener('scroll', updateHint, { passive: true });
-    window.addEventListener('resize', updateHint);
-
-    return () => {
-      node.removeEventListener('scroll', updateHint);
-      window.removeEventListener('resize', updateHint);
-    };
-  }, [displayPlans.length, selectedPlan?.planName]);
-
-  useEffect(() => {
     const onScroll = () => {
       setShowReviewQuickJump(window.scrollY < 420);
     };
@@ -316,7 +292,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 bg-brand-bg relative overflow-hidden">
+    <div className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg relative overflow-hidden">
       {/* Background Glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/5 blur-[120px] rounded-full -z-10" />
@@ -450,7 +426,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
 
               {/* Horizontal Scrollable Row */}
               <div className="relative">
-              <div ref={planScrollerRef} className="flex overflow-x-auto gap-3 sm:gap-4 pb-4 pr-10 snap-x hide-scrollbar">
+              <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-4 snap-x hide-scrollbar">
                 {displayPlans.map((plan: Plan, i: number) => (
                   <button
                     key={i}
@@ -468,11 +444,6 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                   </button>
                 ))}
               </div>
-              {showPlanScrollHint ? (
-                <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-black/65 border border-white/15 text-primary grid place-items-center">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              ) : null}
               </div>
 
               {/* Dynamic Benefits Box */}

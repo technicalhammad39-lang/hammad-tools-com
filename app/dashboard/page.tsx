@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -495,7 +495,7 @@ function DashboardPageContent() {
   const mobileQuickMenuItems = sidebarItems.filter((item) => item.id !== 'notifications');
 
   return (
-    <main className="min-h-screen pt-24 pb-40 md:pb-12 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-40 md:pb-12 bg-brand-bg">
       <div className="site-container flex flex-col lg:flex-row gap-10">
         <aside className="lg:w-72 flex-shrink-0 hidden lg:block">
           <div className="glass rounded-[2rem] p-6 border border-white/5 sticky top-28 bg-brand-soft/10 backdrop-blur-3xl overflow-hidden">
@@ -606,7 +606,7 @@ function DashboardPageContent() {
                             <div className="min-w-0">
                               <div className="text-sm font-black text-brand-text break-words">{getOrderProductName(order)}</div>
                               <div className="text-[10px] font-semibold text-brand-text/45 mt-1 break-words">
-                                {getOrderDisplayId(order)} • {getOrderPlan(order)}
+                                {getOrderDisplayId(order)} � {getOrderPlan(order)}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -652,7 +652,7 @@ function DashboardPageContent() {
                         >
                           <div className="text-sm font-semibold text-brand-text break-words">{getOrderProductName(order)}</div>
                           <div className="text-[10px] text-brand-text/45 break-words">
-                            {getOrderDisplayId(order)} • {formatDateTime(order.createdAt)}
+                            {getOrderDisplayId(order)} � {formatDateTime(order.createdAt)}
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <div className="text-[10px] font-black uppercase tracking-widest text-primary">
@@ -684,7 +684,7 @@ function DashboardPageContent() {
                           {getOrderProductName(selectedOrder)}
                         </div>
                         <div className="text-sm text-brand-text/65 break-words">
-                          Plan: {getOrderPlan(selectedOrder)} • Qty: {getOrderQuantity(selectedOrder)}
+                          Plan: {getOrderPlan(selectedOrder)} � Qty: {getOrderQuantity(selectedOrder)}
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="text-sm font-semibold text-primary">
@@ -700,7 +700,7 @@ function DashboardPageContent() {
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                           <div className="text-[11px] text-brand-text/45">
-                            Order ID: {getOrderDisplayId(selectedOrder)} • {formatDateTime(selectedOrder.createdAt)}
+                            Order ID: {getOrderDisplayId(selectedOrder)} � {formatDateTime(selectedOrder.createdAt)}
                           </div>
                           <button
                             type="button"

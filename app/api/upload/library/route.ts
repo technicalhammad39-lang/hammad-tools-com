@@ -27,6 +27,7 @@ type MediaRecord = {
   sizeBytes?: number;
   storagePath?: string;
   publicPath?: string;
+  protectedPath?: string;
   fileUrl?: string;
   relatedType?: string;
   relatedId?: string;
@@ -110,7 +111,7 @@ function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadF
     sizeBytes: Number(data.sizeBytes || 0),
     storagePath: sanitizeText(data.storagePath, 600),
     publicPath: sanitizeText(data.publicPath, 400),
-    url: sanitizeText(data.fileUrl, 2000),
+    url: sanitizeText(data.fileUrl || data.protectedPath || data.publicPath, 2000),
     relatedType: sanitizeText(data.relatedType, 120),
     relatedId: sanitizeText(data.relatedId, 220),
     relatedUserId: sanitizeText(data.relatedUserId, 220),

@@ -223,6 +223,7 @@ export default function MediaLibraryModal({
     try {
       const uploadedItems: MediaLibraryItem[] = [];
       let failedCount = 0;
+      const failedMessages: string[] = [];
 
       for (const [index, file] of files.entries()) {
         try {
@@ -257,8 +258,13 @@ export default function MediaLibraryModal({
             note: '',
             createdAt: new Date().toISOString(),
           });
-        } catch {
+        } catch (uploadError) {
           failedCount += 1;
+          const reason =
+            uploadError instanceof Error && uploadError.message.trim()
+              ? uploadError.message.trim()
+              : 'Unknown upload error';
+          failedMessages.push(`${file.name}: ${reason}`);
         }
       }
 
@@ -281,12 +287,14 @@ export default function MediaLibraryModal({
           uploadedItems.length === 1 ? 'File uploaded' : `${uploadedItems.length} files uploaded`
         );
       } else if (uploadedItems.length && failedCount > 0) {
+        const detail = failedMessages[0] || `${failedCount} file${failedCount > 1 ? 's' : ''} failed`;
+        setErrorMessage(detail);
         toast.info(
           `${uploadedItems.length} files uploaded`,
-          `${failedCount} file${failedCount > 1 ? 's' : ''} failed`
+          detail
         );
       } else {
-        throw new Error('Failed to upload selected files.');
+        throw new Error(failedMessages[0] || 'Failed to upload selected files.');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to upload file.';

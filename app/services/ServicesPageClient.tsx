@@ -74,7 +74,7 @@ export default function AgencyServicesPage() {
   }, [services, searchQuery]);
 
   return (
-    <main className="min-h-screen pt-20 md:pt-24 pb-16 md:pb-20 bg-brand-bg relative overflow-hidden">
+    <main className="min-h-screen page-navbar-spacing pb-16 md:pb-20 bg-brand-bg relative overflow-hidden">
       <div className="site-container relative z-10">
         <div className="flex flex-col items-center text-center mb-6 md:mb-12">
           <motion.h1

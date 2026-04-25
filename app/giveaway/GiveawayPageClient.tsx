@@ -420,7 +420,7 @@ export default function GiveawayPageClient() {
 
   if (loading) {
     return (
-      <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg flex items-center justify-center">
+      <main className="min-h-screen page-navbar-spacing pb-20 px-4 bg-brand-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           <p className="text-brand-text/40 font-black uppercase tracking-widest text-xs">Syncing Rewards...</p>
@@ -430,7 +430,7 @@ export default function GiveawayPageClient() {
   }
 
   return (
-    <main className="min-h-screen pt-24 md:pt-32 pb-20 px-4 bg-brand-bg relative overflow-hidden">
+    <main className="min-h-screen page-navbar-spacing pb-20 px-4 bg-brand-bg relative overflow-hidden">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

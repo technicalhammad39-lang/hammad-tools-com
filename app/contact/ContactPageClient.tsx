@@ -13,7 +13,7 @@ const ContactPage = () => {
   const cleanPhone = settings.supportPhone.replace(/\D/g, '');
   const waLink = `https://wa.me/${cleanPhone}`;
   return (
-    <main className="min-h-screen pt-20 md:pt-24 pb-20 bg-brand-bg">
+    <main className="min-h-screen page-navbar-spacing pb-20 bg-brand-bg">
       <div className="site-container">
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">

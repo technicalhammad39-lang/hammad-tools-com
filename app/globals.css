@@ -139,6 +139,16 @@ select option:checked {
   max-width: var(--site-wide-max);
 }
 
+.page-navbar-spacing {
+  padding-top: calc(var(--user-order-offset) + 1rem);
+}
+
+@media (min-width: 768px) {
+  .page-navbar-spacing {
+    padding-top: calc(var(--user-order-offset) + 1.25rem);
+  }
+}
+
 @keyframes caretBlink {
   0%,
   45% {
@@ -152,6 +162,31 @@ select option:checked {
 
 .typing-caret {
   animation: caretBlink 1s step-end infinite;
+}
+
+@keyframes promoMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.promo-marquee-track {
+  animation: promoMarquee 16s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-marquee-track {
+    animation: none;
+    transform: translateX(0);
+  }
+
+  .typing-caret {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 
