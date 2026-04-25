@@ -13,7 +13,6 @@ import { ToastProvider } from '@/components/ToastProvider';
 import UserOrderTicker from '@/components/UserOrderTicker';
 import LenisProvider from '@/components/LenisProvider';
 import ChunkLoadRecovery from '@/components/ChunkLoadRecovery';
-import GsapSectionAnimator from '@/components/GsapSectionAnimator';
 import GlobalPromoTicker from '@/components/GlobalPromoTicker';
 import { CORE_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, createPageMetadata, getSiteUrl } from '@/lib/seo';
 
@@ -82,7 +81,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SettingsProvider>
                 <ToastProvider>
                   <LenisProvider />
-                  <GsapSectionAnimator />
                   <ChunkLoadRecovery />
                   <GlobalPromoTicker />
                   <Navbar />

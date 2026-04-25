@@ -39,7 +39,12 @@ export default function Home() {
       <Hero />
       
       {/* Logo Marquee Section */}
-      <section data-gsap-reveal="gsap" className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+        className="py-5 md:py-10 border-y border-white/5 bg-black/40 backdrop-blur-xl relative z-10"
+      >
         <Marquee gradient={true} gradientColor="black" gradientWidth={100} speed={40} pauseOnHover={true}>
           {[
             { name: 'Netflix', color: '#E50914' },
@@ -62,7 +67,7 @@ export default function Home() {
             </div>
           ))}
         </Marquee>
-      </section>
+      </motion.section>
 
       <ServicesSection />
       

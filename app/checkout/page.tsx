@@ -58,7 +58,7 @@ type CheckoutTutorialStep = {
 };
 
 function toCurrency(amount: number) {
-  return `Rs ${amount.toFixed(2)}`;
+  return `Rs ${new Intl.NumberFormat('en-PK', { maximumFractionDigits: 2 }).format(amount)}`;
 }
 
 function isManualChatPaymentMethod(method: PaymentMethod | null) {

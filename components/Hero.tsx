@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, MoveRight, Play, Star, MousePointer2, Quote } from 'lucide-react';
+import { ArrowRight, Star, MousePointer2, Quote } from 'lucide-react';
 import Link from 'next/link';
 import UploadedImage from '@/components/UploadedImage';
 
@@ -148,50 +148,39 @@ const Hero = () => {
               Access Netflix, ChatGPT Plus, Canva Pro, and 50+ other premium content access at unbeatable prices. Fast, secure, and reliable.
             </motion.p>
 
-            <div className="w-full md:w-auto space-y-2.5 md:space-y-3">
-              <div className="flex w-full flex-col min-[420px]:flex-row gap-2.5 justify-start md:justify-center lg:justify-start">
-                <Link href="/tools" className="w-full min-[420px]:flex-1 md:flex-initial">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                    className="w-full h-12 md:h-14 bg-primary text-brand-bg px-5 md:px-7 rounded-xl font-black flex items-center justify-center gap-2 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
-                >
-                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Explore Tools</span>
-                    <ArrowRight className="w-4 h-4 -rotate-45" />
-                </motion.button>
-              </Link>
-
-                <Link href="/services" className="w-full min-[420px]:flex-1 md:flex-initial">
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                    className="w-full h-12 md:h-14 bg-[linear-gradient(135deg,#3B3B3B_0%,#2A2A2A_58%,#242424_100%)] text-brand-text px-5 md:px-7 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-[#727272]/45 shadow-xl shadow-black/25"
-                >
-                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Services</span>
-                    <ArrowRight className="w-4 h-4 -rotate-45 text-brand-text/80" />
-                </motion.button>
-              </Link>
-              </div>
-
-              <div className="inline-flex items-center gap-2.5 md:gap-3">
-                <Link href="/about" className="block w-full md:w-auto">
-                  <motion.button 
+            <div className="w-full md:w-auto">
+              <div className="grid w-full grid-cols-2 gap-2.5 md:gap-3 lg:flex lg:w-auto lg:flex-nowrap lg:items-center lg:justify-start">
+                <Link href="/tools" className="col-span-1 w-full lg:w-auto">
+                  <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full md:w-auto glass hover:bg-white/10 text-white px-6 md:px-10 h-12 md:h-14 rounded-xl font-bold flex items-center justify-center space-x-3 transition-all border border-white/20"
+                    className="w-full h-12 md:h-14 lg:min-w-[182px] xl:min-w-[196px] bg-primary text-brand-bg px-3 md:px-6 rounded-xl font-black flex items-center justify-center gap-2 transition-all border-b-4 border-[#FF8C2A] shadow-xl shadow-primary/10"
                   >
-                    <Play className="w-4 h-4 md:w-5 md:h-5 fill-current" />
-                    <span className="text-[11px] md:text-sm uppercase tracking-[0.08em]">How it Works</span>
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Explore Tools</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45" />
                   </motion.button>
                 </Link>
-                <Link href="/about" className="inline-flex" aria-label="Open About page">
-                  <motion.span
-                    whileHover={{ rotate: -32, x: 3, y: -5 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-                    className="inline-flex h-12 md:h-14 items-center justify-center text-primary/90 cursor-pointer"
+
+                <Link href="/services" className="col-span-1 w-full lg:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full h-12 md:h-14 lg:min-w-[182px] xl:min-w-[196px] bg-[linear-gradient(135deg,#2F2F2F_0%,#242424_58%,#1D1D1D_100%)] text-brand-text px-3 md:px-6 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-[#656565]/45 shadow-xl shadow-black/35"
                   >
-                    <MoveRight className="w-9 h-9 md:w-10 md:h-10" />
-                  </motion.span>
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">Services</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45 text-brand-text/80" />
+                  </motion.button>
+                </Link>
+
+                <Link href="/about" className="col-span-2 block w-full lg:col-span-1 lg:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full h-12 md:h-14 lg:min-w-[196px] xl:min-w-[210px] glass hover:bg-white/10 text-white px-4 md:px-8 rounded-xl font-black flex items-center justify-center gap-2 transition-all border border-white/20"
+                  >
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.1em]">How It Works</span>
+                    <ArrowRight className="w-4 h-4 -rotate-45 text-white/85" />
+                  </motion.button>
                 </Link>
               </div>
             </div>
