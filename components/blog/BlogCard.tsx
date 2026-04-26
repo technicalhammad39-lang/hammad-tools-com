@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, CalendarDays, Clock3 } from 'lucide-react';
+import { ArrowRight, CalendarDays } from 'lucide-react';
 import {
   formatBlogPublishDate,
-  formatBlogReadTime,
-  getBlogReadTimeMinutes,
   type BlogPostDocument,
 } from '@/lib/blog';
 import { toSeoPlainText } from '@/lib/seo';
@@ -17,7 +15,6 @@ type BlogCardProps = {
 export default function BlogCard({ post, compact = false }: BlogCardProps) {
   const coverImageUrl = post.coverImageUrl || '/services-card.webp';
   const publishDate = formatBlogPublishDate(post.publishedAt || post.createdAt);
-  const readTimeLabel = formatBlogReadTime(getBlogReadTimeMinutes(post.content));
   const categoryLabel = post.category || 'Insight';
   const shortDescription = toSeoPlainText(post.shortDescription || '').trim();
 
@@ -45,10 +42,6 @@ export default function BlogCard({ post, compact = false }: BlogCardProps) {
           <span className="inline-flex items-center gap-1.5">
             <CalendarDays className="w-3.5 h-3.5 text-brand-text/45" />
             {publishDate}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Clock3 className="w-3.5 h-3.5 text-brand-text/45" />
-            {readTimeLabel}
           </span>
         </div>
 

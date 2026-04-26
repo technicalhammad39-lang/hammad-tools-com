@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CalendarDays, ChevronRight, Clock3 } from 'lucide-react';
+import { CalendarDays, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -12,8 +12,6 @@ import {
 } from '@/lib/seo';
 import {
   formatBlogPublishDate,
-  formatBlogReadTime,
-  getBlogReadTimeMinutes,
 } from '@/lib/blog';
 import { toMetadataImageUrl } from '@/lib/image-display';
 import { getBlogPostBySlug, getPublishedBlogPosts } from '@/lib/server/blog-posts';
@@ -109,7 +107,6 @@ export default async function BlogDetailPage({ params }: { params: Promise<PageP
   const coverImageUrl = post.coverImageUrl || '/services-card.webp';
   const publishedAt = post.publishedAt || post.createdAt;
   const publishedLabel = formatBlogPublishDate(publishedAt);
-  const readTimeLabel = formatBlogReadTime(getBlogReadTimeMinutes(post.content));
   const articleUrl = toAbsoluteSiteUrl(`/blogs/${post.slug}`);
   const schemaImage = coverImageUrl.startsWith('http')
     ? coverImageUrl
@@ -183,8 +180,8 @@ export default async function BlogDetailPage({ params }: { params: Promise<PageP
       />
 
       <div className="site-container-readable">
-        <header className="mb-8 md:mb-10">
-          <nav className="mb-5 flex flex-wrap items-center gap-2 text-[11px] text-brand-text/45">
+        <header className="mb-5 md:mb-8">
+          <nav className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-brand-text/45">
             <Link href="/" className="hover:text-primary transition-colors">
               Home
             </Link>
@@ -197,17 +194,11 @@ export default async function BlogDetailPage({ params }: { params: Promise<PageP
           </nav>
 
           <article className="p-0 sm:p-1 md:p-2">
-            <div className="flex justify-center">
-              <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-primary">
-                {post.category || 'Insight'}
-              </span>
-            </div>
-
-            <h1 className="mt-5 text-center text-3xl sm:text-4xl md:text-6xl leading-[1.04] font-black text-brand-text tracking-[-0.02em]">
+            <h1 className="mt-1 text-center text-3xl sm:text-4xl md:text-6xl leading-[1.04] font-black text-brand-text tracking-[-0.02em]">
               {post.title}
             </h1>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[12px] text-brand-text/65">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[12px] text-brand-text/65">
               <div className="inline-flex items-center gap-2">
                 <UploadedImage
                   src={authorPhotoUrl}
@@ -222,14 +213,10 @@ export default async function BlogDetailPage({ params }: { params: Promise<PageP
                 <CalendarDays className="w-4 h-4 text-primary" />
                 {publishedLabel}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock3 className="w-4 h-4 text-primary" />
-                {readTimeLabel}
-              </span>
             </div>
 
             {post.shortDescription ? (
-              <div className="mt-6 text-center text-base md:text-lg leading-relaxed text-brand-text/72 max-w-4xl mx-auto">
+              <div className="mt-4 text-center text-base md:text-lg leading-relaxed text-brand-text/72 max-w-4xl mx-auto">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   skipHtml

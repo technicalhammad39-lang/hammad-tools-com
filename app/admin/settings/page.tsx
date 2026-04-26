@@ -85,7 +85,7 @@ const AdminSettings = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4">Contact Protocol (Email)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 ml-4">Contact Email</label>
                 <input 
                   type="email" 
                   value={siteConfig.contactEmail}

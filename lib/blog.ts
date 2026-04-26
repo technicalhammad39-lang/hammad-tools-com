@@ -238,8 +238,7 @@ export function getBlogReadTimeMinutes(content: string, wordsPerMinute = DEFAULT
 }
 
 export function formatBlogReadTime(minutes: number) {
-  const normalized = Math.max(1, Number(minutes) || 1);
-  return `${normalized} min read`;
+  return '';
 }
 
 export function slugifyBlogHeading(value: string) {

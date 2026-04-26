@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, HelpCircle, Loader2, ShieldCheck, Upload, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, HelpCircle, Loader2, ShieldCheck, Upload, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { db } from '@/firebase';
@@ -89,6 +89,20 @@ function getPaymentMethodDisplayName(method: PaymentMethod) {
     return method.name?.trim() || 'Manual Chat (WhatsApp)';
   }
   return method.name;
+}
+
+async function copyText(value: string) {
+  const text = (value || '').trim();
+  if (!text) {
+    return false;
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  return false;
 }
 
 function buildWhatsAppManualOrderMessage({
@@ -521,6 +535,20 @@ function CheckoutPageContent() {
     [discountAmount, subtotal]
   );
 
+  async function handleCopyPaymentValue(label: string, value: string) {
+    try {
+      const success = await copyText(value);
+      if (!success) {
+        toast.error('Copy failed', `${label} is empty or unavailable.`);
+        return;
+      }
+      toast.success('Copied', `${label} copied.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to copy text.';
+      toast.error('Copy failed', message);
+    }
+  }
+
   function resolveOrderIdWithoutPreRead() {
     const fromState = (orderId || '').trim();
     if (fromState) {
@@ -859,7 +887,7 @@ function CheckoutPageContent() {
             mobileSummaryVisible ? 'translate-y-0' : '-translate-y-[140%]'
           }`}
         >
-          <div className="rounded-2xl border border-primary/20 bg-[#101010]/95 backdrop-blur-xl px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,0.5)]">
+          <div className="rounded-lg border border-primary/20 bg-[#101010]/95 backdrop-blur-xl px-2.5 py-2 shadow-[0_14px_30px_rgba(0,0,0,0.5)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="text-[8px] font-black uppercase tracking-[0.16em] text-primary">Order Summary</div>
@@ -874,13 +902,13 @@ function CheckoutPageContent() {
               <button
                 type="button"
                 onClick={() => setMobileSummaryClosed(true)}
-                className="w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-brand-text/70 flex items-center justify-center"
+                className="w-6 h-6 rounded-md border border-white/10 bg-white/5 text-brand-text/70 flex items-center justify-center"
                 aria-label="Hide mobile order summary"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             </div>
-            <div className="mt-2.5 flex items-end justify-between gap-2">
+            <div className="mt-2 flex items-end justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-[8px] font-black uppercase tracking-[0.16em] text-brand-text/35">Order ID</div>
                 <div className="text-[9px] font-black text-brand-text/60 truncate max-w-[44vw]">{orderId}</div>
@@ -981,32 +1009,71 @@ function CheckoutPageContent() {
                     </div>
 
                     {selectedPaymentMethod ? (
-                      <div className="rounded-xl md:rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4">
-                        {selectedPaymentMethodIsManual ? (
-                          <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
-                            <div className="text-[10px] uppercase tracking-widest font-black text-primary">Manual Chat Checkout</div>
-                            <div className="text-xs font-black text-brand-text/80 mt-2 leading-relaxed">
-                              This method redirects you to WhatsApp with your full order details prefilled.
-                            </div>
+                      selectedPaymentMethodIsManual ? (
+                        <div className="space-y-2 py-1">
+                          <div className="text-[10px] uppercase tracking-widest font-black text-primary">Manual Chat Checkout</div>
+                          <div className="text-sm text-brand-text/75 leading-relaxed">
+                            You will be redirected to WhatsApp with your order details already filled in.
                           </div>
-                        ) : (
+                        </div>
+                      ) : (
+                        <div className="rounded-xl md:rounded-2xl border border-white/10 bg-black/30 p-5 space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Title</div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Title</div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleCopyPaymentValue('Account title', selectedPaymentMethod.accountTitle)
+                                  }
+                                  className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest font-black text-primary hover:text-primary/80"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  Copy
+                                </button>
+                              </div>
                               <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountTitle}</div>
                             </div>
                             <div>
-                              <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Number</div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[9px] uppercase tracking-widest text-brand-text/35 font-black">Account Number</div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleCopyPaymentValue('Account number', selectedPaymentMethod.accountNumber)
+                                  }
+                                  className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest font-black text-primary hover:text-primary/80"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  Copy
+                                </button>
+                              </div>
                               <div className="text-base font-black text-brand-text mt-1">{selectedPaymentMethod.accountNumber}</div>
                             </div>
                           </div>
-                        )}
-                        {selectedPaymentMethod.instructions ? (
-                          <div className="text-[10px] uppercase tracking-widest font-black text-brand-text/45 border-t border-white/10 pt-4">
-                            {selectedPaymentMethod.instructions}
-                          </div>
-                        ) : null}
-                      </div>
+                          {selectedPaymentMethod.instructions ? (
+                            <div className="border-t border-white/10 pt-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[9px] uppercase tracking-widest font-black text-brand-text/35">Details</div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleCopyPaymentValue('Payment details', selectedPaymentMethod.instructions || '')
+                                  }
+                                  className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest font-black text-primary hover:text-primary/80"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  Copy
+                                </button>
+                              </div>
+                              <div className="text-xs text-brand-text/65 mt-2 leading-relaxed">
+                                {selectedPaymentMethod.instructions}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      )
                     ) : null}
                   </>
                 )}
@@ -1018,7 +1085,7 @@ function CheckoutPageContent() {
                 </h2>
 
                 {selectedPaymentMethodIsManual ? (
-                  <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 text-[10px] font-black uppercase tracking-widest text-primary leading-relaxed">
+                  <div className="text-sm text-brand-text/70 leading-relaxed">
                     Sender account, transaction ID, and screenshot are skipped for manual chat. On submit, your order is created and you are redirected to WhatsApp with all order details.
                   </div>
                 ) : (

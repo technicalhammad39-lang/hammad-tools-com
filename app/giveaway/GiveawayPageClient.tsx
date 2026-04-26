@@ -21,6 +21,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   doc,
   updateDoc,
   addDoc,
@@ -55,6 +56,12 @@ interface Giveaway {
   commentCount?: number;
   adminAvatar?: string;
   adminName?: string;
+}
+
+interface ProfilePreview {
+  id: string;
+  photoURL?: string;
+  displayName?: string;
 }
 
 const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
@@ -230,12 +237,11 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
                 {giveaway.adminName || 'Hammad Tools'}
                 <Verified className="w-3 h-3 text-primary fill-primary" />
               </span>
-              <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest">Mission Intel</span>
+              <span className="text-[10px] text-primary/60 font-black uppercase tracking-widest">Official Update</span>
             </div>
             <div className="flex items-center gap-1 text-[9px] text-brand-text/30 font-black uppercase">
-              <span>Recently</span>
-              <span className="opacity-40">|</span>
               <Globe className="w-2.5 h-2.5" />
+              <span>Public Post</span>
             </div>
           </div>
         </div>
@@ -396,6 +402,7 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
 export default function GiveawayPageClient() {
   const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
+  const [topProfiles, setTopProfiles] = useState<ProfilePreview[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -418,12 +425,32 @@ export default function GiveawayPageClient() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const profilesQuery = query(collection(db, 'users'), limit(6));
+    const unsubscribeProfiles = onSnapshot(
+      profilesQuery,
+      (snapshot) => {
+        const list = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<ProfilePreview, 'id'>),
+          }))
+          .filter((entry) => Boolean((entry.photoURL || '').trim()))
+          .slice(0, 4);
+        setTopProfiles(list);
+      },
+      () => setTopProfiles([])
+    );
+
+    return () => unsubscribeProfiles();
+  }, []);
+
   if (loading) {
     return (
       <main className="min-h-screen page-navbar-spacing pb-20 px-4 bg-brand-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-6">
           <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-brand-text/40 font-black uppercase tracking-widest text-xs">Syncing Rewards...</p>
+          <p className="text-brand-text/40 font-black uppercase tracking-widest text-xs">Loading Giveaways...</p>
         </div>
       </main>
     );
@@ -438,19 +465,29 @@ export default function GiveawayPageClient() {
           viewport={{ once: true, margin: '-100px' }}
           className="flex items-center justify-between mb-10"
         >
-          <div>
-            <h1 className="text-4xl font-black uppercase text-brand-text">Mission <span className="internal-gradient">Feed</span></h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/30">Hammad Tools Reward Protocol v2.0</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-4xl font-black uppercase text-brand-text whitespace-nowrap truncate">
+              Giveaway <span className="internal-gradient">Feed</span>
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/30">Latest public giveaways and winners updates</p>
           </div>
-          <div className="flex -space-x-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-10 h-10 rounded-full border-2 border-brand-bg bg-white/5 overflow-hidden">
-                <Image src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="Active User" width={40} height={40} />
+          <div className="flex -space-x-3 shrink-0">
+            {topProfiles.map((profile) => (
+              <div key={profile.id} className="w-10 h-10 rounded-full border-2 border-brand-bg bg-white/5 overflow-hidden">
+                <UploadedImage
+                  src={profile.photoURL || ''}
+                  fallbackSrc={null}
+                  fallbackOnError={false}
+                  alt={profile.displayName || 'User'}
+                  className="w-full h-full object-cover"
+                />
               </div>
             ))}
-            <div className="w-10 h-10 rounded-full border-2 border-brand-bg bg-primary flex items-center justify-center text-[10px] font-black text-black">
-              +12k
-            </div>
+            {!topProfiles.length ? null : (
+              <div className="w-10 h-10 rounded-full border-2 border-brand-bg bg-primary flex items-center justify-center text-[10px] font-black text-black">
+                +{topProfiles.length}
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -471,7 +508,7 @@ export default function GiveawayPageClient() {
           viewport={{ once: true, margin: '-100px' }}
           className="text-center mt-20 opacity-20 hover:opacity-100 transition-opacity"
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-text">End of Secure Feed</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-text">You reached the end</p>
         </motion.div>
       </div>
     </main>

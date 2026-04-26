@@ -248,8 +248,8 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-brand-bg"><div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-2xl shadow-primary/20" /></div>;
   if (!service) return <div className="min-h-screen flex flex-col items-center justify-center text-brand-text bg-brand-bg">
     <Shield className="w-20 h-20 text-accent mb-6 opacity-20" />
-    <h2 className="text-3xl font-black uppercase mb-4">System Error: Tool Missing</h2>
-    <Link href="/tools" className="px-10 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest text-xs border-b-4 border-secondary transition-all hover:scale-105 active:scale-95">Back to Command Center</Link>
+    <h2 className="text-3xl font-black uppercase mb-4">Tool Not Found</h2>
+    <Link href="/tools" className="px-10 py-4 bg-primary text-black rounded-2xl font-black uppercase tracking-widest text-xs border-b-4 border-secondary transition-all hover:scale-105 active:scale-95">Back to Tools</Link>
   </div>;
 
   const currentPrice = selectedPlan ? selectedPlan.ourPrice : service.price;
@@ -301,9 +301,16 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
         <button
           type="button"
           onClick={handleScrollToReviews}
-          className="fixed right-3 sm:right-4 bottom-24 md:bottom-8 z-[70] rounded-xl border border-primary/40 bg-primary/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-black shadow-[0_12px_28px_rgba(255,214,0,0.35)]"
+          className="fixed right-3 sm:right-4 bottom-24 md:bottom-8 z-[70] rounded-xl border border-primary/40 bg-[#0E0E0E]/90 p-1.5 shadow-[0_12px_28px_rgba(255,214,0,0.3)]"
+          aria-label="Scroll to reviews"
         >
-          Write Review
+          <UploadedImage
+            src="/review-get.png"
+            fallbackSrc={null}
+            fallbackOnError={false}
+            alt="Write review"
+            className="h-10 sm:h-11 w-auto object-contain"
+          />
         </button>
       ) : null}
 
@@ -316,10 +323,10 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
           <span className="uppercase font-black tracking-[0.2em] text-[10px]">Back to Tools</span>
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-10 lg:gap-20">
 
           {/* Left Column: Visuals & Meta (5 cols) */}
-          <div className="lg:col-span-5 space-y-8">
+          <div className="lg:col-span-5 space-y-4 md:space-y-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -342,33 +349,33 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             </motion.div>
 
             {/* Quick Badges */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-emerald-400 group-hover:scale-110 transition-transform flex-shrink-0" />
+            <div className="grid grid-cols-2 gap-2.5 md:gap-4">
+              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-2.5 md:gap-3 group h-auto">
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-brand-text/70 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
-                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Delivery</div>
-                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.deliveryStatus || 'Instant'}</div>
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/70 mb-0.5">Delivery</div>
+                  <div className="text-[10px] md:text-xs font-black text-white leading-tight whitespace-pre-wrap break-words">{service.deliveryStatus || 'Instant'}</div>
                 </div>
               </div>
-              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <Clock className="w-5 h-5 md:w-6 md:h-6 text-secondary group-hover:scale-110 transition-transform flex-shrink-0" />
+              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-2.5 md:gap-3 group h-auto">
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-brand-text/70 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
-                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Access</div>
-                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.accessLabel || service.accessType || 'Shared'}</div>
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/70 mb-0.5">Access</div>
+                  <div className="text-[10px] md:text-xs font-black text-white leading-tight whitespace-pre-wrap break-words">{service.accessLabel || service.accessType || 'Shared'}</div>
                 </div>
               </div>
-              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <Shield className="w-5 h-5 md:w-6 md:h-6 text-primary group-hover:scale-110 transition-transform flex-shrink-0" />
+              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-2.5 md:gap-3 group h-auto">
+                <Shield className="w-5 h-5 md:w-6 md:h-6 text-brand-text/70 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
-                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Warranty</div>
-                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.warranty || 'Full'}</div>
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/70 mb-0.5">Warranty</div>
+                  <div className="text-[10px] md:text-xs font-black text-white leading-tight whitespace-pre-wrap break-words">{service.warranty || 'Full'}</div>
                 </div>
               </div>
-              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-3 md:gap-4 group h-auto">
-                <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-400 group-hover:scale-110 transition-transform flex-shrink-0" />
+              <div className="glass p-3 sm:p-5 rounded-2xl md:rounded-3xl border border-white/5 flex flex-row items-center text-left gap-2.5 md:gap-3 group h-auto">
+                <Users className="w-5 h-5 md:w-6 md:h-6 text-brand-text/70 group-hover:scale-110 transition-transform flex-shrink-0" />
                 <div>
-                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-text/30">Plan Type</div>
-                  <div className="text-[10px] md:text-xs font-black text-brand-text leading-tight whitespace-pre-wrap break-words">{service.planType || 'Individual'}</div>
+                  <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/70 mb-0.5">Plan Type</div>
+                  <div className="text-[10px] md:text-xs font-black text-white leading-tight whitespace-pre-wrap break-words">{service.planType || 'Individual'}</div>
                 </div>
               </div>
             </div>
@@ -398,12 +405,12 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
           </div>
 
           {/* Right Column: Pricing & Purchase (7 cols) */}
-          <div className="lg:col-span-7 space-y-7 md:space-y-8">
+          <div className="lg:col-span-7 space-y-5 md:space-y-8">
             <div>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-6xl md:text-8xl font-black mb-6 text-brand-text leading-[0.9] whitespace-pre-wrap break-words"
+                className="text-4xl sm:text-5xl md:text-8xl font-black mb-3 md:mb-6 text-brand-text leading-[0.94] whitespace-pre-wrap break-words"
               >
                 {service.name}
               </motion.h1>
@@ -523,7 +530,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
             </div>
 
             <div className="mt-1 md:mt-2">
-              <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-emerald-500/20 bg-emerald-500/10 py-2.5 md:py-3 px-3">
+              <div className="relative overflow-hidden rounded-lg md:rounded-2xl border border-emerald-500/20 bg-emerald-500/10 py-2 md:py-3 px-2.5 md:px-3">
                 <motion.div
                   animate={{ x: ['0%', '-50%'] }}
                   transition={{ duration: 13, repeat: Infinity, ease: 'linear' }}
@@ -626,10 +633,10 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                                 />
                               ))}
                             </div>
-                            <p className="text-xs md:text-sm font-medium text-brand-text/80 leading-relaxed mb-2 whitespace-pre-wrap break-words">
+                            <p className="text-sm md:text-base font-medium text-brand-text/85 leading-relaxed mb-2 whitespace-pre-wrap break-words">
                               {review.text}
                             </p>
-                            <div className="text-[10px] md:text-[11px] font-black tracking-widest text-brand-text whitespace-pre-wrap break-words">
+                            <div className="text-[9px] md:text-[10px] font-black tracking-widest text-brand-text/65 whitespace-pre-wrap break-words">
                               {displayName}
                             </div>
                             {maskedIdentity ? (

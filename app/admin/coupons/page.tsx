@@ -299,7 +299,7 @@ const AdminCoupons = () => {
             Manage <span className="internal-gradient">Coupons</span>
           </h1>
           <p className="text-brand-text/40 text-[10px] md:text-sm font-black uppercase tracking-widest mt-2 px-10">
-            Discount & Promotion Intelligence
+            Discount & Promotion Center
           </p>
         </div>
         <button
@@ -457,7 +457,7 @@ const AdminCoupons = () => {
                 onClick={() => setIsAdding(false)}
                 className="order-2 md:order-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] text-brand-text/40 hover:text-brand-text transition-colors"
               >
-                Abort Mission
+                Cancel
               </button>
               <button
                 onClick={handleAdd}

@@ -18,6 +18,12 @@ import {
   Paperclip,
   X,
 } from 'lucide-react';
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  updateProfile as updateFirebaseProfile,
+} from 'firebase/auth';
 import { useSearchParams } from 'next/navigation';
 import {
   collection,
@@ -33,7 +39,12 @@ import type { NotificationRecord, OrderRecord } from '@/lib/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ToastProvider';
 import { formatDateTime, formatOrderStatusLabel, getOrderDisplayId, normalizeOrderStatus } from '@/lib/order-system';
-import { toStorageMetadata, toStorageMetadataFromLibrary, withProtectedFileToken } from '@/lib/storage-utils';
+import {
+  toStorageMetadata,
+  toStorageMetadataFromLibrary,
+  uploadMediaFile,
+  withProtectedFileToken,
+} from '@/lib/storage-utils';
 import { normalizeImageUrl, resolveStoredMediaUrl } from '@/lib/image-display';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
 import UploadedImage from '@/components/UploadedImage';
@@ -204,6 +215,15 @@ function DashboardPageContent() {
   const [composerAttachment, setComposerAttachment] = useState<ComposerAttachment | null>(null);
   const [isAttachmentLibraryOpen, setIsAttachmentLibraryOpen] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updatingPasswordState, setUpdatingPasswordState] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -348,6 +368,24 @@ function DashboardPageContent() {
   }, [selectedOrderId]);
 
   useEffect(() => {
+    setProfileName(profile?.displayName || '');
+    setProfilePhotoUrl(profile?.photoURL || '');
+  }, [profile?.displayName, profile?.photoURL]);
+
+  useEffect(() => {
+    if (!profilePhotoFile) {
+      setProfilePhotoPreview('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(profilePhotoFile);
+    setProfilePhotoPreview(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [profilePhotoFile]);
+
+  useEffect(() => {
     if (!chatScrollRef.current) {
       return;
     }
@@ -468,6 +506,120 @@ function DashboardPageContent() {
       toast.error('Message failed', message);
     } finally {
       setSendingMessage(false);
+    }
+  }
+
+  async function syncProfileToServer(payload: { displayName: string; photoURL: string }) {
+    if (!user) {
+      throw new Error('Authentication required');
+    }
+
+    const token = await user.getIdToken(true);
+    const response = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await response.json()) as { success?: boolean; error?: string };
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.error || 'Failed to sync profile.');
+    }
+  }
+
+  async function handleSaveProfileSettings() {
+    if (!user) {
+      return;
+    }
+
+    const displayName = profileName.trim();
+    if (!displayName) {
+      toast.error('Name required', 'Please enter your name.');
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      let nextPhotoUrl = (profilePhotoUrl || '').trim();
+
+      if (profilePhotoFile) {
+        const uploaded = await uploadMediaFile({
+          file: profilePhotoFile,
+          folder: 'profiles',
+          relatedType: 'profile',
+          relatedId: user.uid,
+          relatedUserId: user.uid,
+          note: 'dashboard-profile-photo',
+        });
+        nextPhotoUrl = uploaded.url;
+      }
+
+      await updateFirebaseProfile(user, {
+        displayName,
+        photoURL: nextPhotoUrl || '',
+      });
+
+      await syncProfileToServer({
+        displayName,
+        photoURL: nextPhotoUrl || '',
+      });
+
+      setProfilePhotoUrl(nextPhotoUrl || '');
+      setProfilePhotoFile(null);
+      toast.success('Profile updated', 'Your profile changes were saved.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update profile.';
+      toast.error('Profile update failed', message);
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!user || !user.email) {
+      toast.error('Password update unavailable', 'This account cannot update password here.');
+      return;
+    }
+
+    const hasPasswordProvider = user.providerData.some((provider) => provider.providerId === 'password');
+    if (!hasPasswordProvider) {
+      toast.info('Password login not enabled', 'Use your provider account settings to manage password.');
+      return;
+    }
+
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      toast.error('Missing fields', 'Fill old, new, and confirm password fields.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Password mismatch', 'New password and confirm password must match.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('Weak password', 'Use at least 6 characters in new password.');
+      return;
+    }
+
+    setUpdatingPasswordState(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated', 'Your password has been changed successfully.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update password.';
+      toast.error('Password update failed', message);
+    } finally {
+      setUpdatingPasswordState(false);
     }
   }
 
@@ -1011,15 +1163,125 @@ function DashboardPageContent() {
 
             {activeTab === 'settings' && (
               <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <h2 className="text-3xl font-black uppercase text-brand-text">Settings</h2>
-                <div className="glass rounded-2xl border border-white/5 p-8 space-y-4">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Account Email</div>
-                  <div className="text-sm font-semibold text-brand-text break-all">{user.email || 'N/A'}</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40">Display Name</div>
-                  <div className="text-sm font-semibold text-brand-text">{profile?.displayName || 'N/A'}</div>
+                <h2 className="text-3xl font-black uppercase text-brand-text">Profile Settings</h2>
+
+                <div className="glass rounded-2xl border border-white/5 p-5 md:p-8 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-5 md:gap-8 items-start">
+                    <div className="space-y-3">
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+                        <UploadedImage
+                          src={profilePhotoPreview || profilePhotoUrl || profile?.photoURL || ''}
+                          fallbackSrc={`https://ui-avatars.com/api/?name=${encodeURIComponent(profileName || profile?.displayName || 'User')}`}
+                          alt={profileName || profile?.displayName || 'Profile'}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/15 bg-white/[0.03] text-[10px] font-black uppercase tracking-widest text-brand-text/70 cursor-pointer hover:border-primary/40 hover:text-primary transition-colors">
+                        Change Photo
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/jpg"
+                          className="hidden"
+                          onChange={(event) => {
+                            const nextFile = event.target.files?.[0] || null;
+                            setProfilePhotoFile(nextFile);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2">Account Email</div>
+                        <div className="text-sm font-semibold text-brand-text break-all">{user.email || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileName}
+                          onChange={(event) => setProfileName(event.target.value)}
+                          placeholder="Enter your display name"
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-brand-text focus:outline-none focus:border-primary/50"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleSaveProfileSettings();
+                        }}
+                        disabled={savingProfile}
+                        className="w-full md:w-auto rounded-xl bg-primary px-5 py-3 text-black text-[10px] font-black uppercase tracking-widest border-b-2 border-secondary inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Save Profile
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/10" />
+
+                  <div className="space-y-4">
+                    <h3 className="text-base font-black uppercase tracking-widest text-brand-text">
+                      Change Password
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">
+                          Old Password
+                        </label>
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(event) => setCurrentPassword(event.target.value)}
+                          placeholder="Enter old password"
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-brand-text focus:outline-none focus:border-primary/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(event) => setNewPassword(event.target.value)}
+                          placeholder="Enter new password"
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-brand-text focus:outline-none focus:border-primary/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-2 block">
+                          Confirm Password
+                        </label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(event) => setConfirmPassword(event.target.value)}
+                          placeholder="Confirm new password"
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-brand-text focus:outline-none focus:border-primary/50"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleChangePassword();
+                      }}
+                      disabled={updatingPasswordState}
+                      className="w-full md:w-auto rounded-xl border border-primary/40 bg-primary/15 px-5 py-3 text-primary text-[10px] font-black uppercase tracking-widest inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {updatingPasswordState ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      Update Password
+                    </button>
+                  </div>
+
                   <button
                     onClick={logout}
-                    className="lg:hidden mt-4 w-full py-3 rounded-xl border border-accent/30 bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest"
+                    className="lg:hidden mt-2 w-full py-3 rounded-xl border border-accent/30 bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest"
                   >
                     Sign Out
                   </button>

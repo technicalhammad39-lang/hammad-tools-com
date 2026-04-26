@@ -53,7 +53,7 @@ export default function AboutClient() {
             <div className="glass p-6 md:p-10 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden bg-white/5">
                <div className="absolute top-0 left-0 w-2 h-full bg-primary"></div>
                <Shield className="w-8 h-8 md:w-12 md:h-12 text-primary mb-6" />
-               <h2 className="text-2xl md:text-4xl font-black uppercase text-white mb-4">Our Mission & Vision</h2>
+               <h2 className="text-2xl md:text-4xl font-black uppercase text-white mb-4">Our Vision</h2>
                <div className="space-y-4 text-brand-text/70 font-medium leading-relaxed text-sm md:text-base">
                   <p>
                     &ldquo;Our vision is simple: democratize access to elite digital resources. We empower creators by removing the barriers of fragmented subscriptions and high costs.&rdquo;
