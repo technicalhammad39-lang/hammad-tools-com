@@ -1,5 +1,5 @@
 {
-  "name": "ai-studio-applet",
+  "name": "hammadtools",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -57,3 +57,4 @@
     "fast-xml-parser": "^5.7.1"
   }
 }
+
