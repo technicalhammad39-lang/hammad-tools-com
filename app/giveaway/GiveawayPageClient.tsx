@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
 import {
   Timer,
-  Users,
   Trophy,
   MessageSquare,
   Heart,
@@ -28,14 +27,9 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  getDocs,
-  where,
-  increment,
 } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { useAuth } from '@/context/AuthContext';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ToastProvider';
 import { resolveImageSource } from '@/lib/image-display';
@@ -64,6 +58,12 @@ interface ProfilePreview {
   displayName?: string;
 }
 
+const DESCRIPTION_PREVIEW_LIMIT = 380;
+
+function normalizeMultilineText(value: unknown) {
+  return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const { user, profile } = useAuth();
   const router = useRouter();
@@ -73,7 +73,8 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
   const [showComments, setShowComments] = useState(false);
   const [localComments, setLocalComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState('');
-  const [joining, setJoining] = useState(false);
+  const [expandedDescription, setExpandedDescription] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const redirectToLogin = () => {
     const nextPath = pathname || '/giveaway';
@@ -89,6 +90,13 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
       setLocalComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
   }, [giveaway.id]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const handleLike = async () => {
     if (!user) {
@@ -136,52 +144,6 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
     setCommentText('');
   };
 
-  const handleJoin = async () => {
-    if (!user) {
-      redirectToLogin();
-      return;
-    }
-    if (joining) {
-      return;
-    }
-
-    setJoining(true);
-    try {
-      const entryQuery = query(
-        collection(db, `giveaways/${giveaway.id}/entries`),
-        where('userId', '==', user.uid)
-      );
-      const existing = await getDocs(entryQuery);
-      if (!existing.empty) {
-        toast.info('Already joined', 'You are already entered in this giveaway.');
-        return;
-      }
-
-      await addDoc(collection(db, `giveaways/${giveaway.id}/entries`), {
-        userId: user.uid,
-        userName: profile?.displayName || user.email || 'User',
-        userEmail: user.email || '',
-        createdAt: serverTimestamp(),
-      });
-      await addDoc(collection(db, 'user_entries'), {
-        userId: user.uid,
-        giveawayId: giveaway.id,
-        giveawayTitle: giveaway.title,
-        createdAt: serverTimestamp(),
-      });
-      await updateDoc(doc(db, 'giveaways', giveaway.id), {
-        participantsCount: increment(1),
-      });
-
-      toast.success('Entry confirmed', 'You have been added to the giveaway.');
-    } catch (error) {
-      console.error('Entry error:', error);
-      toast.error('Failed to join giveaway', 'Please try again.');
-    } finally {
-      setJoining(false);
-    }
-  };
-
   const handleShare = async () => {
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     const shareText = `Check out this giveaway: ${giveaway.title}`;
@@ -204,13 +166,19 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
 
   const endDateMs = giveaway.endDate?.toDate?.()?.getTime?.();
   const remainingDays = endDateMs
-    ? Math.ceil((endDateMs - Date.now()) / (1000 * 60 * 60 * 24))
+    ? Math.ceil((endDateMs - nowMs) / (1000 * 60 * 60 * 24))
     : null;
+  const normalizedDescription = normalizeMultilineText(giveaway.description);
+  const canExpandDescription = normalizedDescription.length > DESCRIPTION_PREVIEW_LIMIT;
+  const previewDescription = canExpandDescription && !expandedDescription
+    ? `${normalizedDescription.slice(0, DESCRIPTION_PREVIEW_LIMIT).trimEnd()}...`
+    : normalizedDescription;
   const giveawayImageSrc = resolveImageSource(giveaway, {
     mediaPaths: ['imageMedia'],
     stringPaths: ['image'],
-    placeholder: '/services-card.webp',
+    placeholder: '',
   });
+  const hasGiveawayImage = Boolean(giveawayImageSrc);
 
   return (
     <motion.div
@@ -254,47 +222,75 @@ const GiveawayPost = ({ giveaway }: { giveaway: Giveaway }) => {
         <h2 className="text-xl font-black text-brand-text uppercase leading-none mb-3 group-hover:text-primary transition-colors">
           {giveaway.title}
         </h2>
-        <div
-          className="prose prose-invert prose-primary max-w-none
-          prose-p:text-brand-text/60 prose-p:text-sm prose-p:leading-relaxed
-          prose-a:text-blue-500 prose-a:underline cursor-pointer"
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{giveaway.description}</ReactMarkdown>
-        </div>
+        {hasGiveawayImage ? (
+          <>
+            <p className="text-brand-text/70 text-sm sm:text-[15px] leading-relaxed whitespace-pre-line break-words">
+              {previewDescription || 'No giveaway details provided yet.'}
+            </p>
+            {canExpandDescription ? (
+              <button
+                type="button"
+                onClick={() => setExpandedDescription((prev) => !prev)}
+                className="mt-3 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] text-primary hover:text-primary/80 transition-colors"
+              >
+                {expandedDescription ? 'Show less' : 'Read more'}
+              </button>
+            ) : null}
+          </>
+        ) : null}
       </div>
 
-      <div className="relative aspect-[1.91/1] w-full border-y border-white/5 bg-black/20 overflow-hidden">
-        <UploadedImage
-          src={giveawayImageSrc}
-          fallbackSrc="/services-card.webp"
-          alt={giveaway.title}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
+      {hasGiveawayImage ? (
+        <div className="relative aspect-[1.91/1] w-full border-y border-white/5 bg-black/20 overflow-hidden">
+          <UploadedImage
+            src={giveawayImageSrc}
+            fallbackSrc={giveawayImageSrc}
+            alt={giveaway.title}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
 
-        <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
-          <div className="flex gap-4">
-            <div className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
-              <Timer className="w-4 h-4 text-primary" />
-              <span className="text-[10px] font-black text-brand-text uppercase">
-                {remainingDays && remainingDays > 0 ? `${remainingDays} Days` : 'Ended'} Left
-              </span>
-            </div>
-            <div className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
-              <Users className="w-4 h-4 text-secondary" />
-              <span className="text-[10px] font-black text-brand-text uppercase">{giveaway.participantsCount || 0} Joined</span>
+          <div className="absolute bottom-6 left-6 right-6 flex items-center justify-start gap-4">
+            <div className="flex flex-wrap gap-3 sm:gap-4">
+              <div className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
+                <Timer className="w-4 h-4 text-primary" />
+                <span className="text-[10px] font-black text-brand-text uppercase">
+                  {remainingDays && remainingDays > 0 ? `${remainingDays} Days` : 'Ended'} Left
+                </span>
+              </div>
             </div>
           </div>
-          <button
-            onClick={handleJoin}
-            disabled={joining}
-            className="bg-primary text-black px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl border-b-4 border-[#FF8C2A] transform active:scale-95 transition-all disabled:opacity-60"
-          >
-            {joining ? 'Joining...' : 'Enter Now'}
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="w-full border-y border-white/5 bg-gradient-to-b from-black/20 to-black/35 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-5">
+            <p className="text-brand-text/75 text-sm sm:text-[15px] leading-relaxed whitespace-pre-line break-words">
+              {previewDescription || 'No giveaway details provided yet.'}
+            </p>
+            {canExpandDescription ? (
+              <button
+                type="button"
+                onClick={() => setExpandedDescription((prev) => !prev)}
+                className="mt-3 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] text-primary hover:text-primary/80 transition-colors"
+              >
+                {expandedDescription ? 'Show less' : 'Read more'}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex items-center justify-start">
+            <div className="flex flex-wrap gap-3">
+              <div className="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
+                <Timer className="w-4 h-4 text-primary" />
+                <span className="text-[10px] font-black text-brand-text uppercase">
+                  {remainingDays && remainingDays > 0 ? `${remainingDays} Days` : 'Ended'} Left
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-b border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-1.5 cursor-pointer hover:underline group/likes">

@@ -30,6 +30,10 @@ interface Giveaway {
   adminName?: string;
 }
 
+function normalizeMultilineText(value: unknown) {
+  return String(value ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 const AdminGiveaways = () => {
   const { user, isStaff } = useAuth();
   const toast = useToast();
@@ -77,8 +81,10 @@ const AdminGiveaways = () => {
     let finalPayloadForDebug: Record<string, unknown> | null = null;
 
     try {
+      const normalizedDescription = normalizeMultilineText(form.description);
       const data = {
         ...form,
+        description: normalizedDescription,
         endDate: form.endDate || Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
         participantsCount: form.participantsCount || 0,
         updatedAt: serverTimestamp(),
@@ -230,6 +236,9 @@ const AdminGiveaways = () => {
               value={form.description}
               onChange={e => setForm({...form, description: e.target.value})}
             />
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-text/40 -mt-3 mb-6">
+              Line breaks, bullets and emojis are preserved in public giveaway posts.
+            </p>
             <div className="flex justify-end space-x-4">
               <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="px-6 py-3 rounded-xl font-bold text-brand-text/60 hover:text-brand-text">Cancel</button>
               <button onClick={handleSave} className="bg-primary px-8 py-3 rounded-xl font-bold text-white">
@@ -272,7 +281,7 @@ const AdminGiveaways = () => {
                   onClick={() => {
                     setForm({
                       title: giveaway.title,
-                      description: giveaway.description,
+                      description: normalizeMultilineText(giveaway.description),
                       prize: giveaway.prize,
                       winnersCount: giveaway.winnersCount,
                       status: giveaway.status,
