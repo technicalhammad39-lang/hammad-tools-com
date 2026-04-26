@@ -305,11 +305,11 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
           aria-label="Scroll to reviews"
         >
           <UploadedImage
-            src="/review-get.png"
+            src="/review-get.webp"
             fallbackSrc={null}
             fallbackOnError={false}
             alt="Write review"
-            className="h-10 sm:h-11 w-auto object-contain"
+            className="h-14 sm:h-16 md:h-[4.5rem] w-auto object-contain"
           />
         </button>
       ) : null}
