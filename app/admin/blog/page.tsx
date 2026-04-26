@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -45,23 +45,48 @@ import {
   type BlogPostDocument,
 } from '@/lib/blog';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import {
+  buildBlogRelValue,
+  isExternalBlogHref,
+  normalizeBlogEditorUrl,
+  parseBlogLinkMeta,
+  sanitizeBlogHref,
+} from '@/lib/blog-links';
 
 type BlogFormState = {
   title: string;
-  slug: string;
   shortDescription: string;
   content: string;
   coverImageUrl: string;
   coverImageMedia: StoredFileMetadata | null;
 };
 
+type LinkInsertTargetField = 'shortDescription' | 'content';
+
+type LinkInsertState = {
+  targetField: LinkInsertTargetField;
+  anchorText: string;
+  url: string;
+  title: string;
+  openInNewTab: boolean;
+  nofollow: boolean;
+};
+
 const INITIAL_FORM: BlogFormState = {
   title: '',
-  slug: '',
   shortDescription: '',
   content: '',
   coverImageUrl: '',
   coverImageMedia: null,
+};
+
+const INITIAL_LINK_INSERT: LinkInsertState = {
+  targetField: 'content',
+  anchorText: '',
+  url: '',
+  title: '',
+  openInNewTab: false,
+  nofollow: false,
 };
 
 export default function BlogCMSPage() {
@@ -74,9 +99,12 @@ export default function BlogCMSPage() {
   const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
+  const [showLinkBuilder, setShowLinkBuilder] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPostDocument | null>(null);
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [formData, setFormData] = useState<BlogFormState>(INITIAL_FORM);
+  const [linkInsert, setLinkInsert] = useState<LinkInsertState>(INITIAL_LINK_INSERT);
+  const shortDescriptionRef = useRef<HTMLTextAreaElement | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!isStaff) {
@@ -109,7 +137,8 @@ export default function BlogCMSPage() {
   function resetEditor() {
     setFormData(INITIAL_FORM);
     setEditingPost(null);
-    setSlugManuallyEdited(false);
+    setLinkInsert(INITIAL_LINK_INSERT);
+    setShowLinkBuilder(false);
     setShowMarkdownPreview(false);
     setIsEditorOpen(false);
   }
@@ -117,7 +146,8 @@ export default function BlogCMSPage() {
   function openCreateEditor() {
     setFormData(INITIAL_FORM);
     setEditingPost(null);
-    setSlugManuallyEdited(false);
+    setLinkInsert(INITIAL_LINK_INSERT);
+    setShowLinkBuilder(false);
     setShowMarkdownPreview(false);
     setIsEditorOpen(true);
   }
@@ -126,15 +156,117 @@ export default function BlogCMSPage() {
     setEditingPost(post);
     setFormData({
       title: post.title,
-      slug: post.slug,
       shortDescription: post.shortDescription,
       content: post.content,
       coverImageUrl: post.coverImageUrl,
       coverImageMedia: post.coverImageMedia || null,
     });
-    setSlugManuallyEdited(true);
+    setLinkInsert(INITIAL_LINK_INSERT);
+    setShowLinkBuilder(false);
     setShowMarkdownPreview(false);
     setIsEditorOpen(true);
+  }
+
+  function buildMarkdownLinkMarkup(input: {
+    anchorText: string;
+    url: string;
+    title: string;
+    openInNewTab: boolean;
+    nofollow: boolean;
+  }) {
+    const cleanAnchor = input.anchorText.trim();
+    const cleanUrl = normalizeBlogEditorUrl(input.url);
+    const cleanTitle = input.title.trim();
+
+    if (!cleanAnchor || !cleanUrl) {
+      return '';
+    }
+
+    const titleTokens = [];
+    if (cleanTitle) {
+      titleTokens.push(cleanTitle);
+    }
+    if (input.openInNewTab) {
+      titleTokens.push('newtab');
+    }
+    if (input.nofollow) {
+      titleTokens.push('nofollow');
+    }
+
+    const suffix = titleTokens.length
+      ? ` "${titleTokens.join(' | ').replace(/"/g, '\\"')}"`
+      : '';
+    return `[${cleanAnchor}](${cleanUrl}${suffix})`;
+  }
+
+  function applyMarkdownAtCursor(field: LinkInsertTargetField, markup: string) {
+    const ref = field === 'shortDescription' ? shortDescriptionRef : contentRef;
+    const element = ref.current;
+
+    if (!element) {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: `${prev[field].trimEnd()} ${markup}`.trim(),
+      }));
+      return;
+    }
+
+    const source = formData[field] || '';
+    const start = element.selectionStart ?? source.length;
+    const end = element.selectionEnd ?? source.length;
+    const nextValue = `${source.slice(0, start)}${markup}${source.slice(end)}`;
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: nextValue,
+    }));
+
+    window.requestAnimationFrame(() => {
+      const cursor = start + markup.length;
+      element.focus();
+      element.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function handleInsertLink() {
+    const targetField = linkInsert.targetField;
+    const targetRef = targetField === 'shortDescription' ? shortDescriptionRef : contentRef;
+    const source = formData[targetField] || '';
+    const selectedText =
+      targetRef.current && targetRef.current.selectionStart !== targetRef.current.selectionEnd
+        ? source
+            .slice(targetRef.current.selectionStart, targetRef.current.selectionEnd)
+            .trim()
+        : '';
+
+    const anchorText = linkInsert.anchorText.trim() || selectedText;
+    const markup = buildMarkdownLinkMarkup({
+      anchorText,
+      url: linkInsert.url,
+      title: linkInsert.title,
+      openInNewTab: linkInsert.openInNewTab,
+      nofollow: linkInsert.nofollow,
+    });
+
+    if (!anchorText) {
+      toast.error('Anchor text required', 'Select text or provide anchor text.');
+      return;
+    }
+    if (!markup) {
+      toast.error('Valid URL required', 'Enter a valid internal/external URL.');
+      return;
+    }
+
+    applyMarkdownAtCursor(targetField, markup);
+    setLinkInsert((prev) => ({
+      ...prev,
+      anchorText: '',
+      url: '',
+      title: '',
+      openInNewTab: false,
+      nofollow: false,
+    }));
+    toast.success('Link inserted');
   }
 
   async function isSlugAvailable(slug: string, currentPostId = '') {
@@ -150,7 +282,7 @@ export default function BlogCMSPage() {
     }
 
     const title = formData.title.trim();
-    const slug = normalizeBlogSlug(formData.slug || title);
+    const slug = normalizeBlogSlug(title);
     const shortDescription = formData.shortDescription.trim();
     const content = formData.content.trim();
     const coverImageUrl = formData.coverImageUrl.trim();
@@ -328,46 +460,25 @@ export default function BlogCMSPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Title*
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(event) => {
-                        const nextTitle = event.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          title: nextTitle,
-                          slug: slugManuallyEdited ? prev.slug : normalizeBlogSlug(nextTitle),
-                        }));
-                      }}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                      Slug*
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.slug}
-                      onChange={(event) => {
-                        setSlugManuallyEdited(true);
-                        setFormData((prev) => ({
-                          ...prev,
-                          slug: normalizeBlogSlug(event.target.value),
-                        }));
-                      }}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
-                      required
-                    />
-                    <p className="mt-2 text-[11px] text-brand-text/40">/blogs/{formData.slug || 'your-slug'}</p>
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
+                    Title*
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        title: event.target.value,
+                      }))
+                    }
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary"
+                    required
+                  />
+                  <p className="mt-2 text-[11px] text-brand-text/40">
+                    Slug auto-generated: /blogs/{normalizeBlogSlug(formData.title) || 'auto-generated'}
+                  </p>
                 </div>
 
                 <div>
@@ -375,6 +486,7 @@ export default function BlogCMSPage() {
                     Short Description*
                   </label>
                   <textarea
+                    ref={shortDescriptionRef}
                     value={formData.shortDescription}
                     onChange={(event) =>
                       setFormData((prev) => ({ ...prev, shortDescription: event.target.value }))
@@ -423,10 +535,129 @@ export default function BlogCMSPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40 mb-2">
-                    Content (Markdown)*
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-widest text-brand-text/40">
+                      Content (Markdown)*
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowLinkBuilder((prev) => !prev)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/15 transition-colors"
+                    >
+                      {showLinkBuilder ? 'Hide Link Tool' : 'Insert Link'}
+                    </button>
+                  </div>
+
+                  {showLinkBuilder ? (
+                    <div className="mb-4 rounded-xl border border-white/10 bg-black/20 p-4 space-y-3">
+                      <p className="text-[11px] text-brand-text/55">
+                        Select text in editor then insert backlink. External links open in new tab by default.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest font-black text-brand-text/45 mb-1.5">
+                            Target Field
+                          </label>
+                          <select
+                            value={linkInsert.targetField}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({
+                                ...prev,
+                                targetField: event.target.value as LinkInsertTargetField,
+                              }))
+                            }
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                          >
+                            <option value="content">Main Content</option>
+                            <option value="shortDescription">Short Description</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-widest font-black text-brand-text/45 mb-1.5">
+                            Anchor Text
+                          </label>
+                          <input
+                            type="text"
+                            value={linkInsert.anchorText}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({ ...prev, anchorText: event.target.value }))
+                            }
+                            placeholder="Use selected text or type manually"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] uppercase tracking-widest font-black text-brand-text/45 mb-1.5">
+                            URL
+                          </label>
+                          <input
+                            type="text"
+                            value={linkInsert.url}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({ ...prev, url: event.target.value }))
+                            }
+                            placeholder="https://example.com or /tools/canva-pro"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[10px] uppercase tracking-widest font-black text-brand-text/45 mb-1.5">
+                            Optional Link Title
+                          </label>
+                          <input
+                            type="text"
+                            value={linkInsert.title}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({ ...prev, title: event.target.value }))
+                            }
+                            placeholder="Tooltip/title text"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-5">
+                        <label className="inline-flex items-center gap-2 text-[11px] text-brand-text/75">
+                          <input
+                            type="checkbox"
+                            checked={linkInsert.openInNewTab}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({ ...prev, openInNewTab: event.target.checked }))
+                            }
+                            className="accent-primary"
+                          />
+                          Open in new tab (for internal links)
+                        </label>
+                        <label className="inline-flex items-center gap-2 text-[11px] text-brand-text/75">
+                          <input
+                            type="checkbox"
+                            checked={linkInsert.nofollow}
+                            onChange={(event) =>
+                              setLinkInsert((prev) => ({ ...prev, nofollow: event.target.checked }))
+                            }
+                            className="accent-primary"
+                          />
+                          Mark as nofollow
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleInsertLink}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-black text-[10px] font-black uppercase tracking-widest border-b-2 border-[#FF8C2A]"
+                        >
+                          Insert Markdown Link
+                        </button>
+                        <span className="text-[11px] text-brand-text/40">
+                          Internal examples: `/tools`, `/services`, `/blogs/your-slug`
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <textarea
+                    ref={contentRef}
                     value={formData.content}
                     onChange={(event) => setFormData((prev) => ({ ...prev, content: event.target.value }))}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-primary h-72 font-mono text-sm"
@@ -442,10 +673,54 @@ export default function BlogCMSPage() {
                     <div className="prose prose-invert max-w-none prose-headings:text-brand-text prose-headings:font-black prose-p:text-brand-text/80 prose-li:text-brand-text/80 prose-a:text-primary">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
+                        skipHtml
+                        allowedElements={[
+                          'h1',
+                          'h2',
+                          'h3',
+                          'h4',
+                          'h5',
+                          'h6',
+                          'p',
+                          'a',
+                          'strong',
+                          'em',
+                          'ul',
+                          'ol',
+                          'li',
+                          'blockquote',
+                          'code',
+                          'pre',
+                          'hr',
+                          'br',
+                        ]}
                         components={{
                           p: ({ children }) => (
                             <p className="whitespace-pre-wrap leading-7 text-brand-text/80">{children}</p>
                           ),
+                          a: ({ href, title, children, ...props }) => {
+                            const safeHref = sanitizeBlogHref(href);
+                            const linkMeta = parseBlogLinkMeta(title);
+                            const external = isExternalBlogHref(safeHref);
+                            const openInNewTab = external || linkMeta.openInNewTab;
+                            const rel = buildBlogRelValue({
+                              external,
+                              nofollow: linkMeta.nofollow,
+                              openInNewTab,
+                            });
+
+                            return (
+                              <a
+                                href={safeHref}
+                                title={linkMeta.title}
+                                target={openInNewTab ? '_blank' : undefined}
+                                rel={rel}
+                                {...props}
+                              >
+                                {children}
+                              </a>
+                            );
+                          },
                         }}
                       >
                         {formData.content || 'Start writing markdown content...'}

@@ -5,15 +5,17 @@ import { motion } from 'motion/react';
 import { ArrowRight, Layout, Star, Clock, Loader2, Tag } from 'lucide-react';
 import { db } from '@/firebase';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSettings } from '@/context/SettingsContext';
 import { resolveImageSource } from '@/lib/image-display';
+import { toSlugFromTitle } from '@/lib/seo';
 import type { StoredFileMetadata } from '@/lib/types/domain';
 import UploadedImage from '@/components/UploadedImage';
 
 interface AgencyService {
   id: string;
   title?: string;
+  slug?: string;
   description?: string;
   thumbnail?: string;
   thumbnailMedia?: StoredFileMetadata | null;
@@ -24,8 +26,11 @@ function getTitle(service: AgencyService) {
   return service.title || 'Untitled Service';
 }
 
+function getServiceSlug(service: AgencyService) {
+  return toSlugFromTitle((service.slug || service.title || '').toString()) || service.id;
+}
+
 export default function AgencyServicesPage() {
-  const router = useRouter();
   const { settings } = useSettings();
   const [services, setServices] = useState<AgencyService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,6 +137,8 @@ export default function AgencyServicesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
             {filteredServices.map((service, index) => {
               const title = getTitle(service);
+              const serviceSlug = getServiceSlug(service);
+              const serviceHref = `/services/${encodeURIComponent(serviceSlug)}`;
               const thumbnailSrc = resolveImageSource(service, {
                 mediaPaths: ['thumbnailMedia'],
                 stringPaths: ['thumbnail'],
@@ -147,15 +154,17 @@ export default function AgencyServicesPage() {
                   className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-700 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1"
                 >
                   <div className="relative aspect-[16/10] md:aspect-[4/3] overflow-hidden bg-[#0E0E0E]">
-                    <UploadedImage
-                      src={thumbnailSrc}
-                      fallbackSrc="/services-card.webp"
-                      alt={title}
-                      className="absolute inset-0 w-full h-full object-cover md:object-contain group-hover:scale-105 transition-transform duration-1000 p-0 md:p-4 rounded-[2.5rem]"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75" />
-                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                    <Link href={serviceHref} className="absolute inset-0 block" aria-label={`Open ${title}`}>
+                      <UploadedImage
+                        src={thumbnailSrc}
+                        fallbackSrc="/services-card.webp"
+                        alt={title}
+                        className="absolute inset-0 w-full h-full object-cover md:object-contain group-hover:scale-105 transition-transform duration-1000 p-0 md:p-4 rounded-[2.5rem]"
+                        referrerPolicy="no-referrer"
+                      />
+                    </Link>
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-bg/90 via-transparent to-transparent opacity-75 pointer-events-none" />
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
                       <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
                         <Star className="w-3 h-3 text-primary fill-primary" />
                         <span className="text-[8px] font-black uppercase text-white/80">Premium</span>
@@ -164,9 +173,11 @@ export default function AgencyServicesPage() {
                   </div>
 
                   <div className="p-6 md:p-8 flex flex-col flex-1">
-                    <h3 className="text-2xl md:text-3xl font-black text-brand-text leading-tight mb-4 group-hover:text-primary transition-colors break-words line-clamp-2 min-h-[2.3em]">
-                      {title}
-                    </h3>
+                    <Link href={serviceHref} className="block">
+                      <h3 className="text-2xl md:text-3xl font-black text-brand-text leading-tight mb-4 group-hover:text-primary transition-colors break-words line-clamp-2 min-h-[2.3em]">
+                        {title}
+                      </h3>
+                    </Link>
 
                     <p className="text-brand-text/40 text-xs md:text-sm font-medium leading-relaxed mb-6 line-clamp-3 italic min-h-[4.2em]">
                       {service.description || 'Contact us for this service.'}
@@ -188,7 +199,9 @@ export default function AgencyServicesPage() {
                           <Clock className="w-3 h-3 text-brand-text/20" />
                           <span className="text-[9px] font-black uppercase tracking-widest text-brand-text/20">Custom Scope</span>
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Custom Quote</span>
+                        <Link href={serviceHref} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                          View Details
+                        </Link>
                       </div>
 
                       <motion.button

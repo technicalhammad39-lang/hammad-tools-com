@@ -19,10 +19,9 @@ export default async function BlogsPage() {
   return (
     <main className="min-h-screen page-navbar-spacing pb-16 md:pb-24 bg-brand-bg">
       <div className="site-container">
-        <header className="text-center mb-10 md:mb-14">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase leading-none text-brand-text">
-            <span className="font-serif italic text-white normal-case">Latest</span>{' '}
-            <span className="internal-gradient">Blogs</span>
+        <header className="text-center mb-9 md:mb-12">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-[0.96] text-brand-text tracking-[-0.02em]">
+            Blog <span className="internal-gradient">Insights</span>
           </h1>
           <p className="mt-4 text-sm md:text-base text-brand-text/60 max-w-3xl mx-auto">
             Actionable posts on tools, workflows, and premium subscription strategies.
@@ -30,7 +29,7 @@ export default async function BlogsPage() {
         </header>
 
         {posts.length ? (
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
             {posts.map((post) => (
               <BlogCard key={post.id} post={post} />
             ))}

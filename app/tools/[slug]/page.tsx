@@ -4,7 +4,13 @@ import { db } from '@/firebase';
 import ServiceDetailClient from './ServiceDetailClient';
 import { resolveImageSource, toMetadataImageUrl } from '@/lib/image-display';
 import type { StoredFileMetadata } from '@/lib/types/domain';
-import { TOOL_KEYWORDS, createPageMetadata, toAbsoluteSiteUrl } from '@/lib/seo';
+import {
+  TOOL_KEYWORDS,
+  buildSeoDescription,
+  createAutoPageMetadata,
+  createPageMetadata,
+  toAbsoluteSiteUrl,
+} from '@/lib/seo';
 
 interface Plan {
   planName: string;
@@ -167,14 +173,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     stringPaths: ['thumbnail', 'image'],
   });
   const metadataImage = toMetadataImageUrl(imageSrc) || '/services-card.webp';
-  const description = getSeoDescription(service, planLabel, minPrice);
+  const fallbackDescription = getSeoDescription(service, planLabel, minPrice);
   const title = `${service.name} ${planLabel} - Rs ${minPrice || service.price} | Cheap ${service.name} Pakistan`;
 
-  return createPageMetadata({
+  return createAutoPageMetadata({
     title,
-    description,
     path: `/tools/${getServiceSlug(service) || slug}`,
     image: metadataImage,
+    shortDescription: service.description,
+    longDescription: service.longDescription,
+    content: fallbackDescription,
+    fallbackDescription,
     keywords: [
       ...TOOL_KEYWORDS,
       service.name,
@@ -208,6 +217,10 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
     placeholder: '/services-card.webp',
   });
   const minPrice = getMinPrice(service);
+  const seoDescription = buildSeoDescription(
+    [service.description, service.longDescription],
+    `${service.name} premium subscription in Pakistan.`
+  );
   const absoluteToolUrl = toAbsoluteSiteUrl(`/tools/${getServiceSlug(service) || slug}`);
   const absoluteImage = imageSrc.startsWith('http') ? imageSrc : toAbsoluteSiteUrl(imageSrc);
 
@@ -215,7 +228,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: service.name,
-    description: service.longDescription || service.description,
+    description: seoDescription,
     image: [absoluteImage],
     brand: {
       '@type': 'Brand',

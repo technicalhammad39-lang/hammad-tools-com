@@ -217,7 +217,7 @@ const ServicesSection = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/5 transition-all duration-700 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
+                  className="group relative flex flex-col h-full bg-brand-soft/20 backdrop-blur-3xl rounded-[1.25rem] md:rounded-[2.4rem] overflow-hidden border border-white/5 transition-all duration-700 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5"
                 >
                   <Link
                     href={`/tools/${getSlug(service)}`}
@@ -230,7 +230,7 @@ const ServicesSection = () => {
                       src={image}
                       fallbackSrc="/services-card.webp"
                       alt={title}
-                      className="absolute inset-0 w-full h-full object-cover md:object-contain transition-transform duration-1000 group-hover:scale-105 p-0 md:p-4 rounded-[2.5rem]"
+                      className="absolute inset-0 w-full h-full object-cover md:scale-[1.08] transition-transform duration-1000 group-hover:scale-[1.12]"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-transparent to-transparent opacity-80" />

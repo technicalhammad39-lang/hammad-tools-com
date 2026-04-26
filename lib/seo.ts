@@ -32,6 +32,62 @@ function normalizeText(input: string) {
   return input.trim().replace(/\s+/g, ' ');
 }
 
+const MARKDOWN_CODE_BLOCK_PATTERN = /```[\s\S]*?```/g;
+const MARKDOWN_INLINE_CODE_PATTERN = /`([^`]*)`/g;
+const MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*]\([^)]+\)/g;
+const MARKDOWN_LINK_PATTERN = /\[([^\]]+)]\(([^)]+)\)/g;
+const HTML_TAG_PATTERN = /<[^>]+>/g;
+
+function truncateAtWordBoundary(value: string, maxLength: number) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return '';
+  }
+  const safeLimit = Math.max(80, maxLength || 160);
+  if (normalized.length <= safeLimit) {
+    return normalized;
+  }
+
+  const sliced = normalized.slice(0, safeLimit);
+  const boundary = sliced.lastIndexOf(' ');
+  const trimmed = (boundary > 72 ? sliced.slice(0, boundary) : sliced).trim();
+  return `${trimmed.replace(/[.,;:!?-]+$/g, '')}...`;
+}
+
+export function toSeoPlainText(input: unknown) {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  return normalizeText(
+    input
+      .replace(MARKDOWN_CODE_BLOCK_PATTERN, ' ')
+      .replace(MARKDOWN_INLINE_CODE_PATTERN, '$1')
+      .replace(MARKDOWN_IMAGE_PATTERN, ' ')
+      .replace(MARKDOWN_LINK_PATTERN, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*\d+\.\s+/gm, '')
+      .replace(/\r?\n+/g, ' ')
+      .replace(HTML_TAG_PATTERN, ' ')
+      .replace(/[*_~>#|]/g, ' ')
+  );
+}
+
+export function buildSeoDescription(
+  sources: Array<unknown>,
+  fallback = SITE_DESCRIPTION,
+  maxLength = 160
+) {
+  for (const source of sources) {
+    const normalized = toSeoPlainText(source);
+    if (normalized) {
+      return truncateAtWordBoundary(normalized, maxLength);
+    }
+  }
+  return truncateAtWordBoundary(toSeoPlainText(fallback) || SITE_DESCRIPTION, maxLength);
+}
+
 export function getSiteUrl() {
   const fromEnv = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '').trim();
   if (!fromEnv) {
@@ -73,6 +129,19 @@ type MetadataInput = {
   image?: string;
   keywords?: string[];
   noIndex?: boolean;
+};
+
+type AutoMetadataInput = {
+  title: string;
+  path?: string;
+  image?: string;
+  shortDescription?: unknown;
+  longDescription?: unknown;
+  content?: unknown;
+  fallbackDescription?: string;
+  keywords?: string[];
+  noIndex?: boolean;
+  maxDescriptionLength?: number;
 };
 
 export function createPageMetadata({
@@ -142,6 +211,34 @@ export function createPageMetadata({
   };
 }
 
+export function createAutoPageMetadata({
+  title,
+  path = '/',
+  image = DEFAULT_OG_IMAGE,
+  shortDescription,
+  longDescription,
+  content,
+  fallbackDescription = SITE_DESCRIPTION,
+  keywords = [],
+  noIndex = false,
+  maxDescriptionLength = 160,
+}: AutoMetadataInput): Metadata {
+  const description = buildSeoDescription(
+    [shortDescription, longDescription, content],
+    fallbackDescription,
+    maxDescriptionLength
+  );
+
+  return createPageMetadata({
+    title,
+    description,
+    path,
+    image,
+    keywords,
+    noIndex,
+  });
+}
+
 export function toSlugFromTitle(title: string) {
   const normalized = normalizeText(title || '')
     .toLowerCase()
@@ -151,4 +248,3 @@ export function toSlugFromTitle(title: string) {
     .replace(/^-+|-+$/g, '');
   return normalized;
 }
-

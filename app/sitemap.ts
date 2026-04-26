@@ -97,6 +97,27 @@ async function getToolEntries() {
   }
 }
 
+async function getAgencyServiceEntries() {
+  if (!hasFirebaseAdminCredentials()) {
+    return [] as Array<{ slug: string; lastModified: Date }>;
+  }
+
+  try {
+    const snapshot = await withTimeout(
+      adminDb.collection('agency_services').get(),
+      SITEMAP_FIRESTORE_TIMEOUT_MS,
+      'sitemap/agency_services fetch'
+    );
+    return snapshot.docs
+      .map((entry) => entry.data() as CollectionDoc)
+      .filter((item) => item.active !== false)
+      .map((item) => ({ slug: slugFromDoc(item), lastModified: asDate(item.updatedAt || item.createdAt) }))
+      .filter((item) => Boolean(item.slug));
+  } catch {
+    return [] as Array<{ slug: string; lastModified: Date }>;
+  }
+}
+
 async function getBlogEntries() {
   if (!hasFirebaseAdminCredentials()) {
     return [] as Array<{ slug: string; lastModified: Date }>;
@@ -132,12 +153,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: withSite('/terms'), lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
   ];
 
-  const [toolEntries, blogEntries] = await Promise.all([getToolEntries(), getBlogEntries()]);
+  const [toolEntries, blogEntries, agencyServiceEntries] = await Promise.all([
+    getToolEntries(),
+    getBlogEntries(),
+    getAgencyServiceEntries(),
+  ]);
   const toolRoutes: MetadataRoute.Sitemap = toolEntries.map((entry) => ({
     url: withSite(`/tools/${entry.slug}`),
     lastModified: entry.lastModified,
     changeFrequency: 'weekly',
     priority: 0.9,
+  }));
+  const agencyServiceRoutes: MetadataRoute.Sitemap = agencyServiceEntries.map((entry) => ({
+    url: withSite(`/services/${entry.slug}`),
+    lastModified: entry.lastModified,
+    changeFrequency: 'weekly',
+    priority: 0.8,
   }));
   const blogRoutes: MetadataRoute.Sitemap = blogEntries.map((entry) => ({
     url: withSite(`/blogs/${entry.slug}`),
@@ -147,7 +178,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const deduped = new Map<string, MetadataRoute.Sitemap[number]>();
-  [...staticRoutes, ...toolRoutes, ...blogRoutes].forEach((entry) => {
+  [...staticRoutes, ...toolRoutes, ...agencyServiceRoutes, ...blogRoutes].forEach((entry) => {
     deduped.set(entry.url, entry);
   });
   return Array.from(deduped.values());
