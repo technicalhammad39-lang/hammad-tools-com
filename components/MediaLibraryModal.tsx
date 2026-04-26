@@ -21,6 +21,7 @@ import {
   uploadMediaFile,
   withProtectedFileToken,
 } from '@/lib/storage-utils';
+import { resolveImageSource } from '@/lib/image-display';
 import { useToast } from '@/components/ToastProvider';
 
 interface MediaLibraryModalProps {
@@ -494,10 +495,13 @@ export default function MediaLibraryModal({
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
               {filteredItems.map((item) => {
                 const isImage = looksLikeImage(item);
+                const basePreviewUrl = resolveImageSource(item, {
+                  stringPaths: ['url', 'publicPath', 'storagePath'],
+                });
                 const previewUrl =
                   item.access === 'protected'
-                    ? withProtectedFileToken(item.url, fileAccessToken)
-                    : item.url;
+                    ? withProtectedFileToken(basePreviewUrl, fileAccessToken)
+                    : basePreviewUrl;
                 const isSelected = item.id === selectedId;
                 const displayName = item.originalFileName || item.fileName || 'Untitled';
                 const createdAtLabel = item.createdAt

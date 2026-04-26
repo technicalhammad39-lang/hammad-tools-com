@@ -45,6 +45,7 @@ import {
   type BlogPostDocument,
 } from '@/lib/blog';
 import type { StoredFileMetadata } from '@/lib/types/domain';
+import { resolveImageSource } from '@/lib/image-display';
 import {
   buildBlogRelValue,
   isExternalBlogHref,
@@ -131,7 +132,10 @@ export default function BlogCMSPage() {
   }, [isStaff, toast]);
 
   const formImagePreview = useMemo(() => {
-    return formData.coverImageUrl || formData.coverImageMedia?.fileUrl || '';
+    return resolveImageSource(formData, {
+      mediaPaths: ['coverImageMedia'],
+      stringPaths: ['coverImageUrl'],
+    });
   }, [formData.coverImageMedia, formData.coverImageUrl]);
 
   function resetEditor() {
@@ -285,8 +289,10 @@ export default function BlogCMSPage() {
     const slug = normalizeBlogSlug(title);
     const shortDescription = formData.shortDescription.trim();
     const content = formData.content.trim();
-    const coverImageUrl = formData.coverImageUrl.trim();
-    const resolvedCoverImage = coverImageUrl || formData.coverImageMedia?.fileUrl || '';
+    const resolvedCoverImage = resolveImageSource(formData, {
+      mediaPaths: ['coverImageMedia'],
+      stringPaths: ['coverImageUrl'],
+    });
 
     if (!title) {
       toast.error('Title is required');
@@ -774,14 +780,18 @@ export default function BlogCMSPage() {
                   <tbody>
                     {posts.map((post) => {
                       const publishDate = formatBlogPublishDate(post.publishedAt || post.createdAt);
+                      const postCoverImage = resolveImageSource(post, {
+                        mediaPaths: ['coverImageMedia', 'thumbnailMedia', 'imageMedia'],
+                        stringPaths: ['coverImageUrl', 'thumbnail', 'imageUrl', 'image'],
+                      });
                       return (
                         <tr key={post.id} className="border-b border-white/5">
                           <td className="py-5">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 border border-white/10 relative">
-                                {post.coverImageUrl ? (
+                                {postCoverImage ? (
                                   <UploadedImage
-                                    src={post.coverImageUrl}
+                                    src={postCoverImage}
                                     fallbackSrc={null}
                                     fallbackOnError={false}
                                     alt={post.title}

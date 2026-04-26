@@ -6,6 +6,7 @@ import {
   type BlogPostDocument,
 } from '@/lib/blog';
 import { toSeoPlainText } from '@/lib/seo';
+import { resolveImageSource } from '@/lib/image-display';
 
 type BlogCardProps = {
   post: BlogPostDocument;
@@ -13,7 +14,11 @@ type BlogCardProps = {
 };
 
 export default function BlogCard({ post, compact = false }: BlogCardProps) {
-  const coverImageUrl = post.coverImageUrl || '/services-card.webp';
+  const coverImageUrl = resolveImageSource(post, {
+    mediaPaths: ['coverImageMedia', 'thumbnailMedia', 'imageMedia'],
+    stringPaths: ['coverImageUrl', 'thumbnail', 'imageUrl', 'image'],
+    placeholder: '/services-card.webp',
+  });
   const publishDate = formatBlogPublishDate(post.publishedAt || post.createdAt);
   const categoryLabel = post.category || 'Insight';
   const shortDescription = toSeoPlainText(post.shortDescription || '').trim();

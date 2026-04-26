@@ -45,7 +45,7 @@ import {
   uploadMediaFile,
   withProtectedFileToken,
 } from '@/lib/storage-utils';
-import { normalizeImageUrl, resolveStoredMediaUrl } from '@/lib/image-display';
+import { resolveImageSource } from '@/lib/image-display';
 import MediaLibraryModal from '@/components/MediaLibraryModal';
 import UploadedImage from '@/components/UploadedImage';
 
@@ -128,21 +128,24 @@ function getTransactionId(order: OrderRecord) {
 
 function getScreenshotUrl(order: OrderRecord) {
   const proof = order.paymentProof as any;
-  return (
-    resolveStoredMediaUrl(proof?.screenshotMedia) ||
-    normalizeImageUrl(proof?.fileUrl || proof?.screenshotUrl || proof?.paymentProofUrl || '')
-  );
+  return resolveImageSource(proof, {
+    mediaPaths: ['screenshotMedia', 'paymentProofMedia', 'media'],
+    stringPaths: ['fileUrl', 'screenshotUrl', 'paymentProofUrl', 'url', 'publicUrl', 'publicPath', 'storagePath'],
+  });
 }
 
 function getMessageAttachment(entry: any) {
-  const url =
-    resolveStoredMediaUrl(entry?.attachmentMedia) ||
-    normalizeImageUrl(
-      entry?.attachmentUrl ||
-        entry?.attachment?.fileUrl ||
-        entry?.attachment?.url ||
-        ''
-    );
+  const url = resolveImageSource(entry, {
+    mediaPaths: ['attachmentMedia', 'attachment'],
+    stringPaths: [
+      'attachmentUrl',
+      'attachment.fileUrl',
+      'attachment.url',
+      'attachment.publicUrl',
+      'attachment.publicPath',
+      'attachment.storagePath',
+    ],
+  });
 
   if (!url) {
     return null;

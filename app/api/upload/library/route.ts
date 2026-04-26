@@ -69,7 +69,7 @@ function normalizeMediaUrl(value: string) {
         return parsed.pathname.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
       }
       if (parsed.pathname.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
-        return parsed.pathname.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+        return '';
       }
       if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/api/upload/')) {
         return `${parsed.pathname}${parsed.search}${parsed.hash}`;
@@ -84,13 +84,13 @@ function normalizeMediaUrl(value: string) {
     return raw.replace(HOSTINGER_PUBLIC_UPLOAD_PREFIX, '/uploads/');
   }
   if (raw.startsWith(HOSTINGER_PRIVATE_UPLOAD_PREFIX)) {
-    return raw.replace(HOSTINGER_PRIVATE_UPLOAD_PREFIX, '/uploads/');
+    return '';
   }
   if (raw.startsWith('public/uploads/')) {
     return `/${raw.slice('public/'.length)}`;
   }
   if (raw.startsWith('storage/uploads/')) {
-    return `/uploads/${raw.slice('storage/uploads/'.length)}`;
+    return '';
   }
 
   return raw.startsWith('/') ? raw : `/${raw}`;
@@ -159,18 +159,19 @@ function toLibraryItem(docId: string, data: MediaRecord, fallbackFolder: UploadF
     ? normalizeMediaUrl(`/${storagePath}`)
     : '';
 
+  const fallbackApiPath = `/api/upload/${encodeURIComponent(mediaId)}`;
   const url =
     access === 'protected'
-      ? protectedPath || `/api/upload/${encodeURIComponent(mediaId)}` || fileUrl || publicPath
-      : publicPath || fileUrl || storageDerivedPublicPath || protectedPath || `/api/upload/${encodeURIComponent(mediaId)}`;
+      ? protectedPath || fileUrl || fallbackApiPath
+      : publicPath || fileUrl || storageDerivedPublicPath || protectedPath || fallbackApiPath;
 
   return {
     id: mediaId,
     ownerId: sanitizeText(data.ownerId, 220),
     folder,
     access,
-    fileName: sanitizeText(data.fileName, 260),
-    originalFileName: sanitizeText(data.originalFileName, 260),
+    fileName: sanitizeText(data.fileName, 260) || sanitizeText(data.originalFileName, 260) || mediaId,
+    originalFileName: sanitizeText(data.originalFileName, 260) || sanitizeText(data.fileName, 260),
     mimeType: sanitizeText(data.mimeType, 160),
     sizeBytes: Number(data.sizeBytes || 0),
     storagePath,
@@ -289,7 +290,7 @@ export async function GET(request: Request) {
         return;
       }
 
-      if (!item.url || !item.fileName || !item.storagePath) {
+      if (!item.url || !item.fileName) {
         return;
       }
 

@@ -13,7 +13,7 @@ import {
 import {
   formatBlogPublishDate,
 } from '@/lib/blog';
-import { toMetadataImageUrl } from '@/lib/image-display';
+import { resolveImageSource, toMetadataImageUrl } from '@/lib/image-display';
 import { getBlogPostBySlug, getPublishedBlogPosts } from '@/lib/server/blog-posts';
 import { adminDb } from '@/lib/server/firebase-admin';
 import BlogCard from '@/components/blog/BlogCard';
@@ -104,7 +104,11 @@ export default async function BlogDetailPage({ params }: { params: Promise<PageP
     notFound();
   }
 
-  const coverImageUrl = post.coverImageUrl || '/services-card.webp';
+  const coverImageUrl = resolveImageSource(post, {
+    mediaPaths: ['coverImageMedia', 'thumbnailMedia', 'imageMedia'],
+    stringPaths: ['coverImageUrl', 'thumbnail', 'imageUrl', 'image'],
+    placeholder: '/services-card.webp',
+  });
   const publishedAt = post.publishedAt || post.createdAt;
   const publishedLabel = formatBlogPublishDate(publishedAt);
   const articleUrl = toAbsoluteSiteUrl(`/blogs/${post.slug}`);
