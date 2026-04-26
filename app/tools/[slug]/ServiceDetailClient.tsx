@@ -441,7 +441,7 @@ export default function ServiceDetailClient({ service, loading }: { service: Ser
                     className={`snap-center shrink-0 relative min-w-[9rem] sm:min-w-[11rem] max-w-[72vw] sm:max-w-none px-4 sm:px-6 py-3 rounded-2xl border text-center transition-all ${
                       selectedPlan?.planName === plan.planName
                         ? 'bg-green-500 text-black font-black shadow-lg shadow-green-500/30 border-green-500'
-                        : 'glass text-brand-text font-bold border-white/5 hover:border-white/20'
+                        : 'bg-white text-black font-black border-white/80 shadow-[0_8px_20px_rgba(255,255,255,0.16)] hover:bg-white/95'
                     }`}
                   >
                     <div className="text-[10px] sm:text-xs leading-tight tracking-[0.16em] whitespace-normal sm:whitespace-nowrap flex items-center justify-center gap-2">
