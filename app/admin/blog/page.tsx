@@ -729,7 +729,7 @@ export default function BlogCMSPage() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-col md:flex-row justify-end gap-4 p-6 border-t border-white/5 bg-black/40 rounded-2xl">
+                <div className="flex flex-col md:flex-row justify-end gap-4 p-6 border-t border-white/5">
                   <button
                     type="button"
                     onClick={resetEditor}
